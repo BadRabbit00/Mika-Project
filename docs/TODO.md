@@ -14,10 +14,11 @@ These are specification gaps, not defaults chosen by the implementation.
   required in prose but has no name, columns, or transition identity specified.
   Do not substitute life_state for learning state. Define its schema and event
   identity before implementing the state machine.
-- TODO(EMBEDDING-FORMAT), section 2, steps 2 and 3: node_embeddings is specified
-  only as node-associated BLOB vectors. Storage exposes node_id and embedding;
-  vector dimension, dtype, byte order, normalization, and model-version handling
-  remain unspecified. No vector encoder or search is implemented in step 1.
+- Embedding storage in schema version 3 uses the self-describing NumPy NPY format,
+  float64 values, and an explicit model identity. Dimensions come from the server;
+  cosine similarity normalizes vectors at comparison time. Pickle is disabled.
+  TODO(EMBEDDING-UPGRADE): legacy unlabelled blobs and model changes require an
+  explicit reindexing policy; incompatible vectors fail instead of being mixed.
 - TODO(SOURCE-DATE), sections 2 and 38.1, step 2: sources.published_at is a DATE,
   while the later rule requires UTC timestamps for database dates. This schema
   enforces the explicit UTC rule. A date-only publication value cannot be turned
@@ -40,21 +41,52 @@ These are specification gaps, not defaults chosen by the implementation.
   these at their respective delivery stages; do not invent additional tables.
 - TODO(MODEL-CONFIG), section 18.1, step 2: config/models.yaml is referenced but
   not supplied. Existing settings and prompts also contain model settings.
-  Establish the source of truth before implementing model calls. Root mood.yaml
-  and settings.yaml duplicate the supplied config files and remain unchanged.
+  Establish the source of truth for model deployment settings. The implemented
+  client accepts explicit endpoint URLs; sampling temperatures are read from the
+  supplied prompt metadata. No replacement models.yaml is invented.
+
+## Extraction and self-quiz
+
+- TODO(CLAIMS-GRAMMAR): section 4.1 references undefined string, ws, and nl rules.
+  The grammar supplies JSON string escaping, horizontal whitespace, and a line
+  terminator while preserving the specified claim fields and relation vocabulary.
+- TODO(CLAIMS-TERMINATION): the local Gemma repeatedly hits the output limit with
+  the literal mandatory final newline. A diagnostic allowing an optional final
+  newline terminates. JSON Lines permits omitting the last newline, but applying
+  that convention requires changing the supplied production structure so record
+  separators remain mandatory. Clarification has been requested; the committed
+  grammar retains the literal structure until then. Truncated output is rejected
+  in full and never committed. Automated three-article validation uses a mocked
+  generation transport and must not be described as a successful live-model run.
+- TODO(RETRIEVAL-POLICY): the architecture specifies hybrid FTS/cosine search but
+  no fusion formula or cutoff for self-quiz. Retrieval parameters must be supplied
+  explicitly. No production ranking parameters are inferred from the document.
+- TODO(QUIZ-PERSONA): section 12 limits the question context to node names and
+  earlier questions, while section 16 and selfquiz_ask.md add persona. The supplied
+  persona also needs mood state from step 4. Until that dependency is implemented,
+  the question context uses the narrow section 12 contract and an empty persona
+  substitution. No persona or mood text is invented; supplied files stay intact.
+- TODO(TRUST-PRIOR): section 4.3 does not define the reliability lookup for source
+  kind, peer review, and publisher. Extraction preserves explicit trust_prior and
+  origin_key metadata, and deduplicates each normalized triple per source. It does
+  not manufacture trust scores or collapse independent sources into one claim.
+- TODO(SOURCE-REVISION): a reused source ID with changed text is rejected. Define
+  graph retraction and re-extraction semantics before supporting source revisions.
+- TODO(RUNS-PERSISTENCE): multiple calls in one trace are logged in full JSONL with
+  distinct call IDs. The contradictory runs primary key is unchanged; multi-call
+  traces are not squeezed into that table or silently overwritten.
 
 ## Invariants for later delivery stages
 
 The step 1 suite tests time, UTC persistence, storage validation, the closed
 relation vocabulary, FTS synchronization, transaction atomicity, retry limits,
 outbox keys, PAD storage precision, and absence of copied prompt strings.
-No later-stage module is implemented or presented as tested. The executable
+Step 2 additionally tests grounded extraction, overlap, per-source deduplication,
+atomic article writes, embedding compatibility, tokenizer budgets, and server
+termination signals. The executable
 stage gate in tests/test_stage_contracts.py requires the following behavioral
 tests before the corresponding module may be introduced.
 
-- TODO(STEP-2-CONTRACTS): model output is validated before writes; model tools
-  cannot write; only the seven relation names are allowed; 200-token overlap;
-  norm_hash deduplication; token counts come from /tokenize.
 - TODO(STEP-3-CONTRACTS): selfquiz_ask receives names only; empty retrieval gives
   no_knowledge with zero model calls; invalid citations fail validation.
 - TODO(STEP-4-CONTRACTS): copy the inertia, piercing, decay, and clamp tests from
