@@ -1,4 +1,4 @@
-"""Knowledge extraction contracts; quiz contracts are added after step 2 passes."""
+"""Knowledge extraction, retrieval, and self-quiz behavioral contracts."""
 
 import hashlib
 import json
@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock
 import httpx
 import numpy as np
 import pytest
+from src.retrieve import RetrievalPolicy, RetrievedNode, Retriever
+from src.selfquiz import QuizSettings, SelfQuiz
 
 from src.core.context import ContextBuilder
 from src.core.db import Database
@@ -316,3 +318,162 @@ def test_embedding_storage_rejects_incompatible_vectors():
         cosine(vector, np.array([1.0]))
     with pytest.raises(ValueError):
         decode_vector(blob + b"trailing")
+
+
+@pytest.fixture
+async def knowledge(database):
+    await Extractor(database, fake_llm(), ContextBuilder(Path("prompts"))).extract(
+        source()
+    )
+    with database.connection() as connection:
+        return [
+            RetrievedNode(row["id"], row["name"], row["summary"], ())
+            for row in connection.execute("SELECT * FROM nodes ORDER BY id")
+        ]
+
+
+def quiz(database, llm, retrieved):
+    retriever = AsyncMock()
+    retriever.search.return_value = retrieved
+    return SelfQuiz(
+        database,
+        llm,
+        retriever,
+        ContextBuilder(Path("prompts")),
+        QuizSettings.from_registry(Path("config/settings.yaml")),
+    )
+
+
+async def test_context_isolation_quiz(database, knowledge):
+    secret = "Private node summary fixture"
+    database.run_transaction(
+        lambda connection: connection.execute("UPDATE nodes SET summary=?", (secret,))
+    )
+    llm = fake_llm(["How are seccomp and container escape connected?"])
+    questions = await quiz(database, llm, knowledge).ask("security")
+    assert len(questions) == 1
+    request = llm.generate.call_args.args[0]
+    assert request.profile == "selfquiz_ask" and request.budget == 2000
+    for node in knowledge:
+        assert node.name in request.user
+        assert node.id not in request.user
+    assert secret not in request.system + request.user
+    assert "defends_against" not in request.system + request.user
+    with pytest.raises(ValueError):
+        ContextBuilder(Path("prompts")).build(
+            "selfquiz_ask",
+            topic_node_names=[],
+            asked_questions=[],
+            n="5",
+            retrieved_nodes=knowledge,
+        )
+    with pytest.raises(TypeError):
+        ContextBuilder(Path("prompts")).build(
+            "selfquiz_ask",
+            topic_node_names=[{"name": "node", "summary": secret}],
+            asked_questions=[],
+            n="5",
+        )
+
+
+async def test_empty_retriever_no_llm_call(database):
+    llm = fake_llm()
+    result = await quiz(database, llm, []).answer("Unknown fact?", topic="security")
+    assert result.verdict == "no_knowledge"
+    assert result.cited == result.retrieved == ()
+    assert llm.mock_calls == []
+    with database.connection() as connection:
+        row = connection.execute("SELECT * FROM questions").fetchone()
+        assert row["verdict"] == "no_knowledge" and row["asked_at"].endswith("Z")
+
+
+@pytest.mark.parametrize("case", ["unknown", "mixed", "unretrieved", "wrong_type"])
+async def test_invalid_citations_rejected(database, knowledge, case):
+    returned = [knowledge[0]]
+    cited = {
+        "unknown": ["invented-id"],
+        "mixed": [knowledge[0].id, "invented-id"],
+        "unretrieved": [knowledge[1].id],
+        "wrong_type": knowledge[0].id,
+    }[case]
+    llm = fake_llm(
+        [json.dumps({"answer": "Fixture answer", "cited": cited, "confident": True})]
+    )
+    result = await quiz(database, llm, returned).answer("Fixture?", topic="security")
+    assert result.verdict == "invalid_citation"
+
+
+async def test_valid_citation_is_persisted_and_context_is_fresh(database, knowledge):
+    payload = {
+        "answer": "Fixture answer",
+        "cited": [knowledge[0].id],
+        "confident": True,
+    }
+    llm = fake_llm([json.dumps(payload), json.dumps(payload)])
+    service = quiz(database, llm, knowledge)
+    result = await service.answer("First isolated question?", topic="security")
+    await service.answer("Second isolated question?", topic="security")
+    assert result.verdict == "answered" and result.cited == (knowledge[0].id,)
+    request = llm.generate.call_args.args[0]
+    assert request.profile == "selfquiz_answer" and request.budget == 3000
+    assert "First isolated question?" not in request.user
+    with database.connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM questions WHERE id=?", (result.question_id,)
+        ).fetchone()
+        assert json.loads(row["cited"]) == [knowledge[0].id]
+        assert json.loads(row["retrieved"]) == [node.id for node in knowledge]
+
+
+async def test_citation_is_checked_again_at_commit(database, knowledge):
+    async def generate(*args, **kwargs):
+        database.run_transaction(
+            lambda connection: connection.execute(
+                "UPDATE nodes SET suspect=1 WHERE id=?", (knowledge[0].id,)
+            )
+        )
+        return json.dumps(
+            {"answer": "Fixture", "cited": [knowledge[0].id], "confident": True}
+        )
+
+    llm = fake_llm()
+    llm.generate.side_effect = generate
+    result = await quiz(database, llm, knowledge).answer("Fixture?", topic="security")
+    assert result.verdict == "invalid_citation"
+
+
+async def test_hybrid_retrieval_and_topic_isolation(database, knowledge):
+    llm = fake_llm()
+    llm.embed.side_effect = lambda text: np.array([1.0, 0.0])
+    retriever = Retriever(database, llm, RetrievalPolicy(min_similarity=0.8, rrf_k=60))
+    semantic = await retriever.search("lexically absent", topic="security")
+    assert [node.name for node in semantic] == ["seccomp"]
+    hybrid = await retriever.search("container escape", topic="security")
+    assert {node.id for node in hybrid} == {node.id for node in knowledge}
+    assert any(node.edges for node in hybrid)
+    calls = len(llm.mock_calls)
+    assert await retriever.search("seccomp", topic="other") == []
+    assert len(llm.mock_calls) == calls
+    assert await retriever.search('" OR *', topic="security") == semantic
+
+
+async def test_quiz_round_requires_five_questions_and_three_answers(
+    database, knowledge
+):
+    questions = [f"Fixture question {index}?" for index in range(5)]
+    outputs = ["\n".join(questions)] + [
+        json.dumps(
+            {
+                "answer": "Fixture",
+                "cited": [knowledge[0].id] if i < 3 else [],
+                "confident": i < 3,
+            }
+        )
+        for i in range(5)
+    ]
+    result = await quiz(database, fake_llm(outputs), knowledge).run("security")
+    assert len(result.results) == 5 and result.answered == 3 and result.passed
+    short = await quiz(database, fake_llm(["One more?", outputs[1]]), knowledge).run(
+        "security"
+    )
+    assert short.answered == 1 and not short.passed
