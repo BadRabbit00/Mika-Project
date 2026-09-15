@@ -1,0 +1,15 @@
+* text=auto eol=lf
+*.py text diff=python
+*.md text
+*.nix text
+*.toml text
+*.yaml text
+*.json text
+*.lock text
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gguf binary
