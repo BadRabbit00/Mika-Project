@@ -1,7 +1,8 @@
 # Implementation rules
 
 Read ARCHITECTURE.md before making changes. Follow the delivery order in
-section 38.3. Only step 1 (storage, migrations, time, and its tests) is implemented.
+section 38.3. Steps 1 and 2 (storage, time, and extraction) are implemented.
+Live-model compatibility limits and deferred requirements are in docs/TODO.md.
 
 - Keep main limited to the initial architecture. Work on feature branches and
   merge completed, verified changes into develop.

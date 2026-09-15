@@ -109,6 +109,10 @@
 
       packages = forAllSystems (system: {
         default = pythonSets.${system}.mkVirtualEnv "blogai-env" workspace.deps.default;
+        embedding-model = nixpkgs.legacyPackages.${system}.fetchurl {
+          url = "https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF/resolve/0f741b5a6585bd53aeb15cd1372c56f2a0f65e12/embeddinggemma-300M-Q8_0.gguf";
+          sha256 = "b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63";
+        };
       });
 
       apps = forAllSystems (system: {

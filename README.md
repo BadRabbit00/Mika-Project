@@ -1,7 +1,7 @@
 # BlogAI
 
-Step 1 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 project scaffold,
-SQLite storage, schema migrations, time rules, and executable tests.
+Steps 1 and 2 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+SQLite storage, time rules, and validated knowledge extraction.
 
 ## Development
 
@@ -40,7 +40,57 @@ nix develop .#bootstrap --command uv lock
 
 The flake follows the official
 [uv2nix development template](https://pyproject-nix.github.io/uv2nix/usage/getting-started.html).
-Only dependencies needed for step 1 are installed in the application environment.
+Application dependencies are locked separately from development tools.
+
+## Knowledge extraction
+
+Run two independent llama-server processes: generation on port 8080 and pooled
+embeddings on port 8081. The generation model comes from the local model store.
+Only `llama-server` itself runs directly on the host; all other commands use Nix.
+
+```sh
+llama-server --model ~/.eva/models/gemma-4-12b-it-uncensored-GGUF/gemma-4-12b-it-uncensored-Q4_K_M.gguf \
+  --host 127.0.0.1 --port 8080 --ctx-size 32768 --parallel 1 --reasoning off
+```
+
+The flake provides a revision-pinned, hash-verified embedding model:
+
+```sh
+nix build .#embedding-model --out-link result-embedding
+llama-server --model ./result-embedding --host 127.0.0.1 --port 8081 \
+  --embedding --ctx-size 2048 --parallel 1
+```
+
+Each Markdown article needs YAML frontmatter with `id`, `title`, and `topic`.
+Optional metadata includes `origin_key`, `url`, `kind`, `publisher`, `given_by`,
+`trust_prior`, and an aware `published_at` timestamp. Date-only values are logged
+and stored as NULL because the architecture does not define their time of day.
+
+```sh
+nix develop --command blogai extract library/topic/article.md \
+  --database data/blogai.sqlite3 --log-file logs/extract.jsonl
+```
+
+The client renders each request with `/apply-template` and counts its complete
+token sequence through `/tokenize`, including model boundary tokens. The same
+IDs go to `/completion`; article chunks use at most 2000 tokens with exactly 200
+overlapping tokens. Unicode boundaries are checked before generation.
+
+Claims use `grammars/claims.gbnf`. Code validates the closed relation vocabulary,
+distinct normalized entities, and both entity names occurring in the chunk.
+Normalized names and FTS candidates are checked before cosine merging at 0.85.
+NPY embeddings carry their model identity; incompatible models or dimensions
+fail explicitly. Node summaries accumulate validated claim text deterministically.
+
+An article commits in one transaction after every chunk has been parsed and
+validated. Malformed or truncated generation commits nothing. Replaying the same
+source ID and content skips model calls; changed content requires an explicit
+revision policy. Duplicate triples within a source collapse, while independent
+sources retain separate claims. Rejected claims and their reasons are logged.
+Use `--max-output-tokens` to set an explicit generation cap (default 2048).
+The local model's final-newline compatibility issue is tracked as
+TODO(CLAIMS-TERMINATION); passing mocked integration tests does not establish
+successful extraction quality with that model.
 
 ## Storage
 
@@ -70,7 +120,10 @@ complexity and invalidation columns, synchronizes FTS on insert/update/delete,
 backfills the index, and adds lookup indexes. All pending migrations and
 `PRAGMA user_version` changes commit together. Reinitialization is safe;
 downgrades, newer schemas, and unversioned existing databases are rejected.
-Add new migrations instead of editing released ones.
+Migration 3 adds source content hashes, embedding model identities, and uniqueness
+of `(source_id, norm_hash)`. Legacy duplicate claims fail this migration and must
+be reviewed explicitly; no existing evidence is silently deleted. Add new
+migrations instead of editing released ones.
 
 Use `enqueue_outbox` inside the same transaction that saves a post. Its key is
 the unambiguous JSON encoding of `[post_id, channel]`. Repeating the same intent
@@ -115,7 +168,7 @@ logging handlers.
 
 `main` contains only the initial architecture. Implementation branches merge
 into `develop`. Git's attributes file is `.gitattributes`. Supplied `config/`,
-`prompts/`, and the duplicate root YAML files remain unchanged.
+`prompts/` remain unchanged.
 
 After code changes, regenerate and inspect the Graphify graph:
 
@@ -131,7 +184,7 @@ outside runtime directories can be tracked intentionally.
 ## Open requirements
 
 [docs/TODO.md](docs/TODO.md) records architecture gaps, including the undefined
-learning-state schema, embedding format, trace identity, date-only metadata,
+learning-state schema, embedding upgrades, trace identity, date-only metadata,
 and outbox delivery guarantees. Find them with:
 
 ```sh

@@ -12,6 +12,7 @@ import pytest
 from src.core.context import ContextBuilder
 from src.core.db import Database
 from src.core.llm_local import ContextOverflow, LocalLLM
+from src.core.vectors import cosine, decode_vector, encode_vector
 from src.extract import Extractor, chunk_text, grounded, validate_claims
 from src.ingest import Source, read_source
 
@@ -84,7 +85,7 @@ async def test_chunk_overlap():
     assert [len(chunk.tokens) for chunk in chunks] == [2000, 2000, 1410]
     assert all(
         left.tokens[-200:] == right.tokens[:200]
-        for left, right in zip(chunks, chunks[1:])
+        for left, right in zip(chunks, chunks[1:], strict=False)
     )
     assert chunks[0].text + "".join(chunk.text[200:] for chunk in chunks[1:]) == text
     assert await chunk_text("", llm) == []
@@ -140,6 +141,20 @@ async def test_independent_sources_keep_separate_claims(database):
         )
 
 
+async def test_three_articles_build_one_deduplicated_graph(database):
+    llm = fake_llm([json.dumps(claim()) + "\n"] * 3)
+    extractor = Extractor(database, llm, ContextBuilder(Path("prompts")))
+    reports = [
+        await extractor.extract(source(source_id=str(index), origin=str(index)))
+        for index in range(3)
+    ]
+    assert [report.accepted for report in reports] == [1, 1, 1]
+    with database.connection() as connection:
+        assert connection.execute("SELECT count(*) FROM sources").fetchone()[0] == 3
+        assert connection.execute("SELECT count(*) FROM claims").fetchone()[0] == 3
+        assert connection.execute("SELECT count(*) FROM nodes").fetchone()[0] == 2
+
+
 async def test_extraction_failure_rolls_back_entire_article(database):
     llm = fake_llm([json.dumps(claim()) + "\n", "broken json"])
     with pytest.raises(ValueError):
@@ -170,10 +185,22 @@ async def test_fts_then_embeddings_merge_nodes(database):
         )
 
 
+async def test_merged_self_claim_does_not_leave_orphan_nodes(database):
+    llm = fake_llm()
+    llm.embed.side_effect = lambda text: np.array([1.0, 0.0])
+    report = await Extractor(database, llm, ContextBuilder(Path("prompts"))).extract(
+        source()
+    )
+    assert report.accepted == 0 and report.rejected == 1
+    with database.connection() as connection:
+        assert connection.execute("SELECT count(*) FROM nodes").fetchone()[0] == 0
+
+
 def test_source_frontmatter_date_is_not_invented(tmp_path):
     path = tmp_path / "article.md"
     path.write_text(
-        "---\nid: article\ntitle: Article\ntopic: security\npublished_at: 2026-09-16\n---\nseccomp\n"
+        "---\nid: article\ntitle: Article\ntopic: security\n"
+        "published_at: 2026-09-16\n---\nseccomp\n"
     )
     result = read_source(path)
     assert result.id == "article"
@@ -223,7 +250,8 @@ async def test_model_tools_cannot_write():
         if request.url.path == "/apply-template":
             return httpx.Response(200, json={"prompt": "Rendered fixture"})
         if request.url.path == "/tokenize":
-            return httpx.Response(200, json={"tokens": [1, 2]})
+            tokens = [0, 1, 2] if payload["add_special"] else [1, 2]
+            return httpx.Response(200, json={"tokens": tokens})
         return httpx.Response(
             200, json={"content": "{}", "stop": True, "stopped_limit": False}
         )
@@ -236,8 +264,9 @@ async def test_model_tools_cannot_write():
     assert all(
         "tools" not in payload and "tool_choice" not in payload for payload in sent
     )
-    assert sent[-1]["grammar"] == Path("grammars/claims.gbnf").read_text()
-    assert sent[-1]["prompt"] == [1, 2]
+    completion = next(payload for payload in sent if "grammar" in payload)
+    assert completion["grammar"] == Path("grammars/claims.gbnf").read_text()
+    assert completion["prompt"] == [0, 1, 2]
 
 
 async def test_embedding_endpoint_is_separate():
@@ -253,3 +282,37 @@ async def test_embedding_endpoint_is_separate():
         assert np.allclose(await llm.embed("Node"), [3.0, 4.0])
     assert requests[0].url.port == 8081
     assert requests[0].url.path == "/v1/embeddings"
+
+
+@pytest.mark.parametrize(
+    "termination",
+    [{"stopped_limit": True}, {"stop_type": "limit"}, {"truncated": True}],
+)
+async def test_truncated_generation_is_rejected(termination):
+    def handle(request):
+        if request.url.path == "/apply-template":
+            return httpx.Response(200, json={"prompt": "Rendered fixture"})
+        if request.url.path == "/tokenize":
+            return httpx.Response(200, json={"tokens": [1]})
+        return httpx.Response(200, json={"content": "{}", **termination})
+
+    request = ContextBuilder(Path("prompts")).build(
+        "extract", existing_node_names=[], article_chunk="Body"
+    )
+    async with LocalLLM(transport=httpx.MockTransport(handle)) as llm:
+        with pytest.raises(ValueError, match="truncated"):
+            await llm.generate(request)
+
+
+def test_embedding_storage_rejects_incompatible_vectors():
+    vector = np.array([3.0, 4.0])
+    blob = encode_vector(vector)
+    assert np.array_equal(decode_vector(blob), vector)
+    assert cosine(vector, vector) == pytest.approx(1)
+    for invalid in ([], [0.0, 0.0], [np.nan, 1], [np.inf, 1], [1e308, 1e308]):
+        with pytest.raises(ValueError):
+            encode_vector(np.array(invalid))
+    with pytest.raises(ValueError):
+        cosine(vector, np.array([1.0]))
+    with pytest.raises(ValueError):
+        decode_vector(blob + b"trailing")

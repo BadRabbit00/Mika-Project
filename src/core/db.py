@@ -196,6 +196,11 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "CREATE INDEX outbox_pending ON outbox(next_try_at) WHERE sent_at IS NULL",
         "CREATE INDEX mood_queue_fire_at ON mood_queue(fire_at)",
     ),
+    (
+        "ALTER TABLE sources ADD COLUMN content_hash TEXT",
+        "ALTER TABLE node_embeddings ADD COLUMN model TEXT",
+        "CREATE UNIQUE INDEX claims_source_hash ON claims(source_id, norm_hash)",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 
