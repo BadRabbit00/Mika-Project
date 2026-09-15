@@ -1,0 +1,44 @@
+# Python and development caches
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Nix and local environment
+.direnv/
+result
+result-*
+.env
+.env.*
+!.env.example
+
+# Runtime files; intentional SQLite snapshots may be committed separately.
+data/
+logs/
+backups/
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-journal
+*.sqlite-journal
+*.sqlite3-journal
+
+# Graphify caches and generated views; graph.json stays versioned.
+graphify-out/*
+!graphify-out/graph.json
+.graphify_*
+
+# Editor and OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store

@@ -1,0 +1,1 @@
+"""BlogAI application package."""
