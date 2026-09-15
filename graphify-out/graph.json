@@ -1,7 +1,7 @@
 {
+  "hyperedges": [],
   "input_tokens": 0,
   "output_tokens": 0,
-  "failed_sources": [],
   "nodes": [
     {
       "id": "pkg_blogai",
@@ -31,6 +31,31 @@
       "_origin": "ast"
     },
     {
+      "id": "src_cli",
+      "label": "cli.py",
+      "file_type": "code",
+      "source_file": "src/cli.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_cli_main",
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "src/cli.py",
+      "source_location": "L12",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_cli_rationale_1",
+      "label": "Command-line entry point for the storage foundation.",
+      "file_type": "rationale",
+      "source_file": "src/cli.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
       "id": "src_core_init",
       "label": "__init__.py",
       "file_type": "code",
@@ -47,6 +72,464 @@
       "_origin": "ast"
     },
     {
+      "id": "src_core_db",
+      "label": "db.py",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_utc",
+      "label": "_utc()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L26",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_pad",
+      "label": "_pad()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L30",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_is_utc_timestamp",
+      "label": "_is_utc_timestamp()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L203",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "any",
+      "label": "Any",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_is_locked",
+      "label": "_is_locked()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L216",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "operationalerror",
+      "label": "OperationalError",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_identifier",
+      "label": "_identifier()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L223",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_literal",
+      "label": "_literal()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L227",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_install_audit_triggers",
+      "label": "_install_audit_triggers()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L231",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "connection",
+      "label": "Connection",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database",
+      "label": "Database",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L285",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L288",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_py_path",
+      "label": "Path",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_retry",
+      "label": "._retry()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L293",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "t",
+      "label": "T",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_connection",
+      "label": ".connection()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L308",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_transaction",
+      "label": "._transaction()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L337",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_run_transaction",
+      "label": ".run_transaction()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L379",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_initialize",
+      "label": ".initialize()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L389",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_database_migrate",
+      "label": ".migrate()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L393",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_require_transaction",
+      "label": "_require_transaction()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L428",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_make_idem_key",
+      "label": "make_idem_key()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L433",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_enqueue_outbox",
+      "label": "enqueue_outbox()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L441",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_py_datetime",
+      "label": "datetime",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_insert_mood",
+      "label": "insert_mood()",
+      "file_type": "code",
+      "source_file": "src/core/db.py",
+      "source_location": "L486",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_1",
+      "label": "SQLite schema, explicit transactions, bounded retries, and outbox storage. All…",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_232",
+      "label": "Record row diffs on this connection, excluding FTS implementation tables. Diffs…",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L232",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_286",
+      "label": "Open one WAL connection per operation; share paths, never connections.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L286",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_309",
+      "label": "Open, configure, and close a connection; never implicitly commit.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L309",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_371",
+      "label": "Retry BEGIN/COMMIT locks; a with-body cannot be replayed automatically. Body…",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L371",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_380",
+      "label": "Replay database-only work after rollback, with five 200 ms retries.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L380",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_390",
+      "label": "Create or upgrade the database to the current schema version.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L390",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_394",
+      "label": "Apply ordered migrations and user_version in one atomic transaction.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L394",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_434",
+      "label": "Encode the pair without delimiter collisions or lossy hashing.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L434",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_449",
+      "label": "Insert intent in the caller's transaction; preserve an existing row. Reusing a…",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L449",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_db_rationale_501",
+      "label": "Append a validated snapshot; mood dynamics belong to delivery step 4.",
+      "file_type": "rationale",
+      "source_file": "src/core/db.py",
+      "source_location": "L501",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_logging",
+      "label": "logging.py",
+      "file_type": "code",
+      "source_file": "src/core/logging.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_logging_timestamp",
+      "label": "_timestamp()",
+      "file_type": "code",
+      "source_file": "src/core/logging.py",
+      "source_location": "L11",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_logging_configure_logging",
+      "label": "configure_logging()",
+      "file_type": "code",
+      "source_file": "src/core/logging.py",
+      "source_location": "L16",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_logging_py_path",
+      "label": "Path",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_logging_rationale_1",
+      "label": "Structured JSONL logs with UTC timestamps and exception tracebacks.",
+      "file_type": "rationale",
+      "source_file": "src/core/logging.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_logging_rationale_17",
+      "label": "Configure application logging once at the entry point. A supplied file always…",
+      "file_type": "rationale",
+      "source_file": "src/core/logging.py",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils",
+      "label": "time_utils.py",
+      "file_type": "code",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_now",
+      "label": "now()",
+      "file_type": "code",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L14",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_py_datetime",
+      "label": "datetime",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_require_aware",
+      "label": "require_aware()",
+      "file_type": "code",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L19",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_to_utc_iso",
+      "label": "to_utc_iso()",
+      "file_type": "code",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L28",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_from_utc_iso",
+      "label": "from_utc_iso()",
+      "file_type": "code",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L36",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_rationale_1",
+      "label": "Named local timezone in Python; validated UTC text at storage boundaries.",
+      "file_type": "rationale",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_rationale_15",
+      "label": "Return the current instant in Asia/Almaty.",
+      "file_type": "rationale",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_rationale_20",
+      "label": "Reject naive values and normalize aware inputs to Asia/Almaty.",
+      "file_type": "rationale",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L20",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_rationale_29",
+      "label": "Serialize without losing microseconds, using a canonical UTC Z suffix.",
+      "file_type": "rationale",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L29",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_time_utils_rationale_37",
+      "label": "Read a UTC database timestamp into an aware Asia/Almaty datetime.",
+      "file_type": "rationale",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L37",
+      "_origin": "ast"
+    },
+    {
       "id": "tests_test_db_and_time",
       "label": "test_db_and_time.py",
       "file_type": "code",
@@ -55,7 +538,7 @@
       "_origin": "ast"
     },
     {
-      "id": "fixture",
+      "id": "tests_test_db_and_time_py_fixture",
       "label": "fixture",
       "file_type": "code",
       "source_file": "",
@@ -165,7 +648,7 @@
       "label": "test_only_closed_relation_vocabulary_is_accepted()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L158",
+      "source_location": "L159",
       "_callable": true,
       "_origin": "ast"
     },
@@ -174,7 +657,7 @@
       "label": "test_fts_tracks_insert_update_delete_and_rollback()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L181",
+      "source_location": "L182",
       "_callable": true,
       "_origin": "ast"
     },
@@ -183,7 +666,7 @@
       "label": "test_migrations_upgrade_and_reopen_without_losing_data()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L212",
+      "source_location": "L213",
       "_callable": true,
       "_origin": "ast"
     },
@@ -192,7 +675,7 @@
       "label": "test_migration_failure_is_atomic()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L238",
+      "source_location": "L239",
       "_callable": true,
       "_origin": "ast"
     },
@@ -201,7 +684,7 @@
       "label": "test_future_schema_and_downgrades_are_rejected()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L255",
+      "source_location": "L256",
       "_callable": true,
       "_origin": "ast"
     },
@@ -210,7 +693,7 @@
       "label": "test_unversioned_existing_schema_is_not_silently_adopted()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L264",
+      "source_location": "L265",
       "_callable": true,
       "_origin": "ast"
     },
@@ -219,7 +702,7 @@
       "label": "enqueue()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L272",
+      "source_location": "L273",
       "_callable": true,
       "_origin": "ast"
     },
@@ -228,7 +711,7 @@
       "label": "test_outbox_idempotent()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L282",
+      "source_location": "L283",
       "_callable": true,
       "_origin": "ast"
     },
@@ -237,7 +720,7 @@
       "label": "test_outbox_keys_do_not_collide()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L304",
+      "source_location": "L305",
       "_callable": true,
       "_origin": "ast"
     },
@@ -246,7 +729,7 @@
       "label": "test_outbox_conflicting_payload_is_rejected()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L315",
+      "source_location": "L316",
       "_callable": true,
       "_origin": "ast"
     },
@@ -255,7 +738,7 @@
       "label": "test_outbox_requires_an_atomic_transaction()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L323",
+      "source_location": "L324",
       "_callable": true,
       "_origin": "ast"
     },
@@ -264,7 +747,7 @@
       "label": "test_post_and_outbox_are_rolled_back_together()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L329",
+      "source_location": "L330",
       "_callable": true,
       "_origin": "ast"
     },
@@ -273,7 +756,7 @@
       "label": "test_transaction_retries_a_real_sqlite_lock()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L342",
+      "source_location": "L343",
       "_callable": true,
       "_origin": "ast"
     },
@@ -282,7 +765,7 @@
       "label": "test_lock_retries_are_bounded()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L360",
+      "source_location": "L361",
       "_callable": true,
       "_origin": "ast"
     },
@@ -291,7 +774,7 @@
       "label": "test_non_lock_error_is_not_retried()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L371",
+      "source_location": "L372",
       "_callable": true,
       "_origin": "ast"
     },
@@ -300,7 +783,7 @@
       "label": "test_callback_replays_only_after_rollback()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L381",
+      "source_location": "L382",
       "_callable": true,
       "_origin": "ast"
     },
@@ -309,7 +792,7 @@
       "label": "test_concurrent_outbox_writers_deduplicate()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L398",
+      "source_location": "L399",
       "_callable": true,
       "_origin": "ast"
     },
@@ -318,7 +801,7 @@
       "label": "test_concurrent_initialization()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L404",
+      "source_location": "L405",
       "_callable": true,
       "_origin": "ast"
     },
@@ -327,7 +810,7 @@
       "label": "test_mood_storage_rounds_pad()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L420",
+      "source_location": "L421",
       "_callable": true,
       "_origin": "ast"
     },
@@ -336,7 +819,7 @@
       "label": "test_no_prompt_strings_in_code()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L447",
+      "source_location": "L448",
       "_callable": true,
       "_origin": "ast"
     },
@@ -345,7 +828,7 @@
       "label": "test_no_unzoned_clock_calls_in_application_code()",
       "file_type": "code",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L463",
+      "source_location": "L464",
       "_callable": true,
       "_origin": "ast"
     },
@@ -354,6 +837,84 @@
       "label": "Step 1 contracts, written before the storage implementation.",
       "file_type": "rationale",
       "source_file": "tests/test_db_and_time.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli",
+      "label": "test_logging_and_cli.py",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_py_fixture",
+      "label": "fixture",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_log_path",
+      "label": "log_path()",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L17",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_test_jsonl_contains_row_diffs_and_commit_outcome",
+      "label": "test_jsonl_contains_row_diffs_and_commit_outcome()",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L37",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_test_rollback_logs_attempted_changes_and_traceback",
+      "label": "test_rollback_logs_attempted_changes_and_traceback()",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L64",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_test_blob_row_changes_can_be_logged",
+      "label": "test_blob_row_changes_can_be_logged()",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L84",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_test_init_db_cli_is_repeatable",
+      "label": "test_init_db_cli_is_repeatable()",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L103",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_test_init_db_cli_reports_failure_with_nonzero_exit",
+      "label": "test_init_db_cli_reports_failure_with_nonzero_exit()",
+      "file_type": "code",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L126",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_logging_and_cli_rationale_1",
+      "label": "Observable storage changes and an executable, logged initialization command.",
+      "file_type": "rationale",
+      "source_file": "tests/test_logging_and_cli.py",
       "source_location": "L1",
       "_origin": "ast"
     },
@@ -1624,6 +2185,78 @@
       "_origin": "ast"
     },
     {
+      "id": "readme",
+      "label": "README.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_blogai",
+      "label": "BlogAI",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_development",
+      "label": "Development",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_storage",
+      "label": "Storage",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L45",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_time",
+      "label": "Time",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L85",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_logs",
+      "label": "Logs",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L101",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_repository_workflow",
+      "label": "Repository workflow",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L114",
+      "_origin": "ast"
+    },
+    {
+      "id": "readme_open_requirements",
+      "label": "Open requirements",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "README.md",
+      "source_location": "L131",
+      "_origin": "ast"
+    },
+    {
       "id": "docs_todo",
       "label": "TODO.md",
       "file_type": "document",
@@ -2332,12 +2965,1135 @@
       "_origin": "ast"
     },
     {
+      "source": "src_cli",
+      "target": "argparse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "src_core_db",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "src_core_logging",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "src_cli_main",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli_rationale_1",
+      "target": "src_cli",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "src_core_init_rationale_1",
       "target": "src_core_init",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/core/__init__.py",
       "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "json",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "math",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "sqlite3",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "time",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "collections_abc",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "contextlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_py_datetime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "typing",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "uuid",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_utc",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_pad",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_is_utc_timestamp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L203",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_is_utc_timestamp",
+      "target": "any",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L203",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_is_locked",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_is_locked",
+      "target": "operationalerror",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_identifier",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L223",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_literal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L227",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_install_audit_triggers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_install_audit_triggers",
+      "target": "connection",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_database",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L285",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L288",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_init",
+      "target": "src_core_db_py_path",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L288",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_retry",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L293",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_retry",
+      "target": "t",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L293",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_connection",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L308",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_connection",
+      "target": "connection",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L308",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_transaction",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L337",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_transaction",
+      "target": "connection",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L337",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_run_transaction",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L379",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_run_transaction",
+      "target": "connection",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L379",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_run_transaction",
+      "target": "t",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L379",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_initialize",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L389",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database",
+      "target": "src_core_db_database_migrate",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L393",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_require_transaction",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L428",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_require_transaction",
+      "target": "connection",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L428",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_make_idem_key",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L433",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_enqueue_outbox",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L441",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "connection",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L441",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "any",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L441",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "src_core_db_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L441",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_db_insert_mood",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L486",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_insert_mood",
+      "target": "connection",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L486",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_insert_mood",
+      "target": "src_core_db_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L486",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_install_audit_triggers",
+      "target": "src_core_db_identifier",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L259",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_install_audit_triggers",
+      "target": "src_core_db_literal",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L280",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_init",
+      "target": "src_core_db_py_path",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L291",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_retry",
+      "target": "src_core_db_is_locked",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L298",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_connection",
+      "target": "src_core_db_is_utc_timestamp",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/core/db.py",
+      "source_location": "L315",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_connection",
+      "target": "src_core_db_database_retry",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L317",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_connection",
+      "target": "src_core_db_install_audit_triggers",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L325",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_run_transaction",
+      "target": "src_core_db_database_connection",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L381",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_run_transaction",
+      "target": "src_core_db_database_retry",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L387",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_initialize",
+      "target": "src_core_db_database_migrate",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L391",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_database_migrate",
+      "target": "src_core_db_database_run_transaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L423",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "src_core_db_require_transaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L455",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "src_core_db_make_idem_key",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L456",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_insert_mood",
+      "target": "src_core_db_require_transaction",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L502",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_1",
+      "target": "src_core_db",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_232",
+      "target": "src_core_db_install_audit_triggers",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L232",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_286",
+      "target": "src_core_db_database",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L286",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_309",
+      "target": "src_core_db_database_connection",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L309",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_371",
+      "target": "src_core_db_database_transaction",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L371",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_380",
+      "target": "src_core_db_database_run_transaction",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L380",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_390",
+      "target": "src_core_db_database_initialize",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L390",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_394",
+      "target": "src_core_db_database_migrate",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L394",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_434",
+      "target": "src_core_db_make_idem_key",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L434",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_449",
+      "target": "src_core_db_enqueue_outbox",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L449",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_rationale_501",
+      "target": "src_core_db_insert_mood",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L501",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "logging",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "src_core_logging_timestamp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "src_core_logging_configure_logging",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_configure_logging",
+      "target": "src_core_logging_py_path",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_configure_logging",
+      "target": "src_core_logging_timestamp",
+      "relation": "indirect_call",
+      "context": "collection",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/core/logging.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_configure_logging",
+      "target": "src_core_logging_py_path",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_rationale_1",
+      "target": "src_core_logging",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_rationale_17",
+      "target": "src_core_logging_configure_logging",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "re",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "src_core_time_utils_py_datetime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "zoneinfo",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "src_core_time_utils_now",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_now",
+      "target": "src_core_time_utils_py_datetime",
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_require_aware",
+      "target": "src_core_time_utils_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_to_utc_iso",
+      "target": "src_core_time_utils_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_from_utc_iso",
+      "target": "src_core_time_utils_py_datetime",
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_to_utc_iso",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_rationale_1",
+      "target": "src_core_time_utils",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_rationale_15",
+      "target": "src_core_time_utils_now",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_rationale_20",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_rationale_29",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_time_utils_rationale_37",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/time_utils.py",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2464,7 +4220,7 @@
     },
     {
       "source": "tests_test_db_and_time_database",
-      "target": "fixture",
+      "target": "tests_test_db_and_time_py_fixture",
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
@@ -2612,7 +4368,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L158",
+      "source_location": "L159",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2622,7 +4378,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L181",
+      "source_location": "L182",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2632,7 +4388,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L212",
+      "source_location": "L213",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2642,7 +4398,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L238",
+      "source_location": "L239",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2652,7 +4408,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L255",
+      "source_location": "L256",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2662,7 +4418,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L264",
+      "source_location": "L265",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2672,7 +4428,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L272",
+      "source_location": "L273",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2682,7 +4438,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L282",
+      "source_location": "L283",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2692,7 +4448,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L304",
+      "source_location": "L305",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2702,7 +4458,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L315",
+      "source_location": "L316",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2712,7 +4468,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L323",
+      "source_location": "L324",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2722,7 +4478,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L329",
+      "source_location": "L330",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2732,7 +4488,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L342",
+      "source_location": "L343",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2742,7 +4498,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L360",
+      "source_location": "L361",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2752,7 +4508,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L371",
+      "source_location": "L372",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2762,7 +4518,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L381",
+      "source_location": "L382",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2772,7 +4528,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L398",
+      "source_location": "L399",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2782,7 +4538,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L404",
+      "source_location": "L405",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2792,7 +4548,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L420",
+      "source_location": "L421",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2802,7 +4558,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L447",
+      "source_location": "L448",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2812,7 +4568,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L463",
+      "source_location": "L464",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2823,7 +4579,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L285",
+      "source_location": "L286",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2834,7 +4590,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L309",
+      "source_location": "L310",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2846,7 +4602,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L316",
+      "source_location": "L317",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2857,7 +4613,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L319",
+      "source_location": "L320",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2868,7 +4624,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L326",
+      "source_location": "L327",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2880,7 +4636,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L366",
+      "source_location": "L367",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2892,7 +4648,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "tests/test_db_and_time.py",
-      "source_location": "L400",
+      "source_location": "L401",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -2902,6 +4658,186 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_db_and_time.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "json",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "logging",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "subprocess",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "sys",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "pytest",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "src_core_db",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "src_core_logging",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_log_path",
+      "target": "tests_test_logging_and_cli_py_fixture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "context": "decorator",
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "tests_test_logging_and_cli_log_path",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "tests_test_logging_and_cli_test_jsonl_contains_row_diffs_and_commit_outcome",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "tests_test_logging_and_cli_test_rollback_logs_attempted_changes_and_traceback",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "tests_test_logging_and_cli_test_blob_row_changes_can_be_logged",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "tests_test_logging_and_cli_test_init_db_cli_is_repeatable",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L103",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "tests_test_logging_and_cli_test_init_db_cli_reports_failure_with_nonzero_exit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_rationale_1",
+      "target": "tests_test_logging_and_cli",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
       "source_location": "L1",
       "weight": 1.0,
       "_origin": "ast"
@@ -4321,6 +6257,96 @@
       "_origin": "ast"
     },
     {
+      "source": "readme",
+      "target": "readme_blogai",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme",
+      "target": "architecture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme_blogai",
+      "target": "readme_development",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme_blogai",
+      "target": "readme_storage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L45",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme_blogai",
+      "target": "readme_time",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme_blogai",
+      "target": "readme_logs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L101",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme_blogai",
+      "target": "readme_repository_workflow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L114",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme_blogai",
+      "target": "readme_open_requirements",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L131",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "readme",
+      "target": "docs_todo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L133",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "docs_todo",
       "target": "docs_todo_architecture_questions_and_deferred_contracts",
       "relation": "contains",
@@ -4817,6 +6843,602 @@
       "confidence": "EXTRACTED",
       "source_file": "prompts/persona.md",
       "source_location": "L341",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "src_core_db_database",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli",
+      "target": "src_core_logging_configure_logging",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_time_utils_now",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "src_core_time_utils_now",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "src_core_db_database",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "src_core_logging_configure_logging",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time",
+      "target": "src_core_db",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli_main",
+      "target": "src_core_logging_configure_logging",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli_main",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/cli.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_is_utc_timestamp",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L466",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_enqueue_outbox",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L466",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_db_insert_mood",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/db.py",
+      "source_location": "L510",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_timestamp",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_logging_timestamp",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/logging.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_jsonl_contains_row_diffs_and_commit_outcome",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_jsonl_contains_row_diffs_and_commit_outcome",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L49",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_rollback_logs_attempted_changes_and_traceback",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_blob_row_changes_can_be_logged",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_cli_main",
+      "target": "src_core_db_database",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "src/cli.py",
+      "source_location": "L22",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_jsonl_contains_row_diffs_and_commit_outcome",
+      "target": "src_core_db_database",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L38",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_rollback_logs_attempted_changes_and_traceback",
+      "target": "src_core_db_database",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L65",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_test_blob_row_changes_can_be_logged",
+      "target": "src_core_db_database",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L85",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_fts_tracks_insert_update_delete_and_rollback",
+      "target": "src_core_db_database_connection",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L200",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_idempotent",
+      "target": "src_core_db_database_connection",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L286",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_keys_do_not_collide",
+      "target": "src_core_db_database_connection",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L310",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_conflicting_payload_is_rejected",
+      "target": "src_core_db_database_connection",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L320",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_requires_an_atomic_transaction",
+      "target": "src_core_db_database_connection",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L327",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_concurrent_initialization",
+      "target": "src_core_db_database_initialize",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L414",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_mood_storage_rounds_pad",
+      "target": "src_core_db_database_connection",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L425",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_logging_and_cli_log_path",
+      "target": "src_core_logging_configure_logging",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_logging_and_cli.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_database",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_timezone_everywhere",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_timezone_everywhere",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_timezone_everywhere",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_timezone_everywhere",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_invalid_database_timestamps_are_rejected",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_sqlite_datetime_round_trip_without_shift",
+      "target": "src_core_time_utils_from_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L111",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_migrations_upgrade_and_reopen_without_losing_data",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L214",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_migration_failure_is_atomic",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L240",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_unversioned_existing_schema_is_not_silently_adopted",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L266",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_enqueue",
+      "target": "src_core_db_enqueue_outbox",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L274",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_idempotent",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L284",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_idempotent",
+      "target": "src_core_db_database",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L288",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_outbox_idempotent",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L294",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_mood_storage_rounds_pad",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L422",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_db_and_time_test_mood_storage_rounds_pad",
+      "target": "src_core_db_insert_mood",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_db_and_time.py",
+      "source_location": "L424",
       "weight": 1.0,
       "_origin": "ast"
     }

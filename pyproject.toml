@@ -8,6 +8,9 @@ description = "Storage and timezone foundation for the BlogAI agents"
 requires-python = ">=3.12,<3.13"
 dependencies = ["structlog>=25.5,<27"]
 
+[project.scripts]
+blogai = "src.cli:main"
+
 [dependency-groups]
 dev = ["pytest>=8.3,<10", "ruff>=0.12,<1"]
 

@@ -151,7 +151,8 @@ def test_wal_and_foreign_keys_on_every_connection(database):
             assert connection.execute("PRAGMA foreign_keys").fetchone()[0] == 1
             with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY"):
                 connection.execute(
-                    "INSERT INTO edges(src, rel, dst) VALUES ('absent', 'is_a', 'absent')"
+                    "INSERT INTO edges(src, rel, dst) "
+                    "VALUES ('absent', 'is_a', 'absent')"
                 )
 
 

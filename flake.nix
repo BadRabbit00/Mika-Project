@@ -25,6 +25,7 @@
 
   outputs =
     {
+      self,
       nixpkgs,
       pyproject-nix,
       uv2nix,
@@ -33,7 +34,10 @@
     }:
     let
       inherit (nixpkgs) lib;
-      forAllSystems = lib.genAttrs [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = lib.genAttrs [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
 
       workspace = uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
 
@@ -73,7 +77,11 @@
         in
         {
           bootstrap = pkgs.mkShell {
-            packages = [ pkgs.python312 pkgs.uv pkgs.git ];
+            packages = [
+              pkgs.python312
+              pkgs.uv
+              pkgs.git
+            ];
             UV_PYTHON = pkgs.python312.interpreter;
             UV_PYTHON_DOWNLOADS = "never";
           };
@@ -102,5 +110,49 @@
       packages = forAllSystems (system: {
         default = pythonSets.${system}.mkVirtualEnv "blogai-env" workspace.deps.default;
       });
+
+      apps = forAllSystems (system: {
+        default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/blogai";
+          meta.description = "Initialize and migrate BlogAI SQLite storage";
+        };
+      });
+
+      checks = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          testEnv = pythonSets.${system}.mkVirtualEnv "blogai-test-env" workspace.deps.all;
+        in
+        {
+          tests =
+            pkgs.runCommand "blogai-checks"
+              {
+                nativeBuildInputs = [
+                  testEnv
+                  pkgs.uv
+                  pkgs.nixfmt
+                ];
+                PYTHONTZPATH = "${pkgs.tzdata}/share/zoneinfo";
+                UV_PYTHON = pkgs.python312.interpreter;
+                UV_PYTHON_DOWNLOADS = "never";
+                UV_NO_CACHE = "1";
+              }
+              ''
+                cp -r ${lib.cleanSource ./.} source
+                chmod -R u+w source
+                cd source
+                uv lock --check --offline
+                pytest -q
+                ruff check src tests
+                ruff format --check src tests
+                nixfmt --check flake.nix
+                touch "$out"
+              '';
+        }
+      );
+
+      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt);
     };
 }
