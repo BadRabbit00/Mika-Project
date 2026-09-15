@@ -27,7 +27,7 @@ CONTRACTS = {
         "test_clamp",
     },
     "src/validator.py": {"test_validator_rejects_cjk", "test_validator_strips_fences"},
-    "src/core/context.py": {
+    "src/writer.py": {
         "test_context_isolation_offtop",
         "test_context_isolation_quiz",
         "test_curator_text_uses_user_role",
@@ -48,7 +48,7 @@ def test_behavioral_contracts_required_when_stage_is_implemented(module, require
         node.name
         for path in Path("tests").rglob("test_*.py")
         for node in ast.walk(ast.parse(path.read_text()))
-        if isinstance(node, ast.FunctionDef)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
     assert required <= declared, (
         f"Missing behavioral tests for {module}: {required - declared}"
