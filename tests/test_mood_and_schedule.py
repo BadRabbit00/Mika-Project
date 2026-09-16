@@ -34,7 +34,9 @@ START = datetime(2026, 9, 14, tzinfo=ALMATY)
 
 @pytest.fixture
 def model():
-    return MoodModel.from_config(Path("config"), epoch=START)
+    model = MoodModel.from_config(Path("config"), epoch=START)
+    model.cycle._config["length_jitter_days"] = [0, 0]
+    return model
 
 
 @pytest.fixture
@@ -58,7 +60,7 @@ def test_pierce():
 
 
 def test_decay_to_baseline():
-    # TODO(DECAY-ASSERTION): the section 31.1 six-hour <0.1 claim is inconsistent.
+    # The corrected specification preserves the literal half-life formula.
     assert decay("A", 0.9, baseline=-0.4, hours=6) == pytest.approx(-0.2375)
     assert abs(decay("A", 0.9, baseline=-0.4, hours=6) + 0.4) == pytest.approx(0.1625)
     assert abs(decay("A", 0.9, baseline=-0.4, hours=8) + 0.4) < 0.1
@@ -103,7 +105,13 @@ def test_cycle_modifiers_are_literal_and_repeat_after_28_days(model):
     assert late.baseline.P == -0.15 + -0.10
     assert model.coefficients(late_at)["P"].out_neg == 1.4 * 0.8
     assert model.coefficients(late_at)["P"].inward_boost == 0.9 * 0.7
-    assert model.cycle.at(START + timedelta(days=28)) == first
+    following = model.cycle.at(START + timedelta(days=28))
+    assert (following.day, following.id, following.baseline) == (
+        first.day,
+        first.id,
+        first.baseline,
+    )
+    assert following.cycle_number == first.cycle_number + 1
 
 
 def test_floating_baseline_uses_dayparts_debt_and_explicit_history(model):
@@ -319,6 +327,9 @@ def test_repeated_timestamp_is_rejected_without_rewriting_history(service):
 
 
 def test_unspecified_trigger_outcome_does_not_mutate_state(service):
+    service.model.triggers["parents_pressure"]["resolution"] = [
+        {"id": "partial", "p": 0.1, "delta": [0, 0, 0], "after_hours": 24}
+    ]
     with pytest.raises(UnspecifiedResolution):
         service.fire_trigger(
             "parents_pressure",
@@ -331,6 +342,98 @@ def test_unspecified_trigger_outcome_does_not_mutate_state(service):
     with service.database.connection() as connection:
         assert connection.execute("SELECT count(*) FROM mood").fetchone()[0] == 0
         assert connection.execute("SELECT count(*) FROM mood_queue").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("length", [26, 27, 28, 29, 30])
+def test_cycle_jitter_changes_only_follicular_phase(model, length):
+    from collections import Counter
+
+    from src.core.cycle import Cycle
+
+    config = dict(
+        model._data["cycle"], start_day=1, length_jitter_days=[length - 28, length - 28]
+    )
+    cycle = Cycle(config, epoch=START)
+    phases = [cycle.at(START + timedelta(days=i)) for i in range(length)]
+    assert Counter(p.id for p in phases) == {
+        "menstrual": 5,
+        "follicular": length - 20,
+        "ovulatory": 3,
+        "luteal": 12,
+    }
+    assert phases[-6].baseline.P == -0.15
+    assert all(p.baseline.P == -0.15 + -0.10 for p in phases[-5:])
+    assert cycle.at(START + timedelta(days=length)).day == 1
+
+
+def test_cycle_jitter_replays_across_restart_and_negative_cycle_numbers():
+    first = MoodModel.from_config(Path("config"), epoch=START).cycle
+    restarted = MoodModel.from_config(Path("config"), epoch=START).cycle
+    for offset in range(-100, 401):
+        at = START + timedelta(days=offset)
+        assert first.at(at) == restarted.at(at)
+    lengths = {first.length(i) for i in range(-10, 20)}
+    assert lengths <= set(range(26, 31)) and len(lengths) > 1
+
+
+def test_disabled_mood_is_neutral_and_drops_resolutions_on_event(service):
+    service.fire_trigger(
+        "fight_with_boyfriend",
+        at=START,
+        context=BaselineContext(),
+        next_exam_at=None,
+        rng=Random(1),
+    )
+    service.model._settings["mood.enabled"] = False
+    state = service.record_event(
+        "article_received", at=START + timedelta(hours=1), context=BaselineContext()
+    )
+    assert state.mood == Mood(0, 0, 0) and state.baseline == Mood(0, 0, 0)
+    assert service.pending_resolutions(START + timedelta(days=2)) == []
+    assert not any(c.isdigit() for c in service.model.mood_block(state.mood))
+    with service.database.connection() as c:
+        assert c.execute("SELECT count(*) FROM mood_queue").fetchone()[0] == 0
+
+
+def test_rolling_trigger_week_does_not_reset_on_monday(service):
+    sunday = START + timedelta(days=6)
+    service.fire_trigger(
+        "boyfriend_sweet",
+        at=sunday,
+        context=BaselineContext(),
+        next_exam_at=None,
+        rng=Random(1),
+    )
+    with pytest.raises(TriggerBlocked, match="Weekly"):
+        service.fire_trigger(
+            "parents_proud",
+            at=sunday + timedelta(days=5),
+            context=BaselineContext(),
+            next_exam_at=None,
+            rng=Random(1),
+        )
+
+
+def test_baseline_history_uses_approved_windows(model):
+    recent = BaselineContext.from_history(
+        at=START + timedelta(hours=72),
+        windows=model._data["baseline_windows"],
+        exam=(START, "failed"),
+        correction_at=START + timedelta(hours=24),
+        waiting_since=START,
+        quiz_streak=3,
+    )
+    assert recent.exam_result == "failed" and recent.correction_recent
+    assert recent.stuck_days == 3 and recent.quiz_streak_good
+    stale = BaselineContext.from_history(
+        at=START + timedelta(hours=73),
+        windows=model._data["baseline_windows"],
+        exam=(START, "failed"),
+        correction_at=START + timedelta(hours=24),
+        quiz_streak=2,
+    )
+    assert stale.exam_result is None and not stale.correction_recent
+    assert not stale.quiz_streak_good
 
 
 @pytest.mark.parametrize(

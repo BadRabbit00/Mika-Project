@@ -185,6 +185,7 @@ events:
 
 triggers:
   rules:
+    week_window: rolling
     max_per_week: 1
     cooldown_days: 4
     never_before_exam_hours: 12     # не ломать ей экзамен
@@ -203,6 +204,7 @@ triggers:
         - {id: still_angry, p: 0.4, delta: [-0.10, -0.20, -0.10], after_hours: 30}
 
     - id: boyfriend_sweet
+      resolution: []
       who: timur
       weight: 2
       delta: [+0.50, +0.25, +0.20]
@@ -217,8 +219,10 @@ triggers:
       text_hint: "мама опять про то, что пора думать о нормальной профессии"
       resolution:
         - {id: let_go, p: 0.7, delta: [+0.35, -0.20, +0.25], after_hours: 24}
+        - {id: stewing, p: 0.3, delta: [-0.05, -0.10, -0.05], after_hours: 36}
 
     - id: parents_proud
+      resolution: []
       who: mama
       weight: 1
       delta: [+0.55, +0.15, +0.40]
@@ -226,6 +230,7 @@ triggers:
       text_hint: "мама похвалила, и это неожиданно сильно её задело"
 
     - id: grade_disaster
+      resolution: []
       who: universitet
       weight: 2
       delta: [-0.40, +0.25, -0.45]
@@ -240,6 +245,7 @@ triggers:
       text_hint: "поцапались с соседкой из-за бытовой ерунды"
       resolution:
         - {id: made_up, p: 0.85, delta: [+0.30, -0.15, +0.10], after_hours: 12}
+        - {id: cold_war, p: 0.15, delta: [-0.10, -0.10, -0.05], after_hours: 24}
 
 # ══════════════════════════════════════════════════════════════════
 # 7. ВЛИЯНИЕ НА ПОВЕДЕНИЕ. Считается кодом, в промпт не идёт.
@@ -280,7 +286,10 @@ behavior:
 cycle:
   enabled: true
   length_days: 28
-  start_offset_days: 11
+  start_day: 12
+  length_jitter_days: [-2, 2]
+  phase_lengths: {menstrual: 5, ovulatory: 3, luteal: 12}
+  luteal_late_last_n: 5
   phases:
     - id: menstrual
       days: [1, 5]
@@ -304,7 +313,6 @@ cycle:
       baseline: {P: -0.15, A: -0.08, D: -0.08}
       coef_mult:
         P: {out_neg: 0.80, inward_boost: 0.70}
-      late_days: [24, 28]
       late_extra: {P: -0.10, A: -0.10}
 
 # ══════════════════════════════════════════════════════════════════
@@ -324,3 +332,18 @@ events_world:
   channel_milestone:     {delta: [+0.35, +0.25, +0.20]}
   npc_drifted:           {delta: [-0.12,  0.00, -0.05]}
   npc_warm:              {delta: [+0.25, +0.10, +0.10]}
+
+baseline_windows:
+  exam_recent_hours: 72
+  correction_recent_hours: 48
+  quiz_streak_good_count: 3
+  stuck_days_from: 1
+
+disabled_state:
+  p: 0.0
+  a: 0.0
+  d: 0.0
+  band_text: "Ровное рабочее состояние."
+  octant_name: нейтрально
+  drop_queued_resolutions: true
+  skip_post_when_low: false
