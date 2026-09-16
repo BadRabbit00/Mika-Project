@@ -91,6 +91,16 @@ def test_correction_id_channel_and_sleep_storage_constraints(tmp_path):
         c.execute("INSERT INTO threads(channel) VALUES ('dm')")
         with pytest.raises(sqlite3.IntegrityError):
             c.execute(
-                "INSERT INTO sleep_log VALUES "
+                "INSERT INTO sleep_log(night,planned_bedtime,actual_bedtime,wake_at,"
+                "wake_reason,hours,debt_after,debt_applied) VALUES "
                 "('2026-09-16','2026-09-16','2026-09-16','2026-09-16','alarm',8,0,0)"
             )
+        c.execute(
+            "INSERT INTO sleep_log(night,planned_bedtime,actual_bedtime,wake_at,"
+            "wake_reason,hours,debt_after) VALUES "
+            "('2026-09-16','2026-09-15T20:00:00Z','2026-09-15T20:00:00Z',"
+            "'2026-09-16T04:00:00Z','alarm',8,0)"
+        )
+        for column, value in (("origin", "unknown"), ("override_until", "2026-09-17")):
+            with pytest.raises(sqlite3.IntegrityError):
+                c.execute(f"UPDATE sleep_log SET {column}=?", (value,))

@@ -1,5 +1,28 @@
 # Validation evidence
 
+## Autonomous world: 2026-09-16
+
+- Full devShell pytest run: 365 passed, including 17 autonomous-provider cases.
+- `nix flake check`: passed on x86_64-linux, including all tests and lint/format
+  checks. The aarch64-linux outputs were not built on this host.
+- `nix build .#default --no-link`: passed.
+- The one-command dry run reached EXAM with three sources, five answered questions,
+  five curator exam questions, and no external deliveries.
+- Graphify refreshed the code graph. Operator layout/state files and article data
+  are excluded from this graph; the SQL parser limitation described below remains.
+
+Coverage includes no-file startup with logged neutral defaults, persisted initial
+state across restart, date-seeded location probabilities, optional override expiry,
+the existing bedtime/wake formulas, stuck/down labels, latest article complexity,
+chronological debt accounting over two weeks, and migration of legacy night keys.
+Midnight crossings and unusually early bedtimes retain sleep blackouts. Expiring
+a distant future override cannot skip intervening nights. Completed nights retain
+their debt receipts. The CLI accepts a live run without --world-state.
+
+These checks use isolated databases and mocked external boundaries. They do not
+publish to Telegram or call a model. The supplied local startup files were not
+modified or included in the implementation commit.
+
 ## Approved decisions: final verification, 2026-09-16
 
 - `nix develop --command pytest -q --tb=short --show-capture=no`: 348 passed.
@@ -27,8 +50,9 @@ deltas, and band transitions from stored mood events and replies. An excursion
 that returns to its starting PAD has zero drift but retains its band changes.
 Open sessions do not invent an end observation.
 
-Only deployment inputs remain open: the six real first-topic articles, current
-world/sleep observations, and the actual Telegram layout and token environment.
+This earlier run still required a world-state file. That requirement is superseded
+by the autonomous-world correction below. Article content and real Telegram
+deployment are separate operational checks.
 No live Telegram delivery is claimed. See [TODO.md](TODO.md).
 
 ## Initial validation of architecture steps 2 and 3

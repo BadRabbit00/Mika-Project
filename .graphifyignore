@@ -6,3 +6,7 @@ data/
 logs/
 backups/
 result
+library/*.md
+mika-startup/
+config/telegram.yaml
+config/world-*.json

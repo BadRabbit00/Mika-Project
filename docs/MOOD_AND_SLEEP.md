@@ -33,8 +33,9 @@ after process restart. It finishes older pending nights before reading a later o
 Classes include five minutes after their end and no grace inside the lesson.
 Commute starts 45 minutes before the first class and lasts 40 minutes. Sleep,
 class, and commute blackout checks also run immediately before live publication.
-Current location and sleep observations are explicit caller inputs; their live
-format is documented in [LIVE_RUNTIME.md](LIVE_RUNTIME.md).
+Location and sleep are derived autonomously by default. An optional initial
+snapshot and expiring operator overrides are described in
+[LIVE_RUNTIME.md](LIVE_RUNTIME.md).
 
 ## Simulation
 

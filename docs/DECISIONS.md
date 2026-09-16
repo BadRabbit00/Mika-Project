@@ -297,7 +297,7 @@ ALTER TABLE exams ADD COLUMN exam_run_id TEXT REFERENCES exam_runs(id);
 | MOOD-BOUNDARIES | нижняя граница включительно, верхняя исключительно, `+1` в последней полосе |
 | MOOD-TIMESTAMP | отклонять неувеличивающееся время. Микросекунды не выдумывать |
 | CLASS-GRACE | внутрь пары не заходить |
-| WORLD-LOCATION | требовать место от вызывающей стороны |
+| WORLD-LOCATION | Superseded: derive location from section 26.1 by default; see the autonomous-world correction below. |
 | VALIDATOR-SEMANTICS | без LLM-судьи в первой версии |
 | OUTPUT-TRUNCATION | по сигналу сервера и висящей запятой, без требования точки |
 | KAOMOJI | скобки вокруг японской прозы — не исключение |
@@ -470,3 +470,17 @@ SleepProvider  → bedtime, wake, reason, debt из sleep_log
   populate sources.published_at only from explicitly supplied calendar dates.
 - The supplied semester date, 2026-09-01, is a Tuesday. Keep the date; the
   Monday comment in the original patch is incorrect.
+
+## Autonomous-world correction
+
+The user revoked the caller-supplied location requirement. DerivedWorldProvider
+uses section 26.1 and schedule.yaml, seeded by the Almaty calendar date.
+ScheduledSleepProvider calls plan_bedtime and resolve_wake, stores nights, and
+applies debt once through debt_applied. Bedtime mood labels come from the existing
+schedule.yaml mood_labels rules.
+
+The world-state file is optional. Its required data, when supplied, is only the
+initial PAD, its aware timestamp, and initial sleep debt. Location, road roll, and
+sleep intervals are optional overrides with a valid_until boundary. Expiry returns
+to the automatic providers. Without a file, neutral PAD and zero debt are logged
+and persisted as the initial snapshot; restart retains that snapshot and history.
