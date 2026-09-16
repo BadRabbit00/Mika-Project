@@ -48,7 +48,12 @@ async def run_telegram(
 
     async def drain():
         while not stop.is_set():
-            await mirror.drain()
+            try:
+                await mirror.drain()
+            except Exception:
+                structlog.get_logger("blogai.telegram").exception(
+                    "ops_batch_persistence_failed", ops_mirror=True
+                )
             for _ in range(64):
                 if await worker.run_once() == "idle":
                     break
@@ -145,7 +150,7 @@ async def run_telegram(
                 if learning is not None:
                     await learning.close()
                 await jobs.close()
-                await mirror.drain()
+                await mirror.drain(force=True)
     finally:
         logger.removeHandler(mirror)
         for bot in bots.values():

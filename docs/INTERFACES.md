@@ -16,6 +16,44 @@ Public delivery checks current blackout again. A locally deferred send is
 rescheduled without touching Telegram. Operational messages remain available.
 Each destination retains its own receipt, and every payload carries trace_id.
 
+Migration 13 adds `telegram_delivery_limits` without changing learning state,
+existing outbox payloads, receipts, or mood history. Delivery reserves a durable
+slot before the network call: at least 3.1 seconds between operations in a group
+across all topics and all three bots, 1.05 seconds in a private chat, and 0.04
+seconds per bot across chats. Concurrent workers and restarts share these limits.
+Telegram `retry_after` blocks both the bot and the chat, including newly queued
+operations, starting when the rejection is received. Posts and control replies
+take priority over Machine backlog. These are conservative local limits; remote
+flood control can still require a longer pause. See the
+[Telegram rate-limit FAQ](https://core.telegram.org/bots/faq#my-bot-is-hitting-limits-how-do-i-avoid-this).
+
+Idle and rate-limited polls use read-only connections and do not acquire a writer
+lock. Settings and frequent state reads also skip write-audit trigger setup.
+Writers let SQLite wait up to one second for short competing transactions before
+the existing five retries with 200 ms pauses. Transient retries are debug events;
+exhausted retries remain errors. WAL still has one writer at a time; this does
+not remove that SQLite constraint. See [SQLite WAL](https://www.sqlite.org/wal.html).
+
+## Machine log batches
+
+Machine events are grouped into at most ten events per card. Partial batches wait
+up to five seconds before entering the outbox; delivery can take longer when the
+group is busy. Cards split earlier to stay within 4,096 UTF-16 units. Each event
+retains its trace ID. Long display fields are abbreviated; local JSONL remains
+the complete record.
+
+At `full` verbosity with `log.attach_prompts` enabled, one JSON file accompanies
+each batch, with an `events` array containing the complete selected events.
+`log.show_thoughts=false` removes `thought` from each attached event. Quiet mode
+keeps errors and state transitions. The card and attachment enter the outbox in
+one transaction. Failed batches retain their payloads and idempotency keys for
+retry, including a lost commit acknowledgement.
+
+Outbox bookkeeping, delivery-limit changes, and the mirror's own diagnostics do
+not feed new mirror batches. A graceful shutdown persists partial batches. Once
+enqueued, batches use normal durable outbox recovery. Events still buffered only
+in memory can be absent from Telegram after an abrupt stop; JSONL is authoritative.
+
 ## Curator
 
 The devShell provides Claude Code. The backend uses subprocess.run in a worker

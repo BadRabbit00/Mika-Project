@@ -1118,6 +1118,15 @@ embeddings:
 
 ### 19.2 Как это ложится в Telegram
 
+Implementation update (2026-09-16, owner-requested batching): Telegram cards now
+group up to ten events, with a five-second flush window and earlier splitting
+at the message-size limit. Full attachments contain an `events` array. Event
+trace IDs and the complete local JSONL record are preserved. The card and its
+attachment are committed atomically. Shared, durable bot/chat pacing and
+`retry_after` handling apply to every outbox operation. See
+[docs/INTERFACES.md](docs/INTERFACES.md#machine-log-batches) for the current contract;
+the single-event example below illustrates the contents of one batch entry.
+
 Ограничение: 4096 символов на сообщение. Полный промпт туда
 не влезает, а резать его — потерять смысл лога.
 

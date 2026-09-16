@@ -330,12 +330,12 @@ async def test_machine_log_full_mode_queues_complete_attachment(database):
     mirror.emit(
         logging.LogRecord("blogai.curator", logging.INFO, "", 0, event, (), None)
     )
-    await mirror.drain()
+    await mirror.drain(force=True)
     with database.connection() as connection:
         rows = [
             json.loads(row[0])
             for row in connection.execute("SELECT payload FROM outbox ORDER BY id")
         ]
     assert len(rows) == 2 and len(rows[0]["text"]) < 4096
-    assert json.loads(rows[1]["content"])["user"] == "U" * 9000
+    assert json.loads(rows[1]["content"])["events"][0]["user"] == "U" * 9000
     assert all(row["destination"]["bot"] == "ops" for row in rows)

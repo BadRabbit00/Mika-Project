@@ -139,7 +139,7 @@ class DatabaseMoodProvider:
             if period
             else Mood(0, 0, 0)
         )
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             events = [
                 dict(row)
                 for row in c.execute(
@@ -193,7 +193,7 @@ class DatabaseMoodProvider:
         )
 
     def planning_p(self, at, debt):
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             row = c.execute(
                 "SELECT * FROM mood WHERE at<=? ORDER BY at DESC LIMIT 1", (at,)
             ).fetchone()
