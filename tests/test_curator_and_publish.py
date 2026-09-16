@@ -15,6 +15,9 @@ from pydantic import BaseModel, ConfigDict
 from src.core.db import Database
 from src.core.llm_vendor import ClaudeCodeBackend, VendorConfig, extract_json
 from src.core.time_utils import ALMATY
+from src.bot import BotIngress
+from src.core.tasks import JobQueue
+from src.core.telegram import TelegramLayout
 from src.publish import DeliveryRejected, Destination, OutboxWorker, Publisher
 
 AT = datetime(2026, 9, 16, 19, tzinfo=ALMATY)
@@ -262,3 +265,66 @@ def test_curator_does_not_repeat_timeout_as_json_repair(monkeypatch):
             "Fixture system", "Fixture task", VendorFixture, trace_id="timeout-chain"
         )
     assert run.call_count == 1
+
+
+def telegram_layout():
+    return TelegramLayout(
+        owner_id=123, group_id=-100123, channel_id=-100124,
+        topics=dict(diary=11, author=12, curator=13, chat=14, library=15,
+                    machine=16, control=17),
+    )
+
+
+async def test_diary_handler_ignores_user_messages():
+    from aiogram.types import Chat, Message, User
+    service = AsyncMock()
+    jobs = JobQueue()
+    ingress = BotIngress(telegram_layout(), {10: "mika", 20: "curator", 30: "ops"}, jobs, service)
+    message = Message(message_id=1, date=AT, chat=Chat(id=-100123, type="supergroup"),
+                      message_thread_id=11, from_user=User(id=123, is_bot=False, first_name="Owner"),
+                      text="/state")
+    await ingress.on_message(message, SimpleNamespace(id=10))
+    assert jobs.pending == 0
+    service.command.assert_not_awaited()
+    service.chat.assert_not_awaited()
+
+
+async def test_model_calls_use_task_queue():
+    from aiogram.types import Chat, Message, User
+    service = AsyncMock()
+    jobs = JobQueue()
+    ingress = BotIngress(telegram_layout(), {30: "ops"}, jobs, service)
+    message = Message(message_id=2, date=AT, chat=Chat(id=-100123, type="supergroup"),
+                      message_thread_id=17, from_user=User(id=123, is_bot=False, first_name="Owner"),
+                      text="/health")
+    await ingress.on_message(message, SimpleNamespace(id=30))
+    service.command.assert_not_awaited()
+    assert jobs.pending == 1
+    await jobs.start()
+    await jobs.join()
+    await jobs.close()
+    service.command.assert_awaited_once()
+
+
+@pytest.mark.parametrize("owner,topic,bot", [(456,17,30), (123,12,30), (123,13,20), (123,17,10)])
+async def test_routing_rejects_wrong_owner_topic_or_bot(owner, topic, bot):
+    from aiogram.types import Chat, Message, User
+    jobs = JobQueue()
+    ingress = BotIngress(telegram_layout(), {10:"mika",20:"curator",30:"ops"}, jobs, AsyncMock())
+    message = Message(message_id=3, date=AT, chat=Chat(id=-100123, type="supergroup"),
+                      message_thread_id=topic, from_user=User(id=owner,is_bot=False,first_name="User"),
+                      text="/state")
+    await ingress.on_message(message, SimpleNamespace(id=bot))
+    assert jobs.pending == 0
+
+
+async def test_job_trace_is_inherited_by_threaded_work():
+    seen = []
+    jobs = JobQueue()
+    async def work():
+        seen.append(await asyncio.to_thread(structlog.contextvars.get_contextvars))
+    jobs.submit("trace-root", "fixture", work)
+    await jobs.start()
+    await jobs.join()
+    await jobs.close()
+    assert seen[0]["trace_id"] == "trace-root"
