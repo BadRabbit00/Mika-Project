@@ -3,13 +3,16 @@
 import asyncio
 import json
 import re
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Literal
 
 import structlog
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
+from src.core.settings import SettingsRegistry
 from src.core.time_utils import now
+from src.trust import Trust
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 _FIELD = re.compile(r"\{([a-z_]+)\}")
@@ -74,11 +77,24 @@ class SelectionResult(StrictModel):
 
 
 class Curator:
-    def __init__(self, database, backend, prompt_dir: Path):
+    def __init__(
+        self, database, backend, prompt_dir: Path, *, settings=None, trust=None
+    ):
         self.database, self.backend, self.prompt_dir = (
             database,
             backend,
             Path(prompt_dir),
+        )
+        self.settings = settings or SettingsRegistry.from_file(
+            Path("config/settings.yaml")
+        )
+        self.trust = trust or Trust.from_config(database)
+
+    def pass_rule(self):
+        return (
+            (self.prompt_dir / "curator_pass_rule.md")
+            .read_text()
+            .replace("{threshold}", str(self.settings.get("study.quiz_threshold")))
         )
 
     def _snapshot(self, topic):
@@ -95,8 +111,7 @@ class Curator:
             sources = [
                 dict(row)
                 for row in connection.execute(
-                    "SELECT id, title, origin_key, publisher, kind, trust_prior "
-                    "FROM sources WHERE topic=? ORDER BY id",
+                    "SELECT * FROM sources WHERE topic=? ORDER BY id",
                     (topic,),
                 )
             ]
@@ -118,6 +133,22 @@ class Curator:
                 )
             ]
             connection.execute("COMMIT")
+        for source in sources:
+            with self.database.connection() as c:
+                hashes = [
+                    row[0]
+                    for row in c.execute(
+                        "SELECT DISTINCT norm_hash FROM claims WHERE source_id=?",
+                        (source["id"],),
+                    )
+                ]
+            source["reliability"] = self.trust.reliability(source, at=now().date())
+            source["claims_trust"] = {
+                digest: asdict(
+                    self.trust.claim(digest, source_id=source["id"], at=now().date())
+                )
+                for digest in hashes
+            }
         return {
             "curator_log": history,
             "sources_with_trust": sources,
@@ -159,32 +190,109 @@ class Curator:
             ).fetchone()
             if existing:
                 return json.loads(existing[0])["receipt"]
-            ids = []
+            ids, exam_run_id = [], None
             if exams:
+                instant = now()
+                prefix = f"exam-{instant:%Y%m%d}-"
+                number = (
+                    max(
+                        (
+                            int(row[0][len(prefix) :])
+                            for row in connection.execute(
+                                "SELECT id FROM exam_runs WHERE id LIKE ?",
+                                (prefix + "%",),
+                            )
+                        ),
+                        default=0,
+                    )
+                    + 1
+                )
+                exam_run_id = prefix + f"{number:02d}"
+                connection.execute(
+                    "INSERT INTO exam_runs(id,topic,at,trace_id) VALUES (?,?,?,?)",
+                    (exam_run_id, topic, instant, trace_id),
+                )
                 for question in exams:
                     ids.append(
                         connection.execute(
                             "INSERT INTO exams(topic, question, expected, "
-                            "key_facts, at) VALUES (?, ?, ?, ?, ?)",
+                            "key_facts, at, exam_run_id) VALUES (?, ?, ?, ?, ?, ?)",
                             (
                                 topic,
                                 question.q,
                                 question.expected,
                                 json.dumps(question.key_facts),
                                 now(),
+                                exam_run_id,
                             ),
                         ).lastrowid
                     )
+                for correction in result.value.graph_corrections:
+                    matches = connection.execute(
+                        "SELECT DISTINCT n.id FROM nodes n JOIN edges e ON "
+                        "n.id=e.src OR n.id=e.dst "
+                        "JOIN sources s ON s.id=e.source_id WHERE s.topic=? AND "
+                        "(n.id=? OR n.name=?)",
+                        (topic, correction.node, correction.node),
+                    ).fetchall()
+                    if len(matches) != 1:
+                        raise ValueError(
+                            "Correction must identify one current topic node"
+                        )
+                    key = matches[0][0]
+                    connection.execute(
+                        "UPDATE nodes SET summary=?,corrected_by=?,suspect=0 WHERE "
+                        "id=?",
+                        (correction.correct, "exam:" + exam_run_id, key),
+                    )
+                    connection.execute(
+                        "UPDATE curator_review SET resolved_at=?,verdict=?,exam_id=? "
+                        "WHERE subject=? AND kind='suspect_node' AND resolved_at IS "
+                        "NULL",
+                        (instant, correction.correct, exam_run_id, key),
+                    )
+                    connection.execute(
+                        "INSERT INTO "
+                        "curator_log(at,kind,subject,claim,reasoning,exam_id) VALUES "
+                        "(?,'correction',?,?,?,?)",
+                        (
+                            instant,
+                            key,
+                            correction.correct,
+                            json.dumps(
+                                dict(
+                                    topic=topic,
+                                    trace_id=trace_id,
+                                    issue=correction.issue,
+                                )
+                            ),
+                            ids[0],
+                        ),
+                    )
             if grades:
+                runs = {
+                    connection.execute(
+                        "SELECT exam_run_id FROM exams WHERE id=?", (item[0],)
+                    ).fetchone()[0]
+                    for item in grades
+                }
+                if len(runs) != 1 or None in runs:
+                    raise ValueError("Grades must belong to one identified exam")
+                exam_run_id = runs.pop()
                 for exam_id, answer, verdict in grades:
                     connection.execute(
                         "UPDATE exams SET answer=?, verdict=?, comment=? "
                         "WHERE id=? AND topic=?",
                         (answer, verdict.verdict, verdict.note, exam_id, topic),
                     )
+                connection.execute(
+                    "UPDATE exam_runs SET verdict=? WHERE id=?",
+                    (result.value.overall, exam_run_id),
+                )
             receipt = {
                 "trace_id": trace_id,
                 "exam_ids": ids,
+                "exam_run_id": exam_run_id,
                 "result": result.value.model_dump(),
                 "cost_usd": result.cost_usd,
             }
@@ -237,7 +345,7 @@ class Curator:
             self._record, "exam", topic, trace_id, result, exams=exam.questions
         )
 
-    async def grade(self, topic, *, answers: dict[int, str], pass_rule: str, trace_id):
+    async def grade(self, topic, *, answers: dict[int, str], pass_rule=None, trace_id):
         if prior := await asyncio.to_thread(self._replay, "grade", trace_id):
             return prior
 
@@ -254,6 +362,18 @@ class Curator:
                 ]
             if not rows or any(not row for row in rows):
                 raise ValueError("Unknown exam question")
+            runs = {row["exam_run_id"] for row in rows}
+            if len(runs) != 1 or None in runs:
+                raise ValueError("Answers must belong to one identified exam")
+            with self.database.connection() as c:
+                expected = {
+                    row[0]
+                    for row in c.execute(
+                        "SELECT id FROM exams WHERE exam_run_id=?", (next(iter(runs)),)
+                    )
+                }
+            if set(answers) != expected:
+                raise ValueError("Each exam question requires an answer")
             return rows
 
         rows = await asyncio.to_thread(question_rows)
@@ -273,7 +393,7 @@ class Curator:
                 "curator_log": snapshot["curator_log"],
                 "subgraph": snapshot["subgraph"],
                 "qa_pairs": qa_pairs,
-                "pass_rule": pass_rule,
+                "pass_rule": self.pass_rule() if pass_rule is None else pass_rule,
             },
             GradeResult,
             trace_id,
@@ -283,6 +403,21 @@ class Curator:
             range(len(rows))
         ):
             raise ValueError("Grade must cover each supplied answer exactly once")
+        fraction = sum(
+            {"pass": 1, "partial": 0.5, "fail": 0}[v.verdict] for v in verdicts
+        ) / len(verdicts)
+        passed = (
+            fraction >= self.settings.get("study.quiz_threshold")
+            and sum(v.verdict == "fail" for v in verdicts) <= 1
+        )
+        if result.value.overall != ("pass" if passed else "fail"):
+            raise ValueError("Aggregate grade contradicts the configured pass rule")
+        log.info(
+            "exam_scored",
+            trace_id=trace_id,
+            fraction=fraction,
+            unknown_answers=sum(not text.strip() for text in answers.values()),
+        )
         grades = [
             (rows[v.q_index]["id"], answers[rows[v.q_index]["id"]], v) for v in verdicts
         ]

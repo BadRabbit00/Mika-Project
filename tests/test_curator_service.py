@@ -70,6 +70,83 @@ async def test_curator_exam_is_replayable_and_logged_before_publication(service)
     with service.database.connection() as c:
         assert c.execute("SELECT count(*) FROM curator_log").fetchone()[0] == 1
         assert c.execute("SELECT count(*) FROM outbox").fetchone()[0] == 0
+        run = c.execute("SELECT * FROM exam_runs").fetchone()
+        assert run["id"].startswith("exam-") and run["trace_id"] == "trace"
+        assert first["exam_run_id"] == run["id"]
+        assert (
+            c.execute(
+                "SELECT count(*) FROM exams WHERE exam_run_id=?", (run["id"],)
+            ).fetchone()[0]
+            == 5
+        )
+
+
+async def test_curator_applies_validated_corrections_atomically(service):
+    service.database.run_transaction(
+        lambda c: (
+            c.execute(
+                "INSERT INTO nodes(id,name,summary) VALUES "
+                "('n','Node','Old'),('b','Other','Other')"
+            ),
+            c.execute(
+                "INSERT INTO edges(src,rel,dst,source_id) VALUES "
+                "('n','requires','b','article')"
+            ),
+        )
+    )
+    service.backend.ask.return_value = VendorResult(
+        exam(
+            graph_corrections=[
+                dict(
+                    node="Node",
+                    issue="Incomplete",
+                    correct="Corrected",
+                    severity="high",
+                )
+            ]
+        ),
+        0.1,
+        1,
+        ("call",),
+    )
+    receipt = await service.prepare_exam(
+        "topic", summary_post="Summary", given=1, read=1, n=5, trace_id="correction"
+    )
+    with service.database.connection() as c:
+        node = c.execute("SELECT * FROM nodes WHERE id='n'").fetchone()
+        assert node["summary"] == "Corrected"
+        assert node["corrected_by"] == "exam:" + receipt["exam_run_id"]
+
+
+@pytest.mark.parametrize(
+    "verdicts,overall",
+    [
+        (["pass", "pass", "partial", "partial", "fail"], "pass"),
+        (["pass", "pass", "pass", "fail", "fail"], "fail"),
+    ],
+)
+async def test_curator_aggregate_grade_uses_literal_policy(service, verdicts, overall):
+    service.backend.ask.return_value = VendorResult(exam(), 0.1, 1, ("call",))
+    prepared = await service.prepare_exam(
+        "topic", summary_post="Summary", given=1, read=1, n=5, trace_id="exam"
+    )
+    value = GradeResult(
+        verdicts=[
+            dict(q_index=i, verdict=v, missed=[], note="Checked")
+            for i, v in enumerate(verdicts)
+        ],
+        overall=overall,
+        public_comment=exam().public_comment,
+    )
+    service.backend.ask.return_value = VendorResult(value, 0.1, 1, ("grade",))
+    receipt = await service.grade(
+        "topic",
+        answers={key: "Answer" for key in prepared["exam_ids"]},
+        trace_id="exam",
+    )
+    assert receipt["result"]["overall"] == overall
+    with service.database.connection() as c:
+        assert c.execute("SELECT verdict FROM exam_runs").fetchone()[0] == overall
 
 
 async def test_curator_selection_cannot_invent_library_articles(service):
