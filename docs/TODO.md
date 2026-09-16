@@ -47,32 +47,8 @@ including structured log fields written as `todo="<id>"`.
 
 ## Mood and sleep contracts
 
-- TODO(DECAY-ASSERTION): section 31.1 expects a distance below 0.1 after six
-  hours, but the literal section 28.3 formula and A half-life of two hours give
-  0.1625. Tests preserve that exact result and verify the below-0.1 condition at
-  eight hours. No coefficient or formula is changed to satisfy the inconsistent
-  example.
-- TODO(BASELINE-CLAMP): the -0.93 example in section 28.3 conflicts with the
-  configured baseline bounds [-0.6, 0.6]. The configured clamp is authoritative.
-- TODO(BASELINE-HISTORY): no durations define recent exams/corrections or a good
-  quiz streak. Callers supply these facts explicitly; mood does not infer them
-  by reading the knowledge graph. Baseline targets are evaluated at access time.
-- TODO(CYCLE-EPOCH): no production launch epoch is configured. Callers must pass
-  a stable aware epoch on every restart. start_offset_days counts elapsed days,
-  so offset 11 starts on cycle day 12. Confirm if an ordinal day was intended.
-- TODO(CYCLE-WEEKDAY): 28 is divisible by seven, so section 35.2's claimed drift
-  across weekdays is mathematically impossible. The specified 28-day cycle stays
-  unchanged; no random phase drift is added.
-- TODO(MOOD-BOUNDARIES): adjacent band endpoints overlap in the YAML. Bands use
-  lower-inclusive, upper-exclusive intervals, with +1 in the final band. Octants
-  follow the literal >= -0.15 formula, including its boundary.
-- TODO(MOOD-TIMESTAMP): mood.at is the only primary key. Two mutations at the
-  same instant cannot both be appended. Reject non-increasing mutation times;
-  do not invent microsecond offsets or overwrite history.
-- TODO(TRIGGER-POLICY): a week is not defined as calendar or rolling. Callers
-  supply its start explicitly. Some resolution probabilities sum to less than
-  one, and some triggers have no resolution despite the prose. An unspecified
-  probability outcome must fail before mutation; no new event is invented.
+- TODO(BASELINE-HISTORY): the configured history windows and BaselineContext.from_history are implemented.
+  Live providers must still assemble exam, correction, waiting, and quiz facts.
 - TODO(SLEEP-WAKE): sections 25.1 and 29.1 specify different wake algorithms.
   Keep the provisional sleep plan and the actual schedule-based wake event
   explicit, without replacing either formula silently.
@@ -101,11 +77,6 @@ including structured log fields written as `todo="<id>"`.
   debt. The implemented scheduler consumes a caller-supplied blackout provider;
   it does not persist sleep plans or once-per-night debt application. Durable
   sleep-history identities remain undefined. The simulation exports these facts.
-- TODO(MOOD-DISABLED): the settings describe neutral output when mood is disabled,
-  but do not define its numeric state or treatment of queued resolutions. Current
-  supplied defaults enable mood. Disabling mutation fails explicitly until those
-  semantics are specified; no replacement neutral state is invented.
-
 ## Output and writing contracts
 
 - TODO(OFFTOP-PERSONA): the shared prompts/_base.md names AI agents, while

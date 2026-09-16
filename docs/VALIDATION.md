@@ -71,3 +71,16 @@ data/live/decisions-extraction-retry-events.jsonl (ignored runtime files).
 The storage and knowledge gate passes 79 tests, including migration upgrades,
 calendar publication dates, atomic reindexing, independent source trust, and
 multiple call receipts under one shared trace.
+
+## Corrected mood model
+
+Cycle lengths 26–30 retain 5 menstrual, 3 ovulatory, and 12 luteal days. All
+variation belongs to the follicular phase; late luteal means the final 5 days.
+Cycle histories reproduce across restarts and dates before the epoch.
+
+The 14-day simulation starting 2026-09-21 (seed 42) produced 336 hourly samples
+and 60 events. Mean PAD: 0.2034, -0.0291, 0.0234; no extreme samples or runs.
+Evidence: data/decisions-mood-simulation/{report.json,samples.csv,transitions.csv}.
+
+A live question on the newly extracted graph returned answered with two verified
+Yama citations; data/live/decisions-quiz-events.jsonl records the request.

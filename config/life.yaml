@@ -330,3 +330,5 @@ rules:
   prefer_evening: true
   never_on_exam_day: true       # в день экзамена ей не до сериалов
   mood_follows_study: true      # провалила экзамен → офтоп мрачнее
+
+cycle_epoch: 2026-09-21

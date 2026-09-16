@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from random import Random
@@ -15,6 +15,7 @@ from src.core.db import Database, insert_mood
 from src.core.pad import AXES, Coefficients, Mood, clamp, finite, sign
 from src.core.schedule import Schedule
 from src.core.time_utils import (
+    ALMATY,
     add_elapsed,
     daypart_at,
     elapsed_hours,
@@ -100,6 +101,39 @@ class BaselineContext:
         ):
             raise ValueError("Baseline flags must be boolean")
 
+    @classmethod
+    def from_history(
+        cls,
+        *,
+        at,
+        windows,
+        sleep_debt=0,
+        waiting_since=None,
+        exam=None,
+        correction_at=None,
+        quiz_streak=0,
+    ):
+        at = require_aware(at)
+        recent_exam = (
+            exam and 0 <= elapsed_hours(exam[0], at) <= windows["exam_recent_hours"]
+        )
+        correction = (
+            correction_at is not None
+            and 0
+            <= elapsed_hours(correction_at, at)
+            <= windows["correction_recent_hours"]
+        )
+        stuck = (
+            max(0, int(elapsed_hours(waiting_since, at) / 24)) if waiting_since else 0
+        )
+        return cls(
+            sleep_debt=sleep_debt,
+            stuck_days=stuck if stuck >= windows["stuck_days_from"] else 0,
+            exam_result=exam[1] if recent_exam else None,
+            correction_recent=correction,
+            quiz_streak_good=quiz_streak >= windows["quiz_streak_good_count"],
+        )
+
 
 @dataclass(frozen=True)
 class MoodSnapshot:
@@ -140,9 +174,7 @@ class MoodModel:
         self.base_coefficients = {
             axis: Coefficients(**data["coefficients"][axis]) for axis in AXES
         }
-        self.cycle = Cycle(
-            data["cycle"], epoch=epoch, enabled=settings["mood.cycle_enabled"]
-        )
+        self.cycle = Cycle(data["cycle"], epoch=epoch)
         self.events = {**data["events"], **data["events_world"]}
         self.triggers = {item["id"]: item for item in data["triggers"]["items"]}
         for event in self.events.values():
@@ -153,30 +185,48 @@ class MoodModel:
         self.trigger_rules = data["triggers"]["rules"]
 
     @classmethod
-    def from_config(cls, directory: Path, *, epoch: datetime):
+    def from_config(
+        cls, directory: Path, *, epoch: datetime | None = None, settings=None
+    ):
         yaml = YAML(typ="safe")
 
         def read(name):
             return yaml.load((Path(directory) / name).read_text(encoding="utf-8"))
 
         registry = read("settings.yaml")
-        settings = {
-            item["key"]: item["default"]
-            for item in registry["settings"]
-            if item["key"].startswith("mood.")
-        }
+        settings = (
+            settings
+            if settings is not None
+            else {
+                item["key"]: item["default"]
+                for item in registry["settings"]
+                if item["key"].startswith("mood.")
+            }
+        )
         data = read("mood.yaml")
         data["events"] = {
             **data["events"],
             **Schedule.from_config(directory).event_catalog(),
         }
-        return cls(data, read("life.yaml"), settings, epoch=epoch)
+        life = read("life.yaml")
+        if epoch is None:
+            epoch = datetime.combine(
+                life["cycle_epoch"], datetime.min.time(), tzinfo=ALMATY
+            )
+        return cls(data, life, settings, epoch=epoch)
+
+    @property
+    def enabled(self):
+        return self._settings.get("mood.enabled")
+
+    def neutral(self):
+        return Mood(*(self._data["disabled_state"][axis.lower()] for axis in AXES))
 
     def daypart(self, at: datetime) -> str:
         return daypart_at(at, self._life["dayparts"])
 
     def coefficients(self, at: datetime) -> dict[str, Coefficients]:
-        effect = self.cycle.at(at)
+        effect = self.cycle.at(at, enabled=self._settings.get("mood.cycle_enabled"))
         return {
             axis: replace(
                 c,
@@ -189,8 +239,11 @@ class MoodModel:
         }
 
     def baseline(self, at: datetime, context: BaselineContext) -> Mood:
+        require_aware(at)
+        if not self.enabled:
+            return self.neutral()
         daypart = self.daypart(at)
-        effect = self.cycle.at(at)
+        effect = self.cycle.at(at, enabled=self._settings.get("mood.cycle_enabled"))
         factors = {
             "sleep_debt_per_hour": context.sleep_debt,
             "stuck_days": context.stuck_days,
@@ -214,6 +267,10 @@ class MoodModel:
     ) -> MoodSnapshot:
         at = require_aware(at)
         hours = elapsed_hours(state.at, at)
+        if hours < 0:
+            raise ValueError("Decay cannot run backwards")
+        if not self.enabled:
+            return MoodSnapshot(at, self.neutral(), self.neutral(), context.sleep_debt)
         baseline = self.baseline(at, context)
         mood = Mood(
             *(
@@ -223,7 +280,7 @@ class MoodModel:
                     baseline=getattr(baseline, axis),
                     hours=hours,
                     half_life=self._data["decay"][axis]["half_life_hours"]
-                    * self._settings["mood.decay_mult"],
+                    * self._settings.get("mood.decay_mult"),
                 )
                 for axis in AXES
             )
@@ -234,16 +291,14 @@ class MoodModel:
 
     def changed(self, state: MoodSnapshot, delta: list[float], *, pierce: bool) -> Mood:
         coefficients = self.coefficients(state.at)
-        if not self._settings["mood.enabled"]:
-            raise ValueError(
-                "TODO(MOOD-DISABLED): disabled-state semantics are not specified"
-            )
+        if not self.enabled:
+            return self.neutral()
         return Mood(
             *(
                 apply(
                     axis,
                     getattr(state.mood, axis),
-                    value * self._settings["mood.volatility"],
+                    value * self._settings.get("mood.volatility"),
                     pierce=pierce,
                     coefficients=coefficients[axis],
                 )
@@ -265,6 +320,9 @@ class MoodModel:
         return "".join("+" if getattr(mood, axis) >= -0.15 else "-" for axis in AXES)
 
     def mood_block(self, mood: Mood) -> str:
+        if not self.enabled:
+            state = self._data["disabled_state"]
+            return "\n".join((state["octant_name"], state["band_text"]))
         octant = self._data["octants"][self.octant(mood)]
         return "\n".join(
             [
@@ -316,12 +374,16 @@ class MoodService:
         at = require_aware(at)
         with self.database.connection() as connection:
             connection.execute("BEGIN")
-            self._clear_due(connection, at)
+            if self.model.enabled:
+                self._clear_due(connection, at)
             snapshot = self.model.decay(self._latest(connection), at, context)
             connection.execute("COMMIT")
             return snapshot
 
     def pending_resolutions(self, until: datetime) -> list[Resolution]:
+        require_aware(until)
+        if not self.model.enabled:
+            return []
         with self.database.connection() as connection:
             return [
                 Resolution(
@@ -348,7 +410,13 @@ class MoodService:
         trigger_id=None,
         queue_id=None,
     ):
-        self._clear_due(connection, at, queue_id)
+        if (
+            not self.model.enabled
+            and self.model._data["disabled_state"]["drop_queued_resolutions"]
+        ):
+            connection.execute("DELETE FROM mood_queue")
+        else:
+            self._clear_due(connection, at, queue_id)
         state = self._latest(connection)
         existing = connection.execute("SELECT 1 FROM mood LIMIT 1").fetchone()
         if at.timestamp() < state.at.timestamp() or (
@@ -431,14 +499,15 @@ class MoodService:
         *,
         at: datetime,
         context: BaselineContext,
-        week_start: datetime,
+        week_start: datetime | None = None,
         next_exam_at: datetime | None,
         rng: Random,
     ) -> MoodSnapshot:
-        at, week_start = require_aware(at), require_aware(week_start)
-        week_end = week_start + timedelta(days=7)
-        if not week_start.timestamp() <= at.timestamp() < week_end.timestamp():
-            raise ValueError("Trigger time is outside the supplied week")
+        at = require_aware(at)
+        if week_start is not None:
+            require_aware(week_start)
+        # The supplied rolling policy supersedes caller-selected calendar weeks.
+        week_start, week_end = add_elapsed(at, hours=-7 * 24), at
         trigger = self.model.triggers[trigger_id]
         rules = self.model.trigger_rules
         if (
@@ -447,7 +516,7 @@ class MoodService:
         ):
             raise TriggerBlocked("Trigger is too close to an exam")
         resolution = None
-        if outcomes := trigger.get("resolution"):
+        if self.model.enabled and (outcomes := trigger.get("resolution")):
             roll, cumulative = rng.random(), 0.0
             for outcome in outcomes:
                 cumulative += outcome["p"]
@@ -456,7 +525,7 @@ class MoodService:
                     break
             if resolution is None:
                 raise UnspecifiedResolution(
-                    "TODO(TRIGGER-POLICY): no outcome covers this probability"
+                    "No configured outcome covers this probability"
                 )
 
         def save(connection):
@@ -467,8 +536,8 @@ class MoodService:
                 row
                 for row in previous
                 if week_start.timestamp()
-                <= from_utc_iso(row[0]).timestamp()
-                < week_end.timestamp()
+                < from_utc_iso(row[0]).timestamp()
+                <= week_end.timestamp()
             ]
             if len(within_week) >= rules["max_per_week"]:
                 raise TriggerBlocked("Weekly trigger limit reached")
