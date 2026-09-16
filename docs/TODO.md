@@ -203,6 +203,25 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(WEATHER-MONTHS): life.yaml has no July or August fallback. If the API
   fails in those months, omit weather instead of inventing seasonal conditions.
 
+## Curator and interface contracts
+
+- TODO(CURATOR-MODEL-SOURCE): config/models.yaml remains absent. The explicitly
+  supplied config/settings.yaml defaults provide the requested CLI model and
+  effort without hardcoding either string. Curator timeout is a required CLI
+  argument. Consolidate these sources when supplying models.yaml.
+- TODO(CURATOR-RETRY-SCHEDULE): CLI timeout and subscription failures do not
+  immediately repeat. The six-hour, three-attempt retry policy needs durable
+  scheduler ownership in step 12; a JSON/schema failure alone gets one immediate
+  repair attempt. No subscription-limit error taxonomy is defined in the document.
+- TODO(CURATOR-CORRECTION-APPLICATION): validated graph corrections are retained
+  in the curator receipt, without changing graph summaries automatically. The
+  exam schema stores one row per question and does not identify the whole exam;
+  corrected_by and correction-post lineage need that identity decision first.
+- TODO(CURATOR-GRADING-POLICY): curator_grade.md has a pass_rule placeholder,
+  but no aggregate grading formula is supplied. Callers provide its text; code
+  validates the verdict vocabulary and complete question-index coverage rather
+  than inventing an overall pass threshold.
+
 ## Invariants for later delivery stages
 
 The step 1 suite tests time, UTC persistence, storage validation, the closed
