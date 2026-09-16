@@ -1,13 +1,18 @@
 """Literal mood contracts; schedule contracts follow the verified mood stage."""
 
+import json
 import math
 import sqlite3
+import subprocess
+import sys
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timedelta
 from pathlib import Path
 from random import Random
 
 import pytest
+
+from src.core.db import Database, insert_mood
 from src.core.mood import (
     BaselineContext,
     Mood,
@@ -15,11 +20,10 @@ from src.core.mood import (
     MoodService,
     PendingResolution,
     TriggerBlocked,
+    UnspecifiedResolution,
     apply,
     decay,
 )
-
-from src.core.db import Database, insert_mood
 from src.core.time_utils import ALMATY, add_elapsed, elapsed_hours
 
 START = datetime(2026, 9, 14, tzinfo=ALMATY)
@@ -254,6 +258,29 @@ def test_repeated_timestamp_is_rejected_without_rewriting_history(service):
         service.record_event("article_hard", at=at, context=BaselineContext())
 
 
+def test_unspecified_trigger_outcome_does_not_mutate_state(service):
+    with pytest.raises(UnspecifiedResolution):
+        service.fire_trigger(
+            "parents_pressure",
+            at=START,
+            context=BaselineContext(),
+            week_start=START,
+            next_exam_at=None,
+            rng=Random(2),
+        )
+    with service.database.connection() as connection:
+        assert connection.execute("SELECT count(*) FROM mood").fetchone()[0] == 0
+        assert connection.execute("SELECT count(*) FROM mood_queue").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    "offset, phase",
+    [(2, "ovulatory"), (5, "luteal"), (17, "menstrual"), (22, "follicular")],
+)
+def test_cycle_phase_boundaries(model, offset, phase):
+    assert model.cycle.at(START + timedelta(days=offset)).id == phase
+
+
 def test_mood_time_is_aware_and_uses_elapsed_hours(service, model):
     naive = START.replace(tzinfo=None)
     for call in (
@@ -266,3 +293,31 @@ def test_mood_time_is_aware_and_uses_elapsed_hours(service, model):
     after = add_elapsed(before, hours=1)
     assert after.hour == 23 and after.fold == 1 and after.tzinfo == ALMATY
     assert elapsed_hours(before, after) == 1
+
+
+def test_two_week_mood_simulation(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/simulate_mood.py",
+            "--start",
+            "2026-09-14",
+            "--days",
+            "14",
+            "--seed",
+            "1",
+            "--output",
+            str(tmp_path / "simulation"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    report = json.loads((tmp_path / "simulation/report.json").read_text())
+    assert report["days"] == 14 and report["samples"] == 14 * 24
+    assert report["timezone"] == "Asia/Almaty"
+    assert all(-1 <= value <= 1 for value in report["mean"].values())
+    assert all(value == 0 for value in report["longest_extreme_run"].values())
+    assert (tmp_path / "simulation/transitions.csv").is_file()
+    assert "Mean P" in result.stdout

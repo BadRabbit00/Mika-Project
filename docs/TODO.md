@@ -141,9 +141,6 @@ exclusion, replay behavior, and the minimum question count and passing fraction.
 The executable stage gate in tests/test_stage_contracts.py requires the following
 behavioral tests before each later-stage module may be introduced.
 
-- TODO(STEP-4-CONTRACTS): copy the inertia, piercing, decay, and clamp tests from
-  section 31.1; implement sections 28 and 35 literally and run the two-week
-  simulation. PAD persistence rounding is already tested in step 1.
 - TODO(STEP-6-CONTRACTS): reject CJK output, strip fences, and test all three
   validation levels.
 - TODO(STEP-7-CONTRACTS): isolate off-topic and quiz contexts; curator material

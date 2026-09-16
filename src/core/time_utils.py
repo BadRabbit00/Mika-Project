@@ -1,5 +1,6 @@
 """Named local timezone in Python; validated UTC text at storage boundaries."""
 
+import math
 import re
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
@@ -40,3 +41,19 @@ def from_utc_iso(value: str) -> datetime:
     if _UTC_ISO.fullmatch(value) is None:
         raise ValueError("Expected a UTC ISO-8601 timestamp with Z or +00:00")
     return datetime.fromisoformat(value).astimezone(ALMATY)
+
+
+def elapsed_hours(start: datetime, end: datetime) -> float:
+    """Measure actual elapsed time, including a repeated local hour."""
+    return (require_aware(end).timestamp() - require_aware(start).timestamp()) / 3600
+
+
+def add_elapsed(value: datetime, *, hours: float = 0, minutes: float = 0) -> datetime:
+    value = require_aware(value)
+    if any(
+        isinstance(part, bool) or not math.isfinite(part) for part in (hours, minutes)
+    ):
+        raise ValueError("Elapsed time must be finite")
+    return datetime.fromtimestamp(
+        value.timestamp() + hours * 3600 + minutes * 60, ALMATY
+    )
