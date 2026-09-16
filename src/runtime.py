@@ -29,7 +29,7 @@ from src.retrieve import RetrievalPolicy, Retriever
 from src.runner import ActionRunner, SQLiteLearningStore
 from src.scheduler import ActivityScheduler, Rhythm, SQLiteReservations
 from src.selfquiz import QuizSettings, SelfQuiz
-from src.validator import OutputValidator, lexical_echo_similarity
+from src.validator import OutputValidator
 from src.writer import Writer
 
 
@@ -230,7 +230,7 @@ async def dry_run(workdir):
             database,
             llm,
             context,
-            OutputValidator(llm, echo_similarity=lexical_echo_similarity),
+            OutputValidator(llm),
         )
         pipeline = LearningPipeline(
             database,

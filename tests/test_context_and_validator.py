@@ -134,6 +134,36 @@ async def test_validator_rejects_prompt_echo_at_strict_threshold(validator):
     assert (await validator.validate(TEXT, context(prompt="source"))).accepted
 
 
+async def test_prompt_echo_is_jaccard_of_server_token_fivegrams():
+    llm = AsyncMock()
+    llm.tokenize.side_effect = lambda text: list(range(10 if text == "source" else 9))
+    validator = OutputValidator(llm)
+    result = await validator.validate(TEXT, context(prompt="source"))
+    assert "prompt_echo" in result.reasons
+    assert {call.args[0] for call in llm.tokenize.await_args_list} == {"source", TEXT}
+    llm.tokenize.side_effect = lambda text: list(range(10 if text == "source" else 8))
+    assert (await validator.validate(TEXT, context(prompt="source"))).accepted
+
+
+async def test_validator_reads_updated_thresholds_without_reconstruction(tmp_path):
+    from src.core.settings import SettingsRegistry, SQLiteSettingsStore
+
+    db = Database(tmp_path / "validator.sqlite3")
+    db.initialize()
+    settings = SettingsRegistry.from_file(
+        Path("config/settings.yaml"), store=SQLiteSettingsStore(db)
+    )
+    llm = AsyncMock()
+    llm.tokenize.side_effect = lambda text: list(range(10 if text == "source" else 9))
+    validator = OutputValidator(llm, settings=settings)
+    assert (
+        "prompt_echo"
+        in (await validator.validate(TEXT, context(prompt="source"))).reasons
+    )
+    settings.set("validator.echo_threshold", "0.9", trace_id="changed")
+    assert (await validator.validate(TEXT, context(prompt="source"))).accepted
+
+
 async def test_validator_rejects_duplicate_against_only_last_thirty(validator):
     posts = [PastPost(str(index), f"Prior post {index}.") for index in range(31)]
     validator.llm.embed.side_effect = [np.array([1.0, 0.0])] + [

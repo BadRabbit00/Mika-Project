@@ -47,7 +47,8 @@ def day():
 def service(database):
     llm = AsyncMock()
     llm.prompt_tokens.return_value = [1] * 100
-    llm.tokenize.return_value = [2] * 20
+    # Token identity matters for the five-gram echo contract.
+    llm.tokenize.side_effect = lambda text: list(text.encode("utf-8"))
     llm.generate.return_value = json.dumps(
         {
             "answer": "I had tea by the window and enjoyed the quiet evening. "

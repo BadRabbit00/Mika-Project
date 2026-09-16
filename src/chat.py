@@ -19,7 +19,7 @@ from src.core.context import ContextBuilder, ContextOverflow
 from src.core.time_utils import elapsed_hours, from_utc_iso, require_aware
 from src.core.vectors import cosine
 from src.selfquiz import Answer, validate_citations
-from src.validator import OutputValidator, ValidationContext, lexical_echo_similarity
+from src.validator import OutputValidator, ValidationContext
 
 log = structlog.get_logger("blogai.chat")
 
@@ -122,9 +122,7 @@ class ChatService:
         self.summarizer, self.facts_extractor = summarizer, facts_extractor
         self.store = SessionStore(database)
         self.grammar = (Path(grammar_dir) / "answer.gbnf").read_text()
-        self.validator = validator or OutputValidator(
-            llm, echo_similarity=lexical_echo_similarity
-        )
+        self.validator = validator or OutputValidator(llm)
         self._locks = {channel: asyncio.Lock() for channel in ("topic", "dm")}
 
     def _lock(self, channel):

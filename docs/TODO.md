@@ -67,19 +67,6 @@ including structured log fields written as `todo="<id>"`.
   with NULL text. The templates need an explicit output-envelope instruction
   before successful live generation can be claimed. Prompt files remain intact;
   the writer does not manufacture tags or weaken validation to accept these runs.
-- TODO(VALIDATOR-SEMANTICS): no finite list can recognize every euphemism or
-  semantic contradiction. Deterministic rules cover explicit physiological
-  terminology, known euphemisms, current-time claims, and the five-hour debt
-  example. A broader semantic judge has no supplied prompt or grading contract.
-- TODO(PROMPT-ECHO): section 34 specifies a threshold but no similarity metric.
-  The validator requires an explicit scoring function. Lexical sequence
-  similarity is available as an opt-in implementation, not an inferred default.
-- TODO(OUTPUT-TRUNCATION): arbitrary mid-word termination cannot be inferred
-  reliably from punctuation. Reject a server truncation signal and trailing
-  commas; do not require sentence-final punctuation for casual messages.
-- TODO(KAOMOJI): the architecture does not define kaomoji syntax. Bracketed
-  expressions with recognizable face punctuation are exempted from the kana
-  rule; parentheses around Japanese prose are not an exemption.
 - TODO(OFFTOP-FREQUENCY): overused() has no threshold and inverse-frequency
   weights have no zero-count rule. The planner requires explicit max_slot_uses
   and slot_weight inputs. No production threshold or smoothing is inferred.
