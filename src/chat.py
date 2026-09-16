@@ -12,6 +12,7 @@ import structlog
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from ruamel.yaml import YAML
 
+from src.core.chat_metrics import encode_mood, mood_metrics
 from src.core.chat_store import SessionStore as SessionStore
 from src.core.chat_store import summary_state
 from src.core.content_rules import normalized_text, technical_match
@@ -114,29 +115,48 @@ class ChatService:
         facts_extractor,
         grammar_dir=Path("grammars"),
         validator=None,
+        mood_provider=None,
     ):
         if not person_id:
             raise ValueError("An explicit conversation owner is required")
         self.database, self.llm, self.retriever = database, llm, retriever
-        self.context, self.settings, self.person_id = context, settings, str(person_id)
+        self.context, self._settings, self.person_id = context, settings, str(person_id)
+        self.mood_provider = mood_provider
         self.summarizer, self.facts_extractor = summarizer, facts_extractor
         self.store = SessionStore(database)
         self.grammar = (Path(grammar_dir) / "answer.gbnf").read_text()
         self.validator = validator or OutputValidator(llm)
         self._locks = {channel: asyncio.Lock() for channel in ("topic", "dm")}
 
+    @property
+    def settings(self):
+        if isinstance(self._settings, ChatSettings):
+            return self._settings
+        return ChatSettings(
+            self._settings.get("chat.context_tokens"),
+            self._settings.get("chat.keep_last_turns"),
+            self._settings.get("chat.session_ttl_hours"),
+        )
+
     def _lock(self, channel):
         if channel not in self._locks:
             raise ValueError("Unknown session channel")
         return self._locks[channel]
 
-    async def open(self, channel, *, at, mood=""):
+    async def open(self, channel, *, at, mood=None):
         at = require_aware(at)
+        if mood is None and self.mood_provider is not None:
+            mood = await self.mood_provider(at)
         async with self._lock(channel):
             current = await asyncio.to_thread(self.store.active, channel)
             if current and await self._expired(current, at):
                 await self._close(current, at=at, mood=mood)
-            return await asyncio.to_thread(self.store.open, channel, at=at, mood=mood)
+            return await asyncio.to_thread(
+                self.store.open,
+                channel,
+                at=at,
+                mood=encode_mood(mood, self.context.mood_model),
+            )
 
     async def _expired(self, session, at):
         turns = await asyncio.to_thread(self.store.turns, session["id"])
@@ -178,7 +198,7 @@ class ChatService:
             if session is None:
                 return None
             if await self._expired(session, day.at):
-                await self._close(session, at=day.at)
+                await self._close(session, at=day.at, mood=mood)
                 return None
             with structlog.contextvars.bound_contextvars(
                 trace_id=trace_id, session_id=session["id"], chat_channel=channel
@@ -202,9 +222,7 @@ class ChatService:
                 if previous:
                     return self._reply(previous)
                 _, terms, _, _ = await asyncio.to_thread(self._memory, None)
-                nodes = await self.retriever.search(
-                    question, topic=topic, threshold=0.55
-                )
+                nodes = await self.retriever.search(question, topic=topic)
                 mode = (
                     "topical"
                     if nodes
@@ -212,9 +230,9 @@ class ChatService:
                     if technical_match(question, terms)
                     else "personal"
                 )
-                if len(nodes) > 6 or len({node.id for node in nodes}) != len(nodes):
+                if len(nodes) > 12 or len({node.id for node in nodes}) != len(nodes):
                     raise ValueError(
-                        "Chat retrieval requires at most six distinct nodes"
+                        "Chat retrieval requires at most twelve distinct nodes"
                     )
                 facts, _, narrative, existing = await asyncio.to_thread(
                     self._memory, mode
@@ -303,6 +321,7 @@ class ChatService:
                     trace_id=trace_id,
                     tokens=len(tokens) + len(output_tokens),
                     topic=topic,
+                    mood=encode_mood(mood, self.context.mood_model),
                 )
                 log.info(
                     "chat_reply_saved",
@@ -322,14 +341,25 @@ class ChatService:
             row["trace_id"],
         )
 
-    async def _close(self, session, *, at, mood=""):
+    async def _close(self, session, *, at, mood=None):
         trace_id = "session-close:" + session["id"]
         with structlog.contextvars.bound_contextvars(
             trace_id=trace_id, chat_channel=session["channel"]
         ):
             if summary_state(session).get("finalized"):
                 return
-            await asyncio.to_thread(self.store.begin_close, session["id"], at)
+            if (
+                not session["closed_at"]
+                and mood is None
+                and self.mood_provider is not None
+            ):
+                mood = await self.mood_provider(at)
+            await asyncio.to_thread(
+                self.store.begin_close,
+                session["id"],
+                at,
+                mood=encode_mood(mood, self.context.mood_model),
+            )
             turns = await asyncio.to_thread(self.store.turns, session["id"])
             summary, facts = "", []
             if turns:
@@ -345,12 +375,12 @@ class ChatService:
                 facts=facts,
                 person_id=self.person_id,
                 at=at,
-                mood=mood,
+                mood=None,
                 trace_id=trace_id,
             )
             log.info("chat_session_closed", session_id=session["id"], facts=len(facts))
 
-    async def close(self, session_id, *, at, mood=""):
+    async def close(self, session_id, *, at, mood=None):
         session = await asyncio.to_thread(self.store.get, session_id)
         async with self._lock(session["channel"]):
             await self._close(
@@ -386,7 +416,7 @@ class ChatService:
 
     async def export(self, session_id):
         session = await asyncio.to_thread(self.store.get, session_id)
-        turns = await asyncio.to_thread(self.store.turns, session_id)
+        turns = await asyncio.to_thread(self.store.turns, session_id, include_mood=True)
         topical = [
             turn
             for turn in turns
@@ -422,7 +452,7 @@ class ChatService:
                     "unknown_reply_fraction": unknown / len(replies)
                     if replies
                     else None,
-                    "mood_drift_status": "TODO(CHAT-MOOD-METRIC)",
+                    **mood_metrics(session, turns),
                 },
             },
             ensure_ascii=False,

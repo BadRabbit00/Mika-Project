@@ -43,22 +43,6 @@ including structured log fields written as `todo="<id>"`.
   created model instance automatically.
 ## Dialogue and orchestration contracts
 
-- TODO(CHAT-SUMMARY-PROMPT): section 33 requires dialogue-head compression, but
-  no dedicated summary prompt is supplied. `gist.md` describes a single public
-  post and is not silently repurposed. `ChatMemory` requires dialog_summary.md
-  with dialog and previous placeholders; callers may inject a summarizer.
-- TODO(CHAT-SEMANTIC-FILTERS): graph citation checks and explicit-ignorance
-  markers cannot prove that every generated sentence avoids pretrained facts.
-  Verbatim fact grounding and conservative sensitive-word checks cannot cover
-  every euphemism. Rejected output is not stored as an answer or fact.
-- TODO(CHAT-MOOD-METRIC): exports include the first/last reply cosine specified
-  in section 33.5, citation and compression counters, and unknown-reply frequency.
-  No mood-drift formula is specified. The undefined mood metric is explicitly
-  unavailable; counts of ignorance markers do not prove semantic honesty.
-- TODO(PRIVATE-THREADS): threads has no session/channel provenance. Unknown
-  topic questions open public question threads. Unknown DM questions stay in
-  session_turns until a scoped thread contract exists, preserving section 33's
-  privacy boundary instead of feeding private questions to public posts.
 - TODO(RUNTIME-CONTEXT): live composition requires explicit current sleep,
   location, cycle epoch, and mood baseline inputs. Do not reuse stale prompt
   text as a current world snapshot.

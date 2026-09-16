@@ -69,10 +69,10 @@ class SessionStore:
 
         return self.database.run_transaction(save)
 
-    def turns(self, session_id):
+    def turns(self, session_id, *, include_mood=False):
         with self.database.connection() as c:
             return [
-                dict(row)
+                {key: row[key] for key in row.keys() if include_mood or key != "mood"}
                 for row in c.execute(
                     "SELECT * FROM session_turns WHERE session_id=? ORDER BY idx,id",
                     (session_id,),
@@ -118,7 +118,18 @@ class SessionStore:
         return self.database.run_transaction(save)
 
     def save_reply(
-        self, session_id, *, user_id, text, mode, cited, at, trace_id, tokens, topic
+        self,
+        session_id,
+        *,
+        user_id,
+        text,
+        mode,
+        cited,
+        at,
+        trace_id,
+        tokens,
+        topic,
+        mood=None,
     ):
         at = require_aware(at)
 
@@ -146,25 +157,31 @@ class SessionStore:
             ).fetchone()[0]
             row_id = c.execute(
                 "INSERT INTO session_turns"
-                "(session_id,idx,role,text,mode,cited,at,trace_id) "
-                "VALUES (?,?,'mika',?,?,?,?,?)",
-                (session_id, idx, text, mode, json.dumps(cited), at, trace_id),
+                "(session_id,idx,role,text,mode,cited,at,trace_id,mood) "
+                "VALUES (?,?,'mika',?,?,?,?,?,?)",
+                (session_id, idx, text, mode, json.dumps(cited), at, trace_id, mood),
             ).lastrowid
             c.execute("UPDATE session_turns SET mode=? WHERE id=?", (mode, user_id))
             c.execute(
-                "UPDATE sessions SET turns=turns+1,tokens_used=tokens_used+? "
+                "UPDATE sessions SET turns=turns+1,tokens_used=tokens_used+?,"
+                "mood_start=COALESCE(NULLIF(mood_start,''),?),"
+                "mood_end=COALESCE(?,mood_end) "
                 "WHERE id=?",
-                (tokens, session_id),
+                (tokens, mood, mood, session_id),
             )
-            # Private questions stay in session_turns until provenance is specified.
-            if mode == "unknown" and session["channel"] == "topic":
+            if mode == "unknown":
                 question = c.execute(
                     "SELECT text FROM session_turns WHERE id=?", (user_id,)
                 ).fetchone()[0]
                 c.execute(
-                    "INSERT INTO threads(opened_at,kind,text,topic,status) "
-                    "VALUES (?,'question',?,?,'open')",
-                    (at, question, topic),
+                    "INSERT INTO threads(opened_at,kind,text,topic,status,channel) "
+                    "VALUES (?,'question',?,?,'open',?)",
+                    (
+                        at,
+                        question,
+                        topic,
+                        "dm" if session["channel"] == "dm" else "public",
+                    ),
                 )
             return dict(
                 c.execute(
@@ -182,11 +199,13 @@ class SessionStore:
             )
         )
 
-    def begin_close(self, session_id, at):
+    def begin_close(self, session_id, at, *, mood=None):
         self.database.run_transaction(
             lambda c: c.execute(
-                "UPDATE sessions SET closed_at=COALESCE(closed_at,?) WHERE id=?",
-                (require_aware(at), session_id),
+                "UPDATE sessions SET mood_end=CASE WHEN closed_at IS NULL "
+                "THEN COALESCE(?,mood_end) ELSE mood_end END, "
+                "closed_at=COALESCE(closed_at,?) WHERE id=?",
+                (mood, require_aware(at), session_id),
             )
         )
 
@@ -204,7 +223,8 @@ class SessionStore:
                 return
             state.update(text=summary, finalized=True)
             c.execute(
-                "UPDATE sessions SET summary=?,mood_end=? WHERE id=?",
+                "UPDATE sessions SET summary=?,mood_end=COALESCE(?,mood_end) "
+                "WHERE id=?",
                 (json.dumps(state, ensure_ascii=False), mood, session_id),
             )
             if summary:

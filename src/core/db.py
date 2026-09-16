@@ -318,6 +318,10 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
             for operation in ("INSERT", "UPDATE OF corrected_by")
         ),
     ),
+    (
+        "ALTER TABLE session_turns ADD COLUMN mood TEXT "
+        "CHECK (mood IS NULL OR json_valid(mood))",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 
