@@ -82,3 +82,108 @@ outputs, durations, usage, cost, and validation failures go to JSONL. The existi
 single-row-per-trace `runs` schema is not overwritten to hide multiple calls.
 Tests mock the subprocess and inspect the live temporary files, arguments,
 cleanup, strict JSON validation, retries, and database validation boundaries.
+
+## Telegram process
+
+The runtime uses aiogram 3 with three `Bot` objects and one `Dispatcher`.
+`BotIngress` checks owner, group, topic, and receiving bot before submitting any
+work. Diary, Author, and Curator messages are never consumed as model input.
+Chat sessions belong to step 11. Library documents and control commands enter a
+bounded background queue; CLI/model work never runs synchronously in handlers.
+
+`TOPIC_ROLES` follows section 23.2. The explicit user request additionally permits
+owner commands in Machine and private chat with ops. Other users receive no reply.
+Callback actions check the same owner and routing boundaries. Draft buttons are
+Publish and Regenerate; published posts have the requested defect button.
+Defect reasons are accepted in Control or DM for one minute, using a category and
+reason on one line. The Diary message handler remains isolated during this flow.
+
+Supply `MIKA_BOT_TOKEN`, `CURATOR_BOT_TOKEN`, and `OPS_BOT_TOKEN` in the environment.
+The required deployment YAML contains:
+
+| Field | Required value |
+| --- | --- |
+| owner_id | Your positive Telegram user ID |
+| group_id | The negative supergroup chat ID |
+| channel_id | Optional negative public-channel ID |
+| topics | Mapping of diary, author, curator, chat, library, machine, control to seven distinct positive thread IDs |
+
+No deployment IDs or credentials are inferred, and no supplied config is edited.
+
+```sh
+nix develop --command blogai bot \
+  --layout config/telegram.yaml --database data/blogai.sqlite3 \
+  --library library --log-file logs/blogai.jsonl
+```
+
+The layout file above must be supplied before startup. The outbox worker runs
+alongside polling. A delivery-worker failure terminates the supervised runtime;
+it does not silently leave polling active with a dead sender. Pending outbox rows
+remain in SQLite. Queue statuses and exceptions are logged with the original
+event trace, including work dispatched through `asyncio.to_thread`.
+
+### Owner operations
+
+- `/state`: stored topics, counters, pending/uncertain deliveries, and an explicit
+  marker for the later learning-state contract.
+- `/graph`, `/graph stats`, `/graph search <text>`, `/graph <id-or-name>`: SQL/FTS
+  views of nodes, edges, and source references.
+- `/set`, `/set <group>`, `/set <key>`, `/get`, `/help`, `/config`: generated registry
+  metadata, current values, ranges, descriptions, and persisted change metadata
+  when storage is configured. `/set` opens group buttons; group views link to
+  individual keys and hide locked settings. Long results are attached without
+  truncation, retaining their navigation keyboard.
+- `/set <key> <value>`, `/reset`, `/diff`: strict types, ranges, enums, and locked
+  fields; persistent changes require the explicit override storage contract.
+- `/health`: database/outbox state, CLI availability, Telegram, and both local
+  HTTP health endpoints. This command runs probes in the background queue.
+- `/defects [week]`, `/invalid <post> <category> <reason>`: invalidation records.
+- `/preview`, `/publish`, `/regen`, `/trace`: draft actions and complete trace data.
+
+The standalone runtime has no current world/mood regeneration provider. Its
+Regenerate action returns TODO(POST-REGENERATION); application callers can inject
+an async provider. This is not reported as a completed generation.
+
+Markdown uploads use aiogram's async download API, then validate UTF-8,
+frontmatter, required source fields, and `origin_key` in a worker. Admission uses
+an atomic no-overwrite link under the source ID. Replays are safe; changed content
+under an existing ID and path traversal are rejected. The configured extractor
+then runs in the same job/trace. Downloads never enter a chat context.
+
+### Defects and explicit storage contracts
+
+Invalidation records a reason, excludes the post's narrative entries, and keeps
+the original post text. A defect card and its dependent pin use the outbox; the
+pin waits for the card's receipt. Existing public deliveries receive an annotation
+through an edit operation, rather than being deleted.
+
+The architecture omits settings and provenance schemas. The reviewable proposal
+is [interface-storage.sql](interface-storage.sql); it is not an installed migration.
+Tests explicitly install its first three tables to verify restart persistence
+and exact lineage propagation. If those tables are installed by an approved
+migration, `--interface-storage` enables `SQLiteSettingsStore` and
+`SQLiteLineageStore`. This flag does not create tables. The separate runs proposal
+also requires adapting callers and must not be applied as an ad hoc live change.
+
+Without that contract, `/set` writes are rejected explicitly, and defects report
+that derived-node/thread propagation is unavailable. With explicit lineage,
+only linked threads become stale and linked nodes become suspect; topic similarity
+is never treated as evidence of derivation. A durable curator-review queue remains
+an open architecture requirement.
+
+### Operational logs
+
+Every queued event has a stable trace ID. Existing extraction and quiz operations
+inherit it, writer calls have separate attempt IDs under it, and publication
+payloads preserve it across restarts. Full JSONL always stays on disk.
+
+`OpsMirror` sends short event cards from ops to Machine. `full` verbosity adds the
+complete JSON attachment, honoring the supplied attachment/thought settings.
+`quiet` keeps errors and state transitions. Outbox/mirror bookkeeping is excluded
+from the mirror itself to prevent recursive log delivery. Secret fields and the
+runtime token values are redacted at the logging boundary.
+
+The job queue and events waiting for the log mirror are process-local; automatic
+replay of those events is an explicit TODO. Durable publication is handled by the
+outbox. No live Telegram deployment or paid curator invocation is claimed by the
+mocked integration tests.

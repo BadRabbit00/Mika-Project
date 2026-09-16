@@ -184,7 +184,9 @@ class Extractor:
             ]
 
     async def extract(self, source: Source) -> ExtractionReport:
-        trace_id = uuid4().hex
+        trace_id = (
+            structlog.contextvars.get_contextvars().get("trace_id") or uuid4().hex
+        )
         with structlog.contextvars.bound_contextvars(trace_id=trace_id):
             names = await asyncio.to_thread(self._snapshot, source)
             if names is None:

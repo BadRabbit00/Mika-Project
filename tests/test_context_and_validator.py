@@ -473,6 +473,28 @@ async def test_writer_kills_after_three_invalid_outputs(builder, writing_db, day
         assert row["state"] == "killed" and row["text"] is None
 
 
+async def test_writer_preserves_incoming_trace(builder, writing_db, day):
+    import json
+
+    import structlog
+
+    llm = writer_llm(["<casual>" + TEXT * 4 + "</casual>"])
+    writer = Writer(
+        writing_db, llm, builder, OutputValidator(llm, echo_similarity=lambda a, b: 0)
+    )
+    with structlog.contextvars.bound_contextvars(trace_id="root-chain"):
+        result = await writer.generate(
+            "offtop", **writing_blocks(day, offtop_event=TEXT)
+        )
+    with writing_db.connection() as connection:
+        row = connection.execute(
+            "SELECT params_json FROM runs "
+            "WHERE json_extract(params_json, '$.post_id')=?",
+            (result.id,),
+        ).fetchone()
+        assert json.loads(row[0])["trace_id"] == "root-chain"
+
+
 async def test_writer_respects_sleep_blackout(builder, writing_db):
     world = World.from_config(Path("config"))
     night = world.day_context(

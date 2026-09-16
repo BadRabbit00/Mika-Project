@@ -13,18 +13,51 @@ def _timestamp(logger, method_name, event_dict):
     return event_dict
 
 
-def configure_logging(path: Path | None = None, *, level: int = logging.INFO) -> None:
+def configure_logging(
+    path: Path | None = None,
+    *,
+    level: int = logging.INFO,
+    secret_values: tuple[str, ...] = (),
+) -> None:
     """Configure application logging once at the entry point.
 
     A supplied file always receives DEBUG and higher events, independently of
     console verbosity. Importing storage never changes the caller's handlers.
     """
+
+    def redact(value):
+        if isinstance(value, dict):
+            return {
+                key: "[REDACTED]"
+                if str(key).lower()
+                in {
+                    "token",
+                    "api_key",
+                    "secret",
+                    "password",
+                    "authorization",
+                }
+                else redact(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, (tuple, list)):
+            return [redact(item) for item in value]
+        if isinstance(value, str):
+            for secret in secret_values:
+                if secret:
+                    value = value.replace(secret, "[REDACTED]")
+        return value
+
+    def redact_event(logger, method_name, event_dict):
+        return redact(event_dict)
+
     shared = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         _timestamp,
         structlog.processors.format_exc_info,
+        redact_event,
     ]
     formatter = structlog.stdlib.ProcessorFormatter(
         foreign_pre_chain=shared,

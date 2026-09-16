@@ -19,6 +19,7 @@ from src.extract import Extractor
 from src.ingest import read_source
 from src.retrieve import RetrievalPolicy, Retriever
 from src.selfquiz import QuizSettings, SelfQuiz
+from src.telegram_runtime import run_telegram
 
 
 async def _curator(args):
@@ -106,6 +107,21 @@ def main(argv: list[str] | None = None) -> int:
     curator.add_argument("--prompt-dir", type=Path, default=Path("prompts"))
     curator.add_argument("--timeout", type=int, required=True)
     curator.add_argument("--trace-id", required=True)
+    bot = commands.add_parser("bot", help="Run three Telegram bots and background jobs")
+    bot.add_argument("--layout", type=Path, required=True)
+    bot.add_argument(
+        "--interface-storage",
+        action="store_true",
+        help="Use explicitly installed settings and lineage tables",
+    )
+    bot.add_argument("--database", type=Path, required=True)
+    bot.add_argument("--log-file", type=Path, required=True)
+    bot.add_argument("--library", type=Path, default=Path("library"))
+    bot.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
+    bot.add_argument("--prompt-dir", type=Path, default=Path("prompts"))
+    bot.add_argument("--grammar-dir", type=Path, default=Path("grammars"))
+    bot.add_argument("--generation-url", default="http://127.0.0.1:8080")
+    bot.add_argument("--embedding-url", default="http://127.0.0.1:8081")
     for command in (extract, quiz):
         command.add_argument("--database", type=Path, required=True)
         command.add_argument("--log-file", type=Path, required=True)
@@ -124,6 +140,8 @@ def main(argv: list[str] | None = None) -> int:
             asyncio.run(_extract(args))
         elif args.command == "curator":
             asyncio.run(_curator(args))
+        elif args.command == "bot":
+            asyncio.run(run_telegram(args))
         else:
             asyncio.run(_quiz(args))
     except Exception:

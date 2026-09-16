@@ -9,12 +9,12 @@ automatically. Telegram cannot provide an exactly-once transaction with SQLite.
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import structlog
 
 from src.core.db import enqueue_outbox
-from src.core.time_utils import now, require_aware, to_utc_iso
+from src.core.time_utils import add_elapsed, now, require_aware, to_utc_iso
 
 log = structlog.get_logger("blogai.publish")
 
@@ -157,8 +157,13 @@ class OutboxWorker:
     def _claim(self, at):
         def claim(connection):
             row = connection.execute(
-                "SELECT * FROM outbox WHERE sent_at IS NULL AND tg_message_id IS NULL "
-                "AND next_try_at<=? ORDER BY next_try_at, id LIMIT 1",
+                "SELECT o.* FROM outbox o WHERE o.sent_at IS NULL "
+                "AND o.tg_message_id IS NULL AND o.next_try_at<=? "
+                "AND (json_extract(o.payload, '$.depends_on') IS NULL OR EXISTS "
+                "(SELECT 1 FROM outbox parent WHERE parent.id="
+                "json_extract(o.payload, '$.depends_on') "
+                "AND parent.sent_at IS NOT NULL)) "
+                "ORDER BY o.next_try_at, o.id LIMIT 1",
                 (to_utc_iso(at),),
             ).fetchone()
             if row is None:
@@ -167,7 +172,16 @@ class OutboxWorker:
                 "UPDATE outbox SET attempts=attempts+1, next_try_at=NULL WHERE id=?",
                 (row["id"],),
             )
-            return dict(row)
+            claimed = dict(row)
+            payload = json.loads(claimed["payload"])
+            if payload.get("depends_on") is not None:
+                parent = connection.execute(
+                    "SELECT tg_message_id FROM outbox WHERE id=?",
+                    (payload["depends_on"],),
+                ).fetchone()
+                payload["message_id"] = parent[0]
+                claimed["payload"] = json.dumps(payload)
+            return claimed
 
         return self.database.run_transaction(claim)
 
@@ -209,6 +223,11 @@ class OutboxWorker:
                     "tg_message_id=? WHERE id=?",
                     (at, message_id, payload["post_id"]),
                 )
+            if payload["method"] == "pin" and payload.get("defect_post_id"):
+                connection.execute(
+                    "UPDATE invalidated SET pinned_id=? WHERE post_id=?",
+                    (message_id, payload["defect_post_id"]),
+                )
             log.info(
                 "outbox_receipt_saved",
                 outbox_id=outbox_id,
@@ -220,6 +239,20 @@ class OutboxWorker:
 
     async def run_once(self, *, at: datetime | None = None) -> str:
         at = require_aware(now() if at is None else at)
+
+        def recover():
+            with self.database.connection() as connection:
+                row = connection.execute(
+                    "SELECT id, tg_message_id FROM outbox WHERE sent_at IS NULL "
+                    "AND tg_message_id IS NOT NULL AND attempts>0 ORDER BY id LIMIT 1"
+                ).fetchone()
+            if row is not None:
+                self.reconcile(row[0], message_id=row[1], at=at)
+                return True
+            return False
+
+        if await asyncio.to_thread(recover):
+            return "recovered"
         row = await asyncio.to_thread(self._claim, at)
         if row is None:
             return "idle"
@@ -232,7 +265,7 @@ class OutboxWorker:
                     "outbox_remote_rejection", outbox_id=row["id"], error=str(error)
                 )
                 if error.retry_after is not None:
-                    retry_at = at + timedelta(seconds=error.retry_after)
+                    retry_at = add_elapsed(at, minutes=error.retry_after / 60)
                     await asyncio.to_thread(
                         self.database.run_transaction,
                         lambda c: c.execute(

@@ -12,12 +12,12 @@ import pytest
 import structlog
 from pydantic import BaseModel, ConfigDict
 
+from src.bot import BotIngress, post_buttons
 from src.core.db import Database
 from src.core.llm_vendor import ClaudeCodeBackend, VendorConfig, extract_json
-from src.core.time_utils import ALMATY
-from src.bot import BotIngress
 from src.core.tasks import JobQueue
-from src.core.telegram import TelegramLayout
+from src.core.telegram import TelegramLayout, TelegramTransport
+from src.core.time_utils import ALMATY
 from src.publish import DeliveryRejected, Destination, OutboxWorker, Publisher
 
 AT = datetime(2026, 9, 16, 19, tzinfo=ALMATY)
@@ -99,6 +99,17 @@ async def test_outbox_receipt_commit_failure_does_not_resend(database, monkeypat
         await worker.run_once(at=AT)
     assert await OutboxWorker(database, transport).run_once(at=AT) == "idle"
     transport.send.assert_awaited_once()
+
+
+async def test_outbox_existing_receipt_is_recovered_without_network(database):
+    Publisher(database).enqueue_post("p", [DIARY], trace_id="trace-1", at=AT)
+    database.run_transaction(
+        lambda c: c.execute("UPDATE outbox SET tg_message_id=71, attempts=1 WHERE id=1")
+    )
+    transport = AsyncMock()
+    assert await OutboxWorker(database, transport).run_once(at=AT) == "recovered"
+    transport.send.assert_not_awaited()
+    assert rows(database)[0]["sent_at"].endswith("Z")
 
 
 async def test_outbox_concurrent_workers_claim_once(database):
@@ -269,20 +280,31 @@ def test_curator_does_not_repeat_timeout_as_json_repair(monkeypatch):
 
 def telegram_layout():
     return TelegramLayout(
-        owner_id=123, group_id=-100123, channel_id=-100124,
-        topics=dict(diary=11, author=12, curator=13, chat=14, library=15,
-                    machine=16, control=17),
+        owner_id=123,
+        group_id=-100123,
+        channel_id=-100124,
+        topics=dict(
+            diary=11, author=12, curator=13, chat=14, library=15, machine=16, control=17
+        ),
     )
 
 
 async def test_diary_handler_ignores_user_messages():
     from aiogram.types import Chat, Message, User
+
     service = AsyncMock()
     jobs = JobQueue()
-    ingress = BotIngress(telegram_layout(), {10: "mika", 20: "curator", 30: "ops"}, jobs, service)
-    message = Message(message_id=1, date=AT, chat=Chat(id=-100123, type="supergroup"),
-                      message_thread_id=11, from_user=User(id=123, is_bot=False, first_name="Owner"),
-                      text="/state")
+    ingress = BotIngress(
+        telegram_layout(), {10: "mika", 20: "curator", 30: "ops"}, jobs, service
+    )
+    message = Message(
+        message_id=1,
+        date=AT,
+        chat=Chat(id=-100123, type="supergroup"),
+        message_thread_id=11,
+        from_user=User(id=123, is_bot=False, first_name="Owner"),
+        text="/state",
+    )
     await ingress.on_message(message, SimpleNamespace(id=10))
     assert jobs.pending == 0
     service.command.assert_not_awaited()
@@ -291,12 +313,18 @@ async def test_diary_handler_ignores_user_messages():
 
 async def test_model_calls_use_task_queue():
     from aiogram.types import Chat, Message, User
+
     service = AsyncMock()
     jobs = JobQueue()
     ingress = BotIngress(telegram_layout(), {30: "ops"}, jobs, service)
-    message = Message(message_id=2, date=AT, chat=Chat(id=-100123, type="supergroup"),
-                      message_thread_id=17, from_user=User(id=123, is_bot=False, first_name="Owner"),
-                      text="/health")
+    message = Message(
+        message_id=2,
+        date=AT,
+        chat=Chat(id=-100123, type="supergroup"),
+        message_thread_id=17,
+        from_user=User(id=123, is_bot=False, first_name="Owner"),
+        text="/health",
+    )
     await ingress.on_message(message, SimpleNamespace(id=30))
     service.command.assert_not_awaited()
     assert jobs.pending == 1
@@ -306,14 +334,24 @@ async def test_model_calls_use_task_queue():
     service.command.assert_awaited_once()
 
 
-@pytest.mark.parametrize("owner,topic,bot", [(456,17,30), (123,12,30), (123,13,20), (123,17,10)])
+@pytest.mark.parametrize(
+    "owner,topic,bot", [(456, 17, 30), (123, 12, 30), (123, 13, 20), (123, 17, 10)]
+)
 async def test_routing_rejects_wrong_owner_topic_or_bot(owner, topic, bot):
     from aiogram.types import Chat, Message, User
+
     jobs = JobQueue()
-    ingress = BotIngress(telegram_layout(), {10:"mika",20:"curator",30:"ops"}, jobs, AsyncMock())
-    message = Message(message_id=3, date=AT, chat=Chat(id=-100123, type="supergroup"),
-                      message_thread_id=topic, from_user=User(id=owner,is_bot=False,first_name="User"),
-                      text="/state")
+    ingress = BotIngress(
+        telegram_layout(), {10: "mika", 20: "curator", 30: "ops"}, jobs, AsyncMock()
+    )
+    message = Message(
+        message_id=3,
+        date=AT,
+        chat=Chat(id=-100123, type="supergroup"),
+        message_thread_id=topic,
+        from_user=User(id=owner, is_bot=False, first_name="User"),
+        text="/state",
+    )
     await ingress.on_message(message, SimpleNamespace(id=bot))
     assert jobs.pending == 0
 
@@ -321,10 +359,103 @@ async def test_routing_rejects_wrong_owner_topic_or_bot(owner, topic, bot):
 async def test_job_trace_is_inherited_by_threaded_work():
     seen = []
     jobs = JobQueue()
+
     async def work():
         seen.append(await asyncio.to_thread(structlog.contextvars.get_contextvars))
+
     jobs.submit("trace-root", "fixture", work)
     await jobs.start()
     await jobs.join()
     await jobs.close()
     assert seen[0]["trace_id"] == "trace-root"
+
+
+@pytest.mark.parametrize(
+    "owner,topic,bot,accepted",
+    [(123, 17, 30, True), (456, 17, 30, False), (123, 11, 10, False)],
+)
+async def test_settings_callback_is_owner_only_and_queued(owner, topic, bot, accepted):
+    from aiogram.types import Chat, Message, User
+
+    jobs, service = JobQueue(), AsyncMock()
+    ingress = BotIngress(telegram_layout(), {10: "mika", 30: "ops"}, jobs, service)
+    message = Message(
+        message_id=4,
+        date=AT,
+        chat=Chat(id=-100123, type="supergroup"),
+        message_thread_id=topic,
+    )
+    query = SimpleNamespace(
+        id="settings-query",
+        from_user=User(id=owner, is_bot=False, first_name="User"),
+        message=message,
+        data="settings:view:study",
+        answer=AsyncMock(),
+    )
+    await ingress.on_callback(query, SimpleNamespace(id=bot))
+    assert jobs.pending == int(accepted)
+    service.settings_view.assert_not_awaited()
+    if accepted:
+        query.answer.assert_awaited_once()
+        await jobs.start()
+        await jobs.join()
+        await jobs.close()
+        service.settings_view.assert_awaited_once()
+        assert service.settings_view.call_args.args[:2] == (message, "study")
+    else:
+        query.answer.assert_not_awaited()
+
+
+async def test_dependent_pin_waits_for_message_receipt(database):
+    publisher = Publisher(database)
+    destination = Destination("control", "ops", -100123, 17)
+    card = publisher.enqueue_operation(
+        "card",
+        destination,
+        trace_id="defect",
+        method="message",
+        text="Defect card",
+        at=AT,
+    )
+    publisher.enqueue_operation(
+        "pin", destination, trace_id="defect", method="pin", depends_on=card, at=AT
+    )
+    transport = AsyncMock()
+    transport.send.side_effect = [77, 77]
+    worker = OutboxWorker(database, transport)
+    assert await worker.run_once(at=AT) == "sent"
+    assert await worker.run_once(at=AT) == "sent"
+    assert transport.send.call_args.args[0]["message_id"] == 77
+
+
+def test_post_buttons_expose_required_actions():
+    draft = post_buttons("post-id")["inline_keyboard"][0]
+    assert [button["text"] for button in draft] == ["Опубликовать", "Перегенерировать"]
+    assert (
+        post_buttons("post-id", published=True)["inline_keyboard"][0][0]["text"]
+        == "Брак"
+    )
+
+
+async def test_telegram_transport_uses_the_designated_bot_and_topic():
+    bots = {name: AsyncMock() for name in ("mika", "curator", "ops")}
+    bots["curator"].send_message.return_value = SimpleNamespace(message_id=83)
+    transport = TelegramTransport(bots)
+    message_id = await transport.send(
+        {
+            "method": "message",
+            "trace_id": "trace",
+            "destination": {
+                "channel": "curator",
+                "bot": "curator",
+                "chat_id": -100123,
+                "topic_id": 13,
+                "primary": False,
+            },
+            "text": "A recorded verdict.",
+        }
+    )
+    assert message_id == 83
+    assert bots["curator"].send_message.call_args.kwargs["message_thread_id"] == 13
+    bots["mika"].send_message.assert_not_awaited()
+    bots["ops"].send_message.assert_not_awaited()
