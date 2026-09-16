@@ -2063,11 +2063,19 @@ Celery, Postgres, Docker. Каждое добавит инфраструктур
 
 ### 30.1 Два сервиса
 
+```sh
+nix develop .#models --command llama-server \
+  --model /path/to/gemma-4-12b-it-uncensored-Q4_K_M.gguf \
+  --host 127.0.0.1 --port 8080 --ctx-size 32768 --parallel 1 --reasoning off
+nix build .#embedding-model --out-link result-embedding-model
+nix develop .#models --command llama-server \
+  --model "$PWD/result-embedding-model" --host 127.0.0.1 --port 8081 \
+  --ctx-size 2048 --parallel 1 --batch-size 2048 --ubatch-size 2048 --embedding
 ```
-llama-server --model gemma-4-12B-it-Q4_K_M.gguf --port 8080 \
-             --ctx-size 32768 --grammar-dir grammars/
-llama-server --model embeddinggemma-308m.gguf  --port 8081 --embedding
-```
+
+Nix is required for both services. Grammars are sent per request; llama-server
+has no `--grammar-dir` option. See [the startup guide](mika-startup/ЗАПУСК.md)
+for the complete launch sequence and local input checks.
 
 Оба под systemd с `DynamicUser`, `ProtectHome`, `PrivateTmp`.
 Контекст 32K, а не 256K: больше нам не нужно ни в одном профиле,

@@ -5,7 +5,7 @@ PAD mood simulation, dialogue sessions, and Telegram publication. The architectu
 is in [ARCHITECTURE.md](ARCHITECTURE.md); approved corrections take precedence in
 [docs/DECISIONS.md](docs/DECISIONS.md).
 
-The startup guide is in [mika-startup/ЗАПУСК.md](mika-startup/ЗАПУСК.md).
+The Nix-only startup guide is in [mika-startup/ЗАПУСК.md](mika-startup/ЗАПУСК.md).
 That directory also contains public configuration templates. Keep the filled
 copies in `config/`; the private library, Telegram layout, runtime snapshots,
 and credential files are excluded from Git.
@@ -31,9 +31,9 @@ After changing dependencies:
 nix develop .#bootstrap --command uv lock
 ```
 
-Work on feature branches and merge verified changes into `develop`. `main`
-contains the initial instructions. Configuration is in `config/`; all model
-instructions and examples are files in `prompts/`.
+Work on feature branches and merge verified changes into `develop`. Promote
+`develop` to `main` through a pull request with passing CI. Configuration is in
+`config/`; all model instructions and examples are files in `prompts/`.
 
 CI runs on every pull request to `main` and `develop`, pushes to those branches,
 and merge queues. It runs the full test suite, lint and formatting checks, an
@@ -57,7 +57,12 @@ calls occur. Add `--workdir <new-directory>` to retain evidence.
 Run separate llama-server services: generation on port 8080 and embeddings on
 8081. The embedding model must match the stored vector identity. The flake exposes
 `embedding-model`; rebuild vectors explicitly with `/graph reindex` after a change.
-Host llama-server processes are the allowed exception to the devShell rule.
+Start both servers through `nix develop .#models --command llama-server`; the
+[startup guide](mika-startup/ЗАПУСК.md#3-start-the-model-services) lists the full
+commands. This shell supplies the locked Vulkan build of llama.cpp.
+
+Use the flake's Python directly. `uv run` can select a local `.venv` containing
+wheels that cannot load native libraries on NixOS.
 
 ```sh
 nix develop --command python -m src.cli run \

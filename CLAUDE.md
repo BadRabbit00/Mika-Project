@@ -6,9 +6,10 @@ Open requirements are in docs/TODO.md. Approved corrections and configuration
 changes are in docs/DECISIONS.md and docs/CONFIG_PATCHES.md. Later explicit user
 corrections take precedence over these documents and ARCHITECTURE.md.
 
-- Keep main limited to the initial architecture. Work on feature branches and
-  merge completed, verified changes into develop.
+- Work on feature branches and merge completed, verified changes into develop.
+  Promote develop to main through a pull request with passing CI.
 - Run Python, uv, tests, and developer tools inside the flake devShell.
+- Start llama-server through the flake's models devShell. Nix is required.
 - Use Python 3.12, uv2nix, and the standard-library sqlite3 module. Do not add an ORM.
 - Apply the supplied decisions to config/ and prompts/. Write new comments,
   logs, and documentation in English. Never put model prompts or settings in
