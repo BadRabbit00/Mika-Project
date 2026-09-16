@@ -7,7 +7,6 @@ import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from difflib import SequenceMatcher
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
@@ -15,6 +14,7 @@ import structlog
 
 from src.core.content_rules import CYCLE, normalized_text, technical_match
 from src.core.pad import finite
+from src.core.settings import SettingsRegistry
 from src.core.time_utils import require_aware
 from src.core.vectors import cosine
 
@@ -202,16 +202,30 @@ class ValidationResult:
         return not self.reasons
 
 
-def lexical_echo_similarity(left: str, right: str) -> float:
-    """Explicit opt-in sequence metric; see TODO(PROMPT-ECHO)."""
-    return SequenceMatcher(
-        None, normalized_text(left), normalized_text(right), autojunk=False
-    ).ratio()
+async def token_echo_similarity(llm, left: str, right: str) -> float:
+    """Jaccard similarity of five-token sets from the generation tokenizer."""
+    sets = []
+    for text in (left, right):
+        tokens = await llm.tokenize(text)
+        if not isinstance(tokens, list) or any(
+            type(t) is not int or t < 0 for t in tokens
+        ):
+            raise ValueError("Echo scoring requires exact server token IDs")
+        sets.append({tuple(tokens[i : i + 5]) for i in range(len(tokens) - 4)})
+    union = sets[0] | sets[1]
+    return len(sets[0] & sets[1]) / len(union) if union else 0.0
 
 
 class OutputValidator:
-    def __init__(self, llm, *, echo_similarity: Callable[[str, str], float]):
+    def __init__(
+        self,
+        llm,
+        *,
+        echo_similarity: Callable[[str, str], float] | None = None,
+        settings=None,
+    ):
         self.llm, self.echo_similarity = llm, echo_similarity
+        self.settings = settings or SettingsRegistry.from_file("config/settings.yaml")
 
     async def validate(
         self,
@@ -222,6 +236,9 @@ class OutputValidator:
     ) -> ValidationResult:
         envelope = clean_output(raw, strip_modes=False)
         reasons = []
+        echo_threshold = self.settings.get("validator.echo_threshold")
+        repeat_threshold = self.settings.get("validator.repeat_threshold")
+        echo_score = repeat_score = None
         if context.mode is not None:
             match = re.fullmatch(
                 r"<" + context.mode + r">(.*?)</" + context.mode + r">",
@@ -277,10 +294,15 @@ class OutputValidator:
         if not context.complete or visible.rstrip().endswith(","):
             reasons.append("truncated")
         if context.prompt:
-            score = finite(self.echo_similarity(context.prompt, visible))
+            score = finite(
+                self.echo_similarity(context.prompt, visible)
+                if self.echo_similarity
+                else await token_echo_similarity(self.llm, context.prompt, visible)
+            )
             if not 0 <= score <= 1:
                 raise ValueError("Echo similarity must be in [0, 1]")
-            if score > 0.8:
+            echo_score = score
+            if score > echo_threshold:
                 reasons.append("prompt_echo")
         if CYCLE.search(scan):
             reasons.append("cycle")
@@ -312,7 +334,8 @@ class OutputValidator:
             vector = await self.llm.embed(visible)
             for post in recent_posts[:30]:
                 score = cosine(vector, await self.llm.embed(post.text))
-                if score > 0.86:
+                repeat_score = score
+                if score > repeat_threshold:
                     reasons.append("duplicate")
                     duplicate = post.id
                     break
@@ -327,5 +350,9 @@ class OutputValidator:
             accepted=result.accepted,
             reasons=result.reasons,
             duplicate_of=duplicate,
+            echo_score=echo_score,
+            echo_threshold=echo_threshold,
+            repeat_score=repeat_score,
+            repeat_threshold=repeat_threshold,
         )
         return result
