@@ -35,13 +35,13 @@ def simulate_nights(start, days, schedule, scenario, rng):
     for index in range(days):
         day = start + timedelta(days=index)
         complexities, labels = scenario["complexity_rotation"], scenario["sleep_labels"]
-        plan = schedule.plan_sleep(
+        bedtime = schedule.plan_bedtime(
             day - timedelta(days=1),
             last_complexity=complexities[index % len(complexities)],
             mood=labels[index % len(labels)],
             rng=rng,
         )
-        wake = schedule.wake_up(
+        wake = schedule.resolve_wake(
             day,
             rng=rng,
             trigger_states=scenario["trigger_states"],
@@ -50,9 +50,9 @@ def simulate_nights(start, days, schedule, scenario, rng):
                 for key, value in scenario["interruption_times"].items()
             },
         )
-        sleep = SleepWindow(plan.bedtime, wake.at)
+        sleep = SleepWindow(bedtime, wake.at)
         debt = schedule.sleep_debt(debt, sleep)
-        nights.append((plan, wake, sleep, debt))
+        nights.append((bedtime, wake, sleep, debt))
     return nights
 
 
@@ -235,13 +235,13 @@ def simulate(
         sleep_rows = [
             {
                 "bedtime": to_utc_iso(sleep.bedtime),
-                "planned_wake": to_utc_iso(plan.wake),
+                "planned_bedtime": to_utc_iso(bedtime),
                 "actual_wake": to_utc_iso(sleep.wake),
                 "reason": wake.reason,
                 "hours": round(sleep.hours, 4),
                 "debt": round(debt, 4),
             }
-            for plan, wake, sleep, debt in nights
+            for bedtime, wake, sleep, debt in nights
         ]
         for name, rows in (("sleep", sleep_rows), ("world", world_rows)):
             with (output / f"{name}.csv").open(

@@ -504,34 +504,30 @@ def wake_options(day=START):
 
 def test_sleep_plan_preserves_literal_complexity_and_mood_formula(schedule):
     rng = Mock()
-    rng.gauss.side_effect = [7, -4]
-    plan = schedule.plan_sleep(
+    rng.gauss.side_effect = [7]
+    bedtime = schedule.plan_bedtime(
         START - timedelta(days=1), last_complexity=9, mood="stuck", rng=rng
     )
-    assert plan.bedtime == START.replace(hour=2, minute=19)
-    assert plan.wake == START.replace(hour=7, minute=56)
+    assert bedtime == START.replace(hour=2, minute=19)
     assert rng.gauss.call_args_list[0].args == (0, 35)
-    assert rng.gauss.call_args_list[1].args == (0, 20)
+    assert rng.gauss.call_count == 1
     rng.gauss.side_effect = [0]
-    rng.uniform.return_value = 8.5
-    free = schedule.plan_sleep(START, last_complexity=4, mood="down", rng=rng)
-    assert free.bedtime == (START + timedelta(days=1)).replace(minute=30)
-    assert elapsed_hours(free.bedtime, free.wake) == 8.5
-    assert rng.uniform.call_args.args == (7.5, 9.5)
+    free = schedule.plan_bedtime(START, last_complexity=4, mood="down", rng=rng)
+    assert free == (START + timedelta(days=1)).replace(minute=30)
 
 
 def test_actual_wake_uses_first_class_and_free_windows(schedule):
     rng = Mock()
     rng.random.return_value = 0.999
     for day, hour, minute in ((START, 7, 50), (START + timedelta(days=4), 9, 40)):
-        wake = schedule.wake_up(day, rng=rng, **wake_options(day))
+        wake = schedule.resolve_wake(day, rng=rng, **wake_options(day))
         assert wake.reason == "alarm"
         assert wake.at == day.replace(hour=hour, minute=minute)
         assert wake.event_id == "woke_by_alarm_early"
     rng.uniform.side_effect = lambda lo, hi: (lo + hi) / 2
     for offset, hour, minute in ((1, 10, 45), (5, 11, 0)):
         day = START + timedelta(days=offset)
-        wake = schedule.wake_up(day, rng=rng, **wake_options(day))
+        wake = schedule.resolve_wake(day, rng=rng, **wake_options(day))
         assert wake.at == day.replace(hour=hour, minute=minute)
         assert wake.reason == "free" and wake.event_id is None
 
@@ -541,7 +537,7 @@ def test_wake_interruptions_stop_at_first_matching_event(schedule):
     rng = Mock()
     rng.random.return_value = 0
     rng.uniform.side_effect = lambda lo, hi: lo
-    wake = schedule.wake_up(sunday, rng=rng, **wake_options(sunday))
+    wake = schedule.resolve_wake(sunday, rng=rng, **wake_options(sunday))
     assert wake.reason == "mama_call" and wake.at == sunday.replace(hour=9)
     assert wake.event_id == "wake:mama_call" and wake.hint
     assert rng.random.call_count == 1
@@ -550,23 +546,27 @@ def test_wake_interruptions_stop_at_first_matching_event(schedule):
 def test_unspecified_wake_time_and_trigger_state_fail_explicitly(schedule):
     rng = Mock()
     rng.random.return_value = 0
-    with pytest.raises(ScheduleGap, match="WAKE-TIMES"):
-        schedule.wake_up(START, rng=rng, interruption_times={}, trigger_states={})
+    rng.uniform.side_effect = lambda low, high: low
+    wake = schedule.resolve_wake(START, rng=rng, trigger_states={})
+    assert wake.at == START.replace(hour=7, minute=40)
     rng.random.return_value = 0.999
     with pytest.raises(ScheduleGap, match="trigger state"):
-        schedule.wake_up(START, rng=rng, interruption_times={}, trigger_states={})
+        schedule.resolve_wake(START, rng=rng, trigger_states={})
 
 
 def test_oversleep_only_matches_class_days(schedule):
     rng = Mock()
     rng.random.side_effect = [0.999, 0.999, 0]
-    wake = schedule.wake_up(START, rng=rng, **wake_options())
+    wake = schedule.resolve_wake(START, rng=rng, **wake_options())
     assert wake.reason == "overslept" and wake.missed_first_class
     assert wake.at == START.replace(hour=12, minute=20)
     tuesday = START + timedelta(days=1)
     rng.random.side_effect = [0.999, 0.999]
     rng.uniform.side_effect = lambda lo, hi: lo
-    assert schedule.wake_up(tuesday, rng=rng, **wake_options(tuesday)).reason == "free"
+    assert (
+        schedule.resolve_wake(tuesday, rng=rng, **wake_options(tuesday)).reason
+        == "free"
+    )
 
 
 def test_sleep_debt_uses_actual_hours_and_literal_clamp(schedule, model):
@@ -598,10 +598,60 @@ def test_sleep_and_class_blackouts_include_boundaries_but_allow_breaks(schedule)
             START.replace(hour=hour, minute=minute), sleep=sleep, road_roll=0
         )
         assert result.blocked and result.reason == reason
-    for hour, minute in ((7, 50), (10, 20), (10, 25), (11, 50), (13, 20)):
+    for hour, minute in ((7, 50), (10, 25), (11, 55), (13, 25)):
         assert not schedule.blackout(
             START.replace(hour=hour, minute=minute), sleep=sleep, road_roll=0
         ).blocked
+
+
+def test_commute_follows_first_class_and_free_days_have_no_commute(schedule):
+    friday = START + timedelta(days=4)
+    assert not schedule.in_commute(friday.replace(hour=8, minute=40))
+    assert schedule.in_commute(friday.replace(hour=10, minute=5))
+    assert not schedule.in_commute(friday.replace(hour=10, minute=45))
+    assert not schedule.in_commute(
+        (START + timedelta(days=1)).replace(hour=8, minute=40)
+    )
+
+
+def test_sleep_history_applies_debt_once_across_restarts(tmp_path, schedule):
+    from src.core.sleep import SleepHistory
+
+    db = Database(tmp_path / "sleep.sqlite3")
+    db.initialize()
+    history = SleepHistory(db, schedule, initial_debt=3)
+    sleep = SleepWindow(START.replace(hour=1), START.replace(hour=7))
+    history.record(sleep, planned_bedtime=sleep.bedtime, reason="alarm")
+    with pytest.raises(ValueError, match="wake"):
+        history.complete(START.date(), at=START.replace(hour=6))
+    assert history.complete(START.date(), at=sleep.wake) == 5
+    reopened = SleepHistory(Database(db.path), schedule, initial_debt=3)
+    assert reopened.complete(START.date(), at=sleep.wake) == 5
+    with db.connection() as c:
+        row = c.execute("SELECT * FROM sleep_log").fetchone()
+        assert row["debt_applied"] == 1 and row["hours"] == 6
+        assert row["actual_bedtime"].endswith("Z")
+    following = SleepWindow(
+        sleep.bedtime + timedelta(days=1), sleep.wake + timedelta(days=1)
+    )
+    third = SleepWindow(
+        sleep.bedtime + timedelta(days=2), sleep.wake + timedelta(days=2)
+    )
+    reopened.record(following, planned_bedtime=following.bedtime, reason="alarm")
+    reopened.record(third, planned_bedtime=third.bedtime, reason="alarm")
+    assert reopened.complete(third.bedtime.date(), at=third.wake) == 9
+    assert reopened.complete(following.bedtime.date(), at=third.wake) == 7
+
+
+def test_sleep_mood_labels_and_relative_oversleep_window(schedule):
+    assert schedule.mood_label(learning_state="WAITING", rounds=2, p=0.3) == "stuck"
+    assert schedule.mood_label(learning_state="IDLE", rounds=0, p=-0.36) == "down"
+    assert schedule.mood_label(learning_state="IDLE", rounds=0, p=-0.35) is None
+    rng = Mock()
+    rng.random.side_effect = [0.999, 0.999, 0]
+    rng.uniform.side_effect = lambda low, high: high
+    wake = schedule.resolve_wake(START, rng=rng, trigger_states={"not_fighting": False})
+    assert wake.reason == "overslept" and wake.at == START.replace(hour=8, minute=35)
 
 
 def test_road_blackout_uses_explicit_roll_and_configured_probability(schedule):
@@ -617,7 +667,7 @@ def test_schedule_rejects_naive_times_and_measures_repeated_hour(schedule):
     naive = START.replace(tzinfo=None)
     for call in (
         lambda: schedule.classes(naive),
-        lambda: schedule.plan_sleep(
+        lambda: schedule.plan_bedtime(
             naive, last_complexity=5, mood="neutral", rng=Random(1)
         ),
         lambda: SleepWindow(naive, START),
@@ -634,7 +684,7 @@ def test_schedule_rejects_naive_times_and_measures_repeated_hour(schedule):
 def test_wake_and_class_deltas_only_change_mood_via_events(service, schedule):
     rng = Mock()
     rng.random.return_value = 0
-    wake = schedule.wake_up(START, rng=rng, **wake_options())
+    wake = schedule.resolve_wake(START, rng=rng, **wake_options())
     state = service.record_event(wake.event_id, at=wake.at, context=BaselineContext())
     assert state.last_event == "wake:dasha_hairdryer"
     lesson = schedule.classes(START)[0]

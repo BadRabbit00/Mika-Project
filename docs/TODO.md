@@ -49,34 +49,6 @@ including structured log fields written as `todo="<id>"`.
 
 - TODO(BASELINE-HISTORY): the configured history windows and BaselineContext.from_history are implemented.
   Live providers must still assemble exam, correction, waiting, and quiz facts.
-- TODO(SLEEP-WAKE): sections 25.1 and 29.1 specify different wake algorithms.
-  Keep the provisional sleep plan and the actual schedule-based wake event
-  explicit, without replacing either formula silently.
-- TODO(SLEEP-RECOVERY): the literal debt formula reduces debt only by surplus
-  sleep. The extra 2.5-hour good-night recovery has no defined condition or
-  composition rule; do not subtract it in addition to the formula.
-- TODO(WAKE-TIMES): dasha_hairdryer, delivery_doorbell, and overslept have no
-  structured wake times. Missing times require explicit caller input; text hints
-  are not parsed into scheduling rules.
-- TODO(CLASS-GRACE): grace_min does not specify which side of a lesson boundary
-  it affects. Class interiors remain blocked, with the explicit timetable gaps
-  available for posts; no grace interval is invented inside a lesson.
-- TODO(COMMUTE-WINDOW): the fixed 08:20–09:00 blackout differs from the
-  35-minute commute and Friday's later classes. No weekday restriction or return
-  route is supplied. Use the explicit blackout window; do not infer extra routes.
-- TODO(SLEEP-MOOD): no rule maps PAD to the sleep formula's stuck/down labels.
-  Callers must supply the label as an explicit fact.
-- TODO(SEMESTER-EPOCH): schedule.yaml references a semester start in life.yaml,
-  but only a week number is supplied. Semester pressure requires a start date.
-- TODO(WORLD-LOCATION): no deterministic movement policy is specified. Day
-  context requires the caller's known location, validated against life.yaml.
-  It does not randomly invent a location or infer one from a publication chance.
-- TODO(SLEEP-HISTORY): no schema or life_state key contract specifies planned
-  and actual sleep intervals, wake reasons, or once-per-night debt application.
-  Sleep calculators accept explicit facts; mood snapshots persist the supplied
-  debt. The implemented scheduler consumes a caller-supplied blackout provider;
-  it does not persist sleep plans or once-per-night debt application. Durable
-  sleep-history identities remain undefined. The simulation exports these facts.
 ## Output and writing contracts
 
 - TODO(OFFTOP-PERSONA): the shared prompts/_base.md names AI agents, while
@@ -126,9 +98,6 @@ including structured log fields written as `todo="<id>"`.
   the supplied template is corrected. The slot and situation variants are separate.
 - TODO(INSIGHT-PROMPT): insight is listed as a post kind but has no supplied
   write_insight.md. Do not substitute a different prompt silently.
-- TODO(WEATHER-MONTHS): life.yaml has no July or August fallback. If the API
-  fails in those months, omit weather instead of inventing seasonal conditions.
-
 ## Curator and interface contracts
 
 - TODO(CURATOR-MODEL-SOURCE): config/models.yaml remains absent. The explicitly

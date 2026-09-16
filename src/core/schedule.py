@@ -99,10 +99,11 @@ class Blackout:
 
 
 class Schedule:
-    def __init__(self, data: dict, sleep: dict):
+    def __init__(self, data: dict, sleep: dict, *, semester=None):
         if data["timezone"] != "Asia/Almaty":
             raise ValueError("The schedule must use Asia/Almaty")
         self._data, self._sleep = data, sleep
+        self._semester = semester
 
     @classmethod
     def from_config(cls, directory: Path):
@@ -111,7 +112,23 @@ class Schedule:
             (Path(directory) / "schedule.yaml").read_text(encoding="utf-8")
         )
         life = yaml.load((Path(directory) / "life.yaml").read_text(encoding="utf-8"))
-        return cls(data, life["sleep"])
+        return cls(data, life["sleep"], semester=life.get("semester"))
+
+    def semester_week(self, at: datetime) -> int | None:
+        at = require_aware(at)
+        if self._semester is None:
+            raise ScheduleGap("A semester start date is required")
+        week = (at.date() - self._semester["start"]).days // 7 + 1
+        return week if 1 <= week <= self._semester["weeks"] else None
+
+    def mood_label(self, *, learning_state, rounds, p) -> str | None:
+        rules = self._data["mood_labels"]
+        if (
+            learning_state == rules["stuck"]["learning_state"]
+            and rounds >= rules["stuck"]["min_rounds"]
+        ):
+            return "stuck"
+        return "down" if finite(p) < rules["down"]["p_below"] else None
 
     def classes(self, day: datetime) -> tuple[ClassSlot, ...]:
         day = require_aware(day)
@@ -140,13 +157,13 @@ class Schedule:
                 events[f"class:{weekday}:{index}"] = {"delta": item["mood"]}
         return events
 
-    def plan_sleep(
-        self, day: datetime, *, last_complexity: int, mood: str, rng: Random
-    ) -> SleepWindow:
+    def plan_bedtime(
+        self, day: datetime, *, last_complexity: int, mood: str | None, rng: Random
+    ) -> datetime:
         day = require_aware(day)
         if type(last_complexity) is not int or not 1 <= last_complexity <= 10:
             raise ValueError("Article complexity must be an integer from one to ten")
-        if mood not in ("neutral", "stuck", "down"):
+        if mood not in (None, "neutral", "stuck", "down"):
             raise ValueError("Supply an explicit neutral, stuck, or down sleep label")
         next_day = day + timedelta(days=1)
         base = local_clock(next_day, self._sleep["bedtime_base"])
@@ -156,31 +173,20 @@ class Schedule:
         bedtime = add_elapsed(
             base, minutes=delta + rng.gauss(0, self._sleep["jitter_min"])
         )
-        if self.has_classes(next_day):
-            wake = add_elapsed(
-                local_clock(next_day, self._sleep["wake_classes"]),
-                minutes=rng.gauss(0, 20),
-            )
-        else:
-            wake = add_elapsed(
-                bedtime, hours=rng.uniform(*self._sleep["wake_free_hours"])
-            )
-        plan = SleepWindow(bedtime, wake)
         log.info(
-            "sleep_planned",
+            "bedtime_planned",
             bedtime=to_utc_iso(bedtime),
-            wake=to_utc_iso(wake),
             complexity=last_complexity,
             sleep_label=mood,
         )
-        return plan
+        return bedtime
 
-    def wake_up(
+    def resolve_wake(
         self,
         day: datetime,
         *,
         rng: Random,
-        interruption_times: Mapping[str, datetime],
+        interruption_times: Mapping[str, datetime] | None = None,
         trigger_states: Mapping[str, bool],
     ) -> WakeEvent:
         day = require_aware(day)
@@ -201,16 +207,27 @@ class Schedule:
                     continue
             if rng.random() >= item["chance"]:
                 continue
-            if "window" in when:
-                at = self._uniform_time(day, when["window"], rng)
-            else:
-                if item["id"] not in interruption_times:
-                    raise ScheduleGap(
-                        f"TODO(WAKE-TIMES): missing time for {item['id']}"
-                    )
+            if interruption_times and item["id"] in interruption_times:
                 at = require_aware(interruption_times[item["id"]])
-                if at.date() != day.date():
-                    raise ValueError("Interruption time must belong to the wake day")
+            elif window := item.get("window", when.get("window")):
+                if window[0].startswith("+"):
+                    if not classes:
+                        raise ScheduleGap("An alarm-relative wake needs a class day")
+                    alarm = add_elapsed(
+                        classes[0].start,
+                        minutes=-self._data["alarm_before_first_class_min"],
+                    )
+                    low, high = [
+                        int(h) * 60 + int(m)
+                        for h, m in (part[1:].split(":") for part in window)
+                    ]
+                    at = add_elapsed(alarm, minutes=rng.uniform(low, high))
+                else:
+                    at = self._uniform_time(day, window, rng)
+            else:
+                raise ScheduleGap(f"Missing wake window for {item['id']}")
+            if at.date() != day.date():
+                raise ValueError("Interruption time must belong to the wake day")
             return self._wake_event(
                 WakeEvent(
                     item["id"],
@@ -256,11 +273,17 @@ class Schedule:
 
     def in_commute(self, at: datetime) -> bool:
         at = require_aware(at)
-        return any(
-            in_clock_window(at, *window)
-            for item in self._data["blackout"]
-            for window in item.get("windows", [])
-        )
+        return any(self._commute_contains(item, at) for item in self._data["blackout"])
+
+    def _commute_contains(self, item, at):
+        if derive := item.get("derive"):
+            classes = self.classes(at)
+            if not classes:
+                return False
+            start = add_elapsed(classes[0].start, minutes=-derive["minus_minutes"])
+            end = add_elapsed(start, minutes=derive["length_minutes"])
+            return start.timestamp() <= at.timestamp() < end.timestamp()
+        return any(in_clock_window(at, *window) for window in item.get("windows", []))
 
     def blackout(
         self, at: datetime, *, sleep: SleepWindow, road_roll: float
@@ -272,9 +295,18 @@ class Schedule:
             if item.get("source") == "sleep_model" and sleep.contains(at):
                 return Blackout(True, "sleep", item["reason"])
             if item.get("source") == "university":
-                if any(lesson.contains(at) for lesson in self.classes(at)):
+                if any(
+                    add_elapsed(
+                        lesson.start, minutes=-item["grace_before_min"]
+                    ).timestamp()
+                    <= at.timestamp()
+                    < add_elapsed(
+                        lesson.end, minutes=item["grace_after_min"]
+                    ).timestamp()
+                    for lesson in self.classes(at)
+                ):
                     return Blackout(True, "class", item["reason"])
-            if any(in_clock_window(at, *window) for window in item.get("windows", [])):
+            if self._commute_contains(item, at):
                 if road_roll >= item["chance_to_post"]:
                     return Blackout(True, "commute", item["reason"])
         return Blackout(False)

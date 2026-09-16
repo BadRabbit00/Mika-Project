@@ -188,7 +188,8 @@ async def test_weather_api_failure_uses_configured_seasonal_fallback():
             "weather"
         ][9]
         assert weather.seasonal_text in choices
-        assert await client.fetch(AT.replace(month=7), rng=Random(1)) is None
+        july = await client.fetch(AT.replace(month=7), rng=Random(1))
+        assert july.source == "seasonal" and july.seasonal_text
 
 
 async def test_weather_relevance_preserves_cooldown_and_location_rules():

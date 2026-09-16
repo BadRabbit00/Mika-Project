@@ -64,6 +64,7 @@ wake:
       text_hint: "мама позвонила, как всегда рано, спрашивала, ем ли я"
 
     - id: dasha_hairdryer
+      window: ["07:40", "08:30"]
       when: {weekday: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]}
       chance: 0.12
       mood: [-0.20, +0.30, -0.05]
@@ -77,6 +78,7 @@ wake:
       requires_trigger_state: not_fighting
 
     - id: delivery_doorbell
+      window: ["10:00", "18:00"]
       chance: 0.05
       mood: [-0.25, +0.35, -0.10]
       text_hint: "курьер перепутал квартиру"
@@ -88,6 +90,7 @@ wake:
       text_hint: "соседи сверху начали сверлить"
 
     - id: overslept
+      window: ["+0:00", "+0:45"]
       when: {has_classes: true}
       chance: 0.12
       mood: [-0.30, +0.40, -0.25]
@@ -97,7 +100,6 @@ wake:
   # Сколько ей нужно сна, чтобы быть в норме
   sleep_need_hours: 8.0
   debt_cap_hours: 12.0        # долг больше не копится
-  debt_recovery_per_good_night: 2.5
 
 # ══════════════════════════════════════════════════════════════════
 # 3. ЧТО ОНА ДЕЛАЕТ В ТЕЧЕНИЕ ДНЯ
@@ -120,5 +122,11 @@ day_shape:
 
 blackout:
   - {reason: сон, source: sleep_model}
-  - {reason: пара, source: university, grace_min: 5}   # может написать на перемене
-  - {reason: дорога, windows: [["08:20","09:00"]], chance_to_post: 0.3}
+  - {reason: пара, source: university, grace_after_min: 5, grace_before_min: 0}
+  - reason: дорога
+    derive: {from_first_class: true, minus_minutes: 45, length_minutes: 40}
+    chance_to_post: 0.3
+
+mood_labels:
+  stuck: {learning_state: WAITING, min_rounds: 2}
+  down: {p_below: -0.35}
