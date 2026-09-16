@@ -36,22 +36,72 @@ Mood remains independent of the knowledge graph.
 
 ```sh
 nix develop --command python scripts/simulate_mood.py \
-  --start 2026-09-14 --days 14 --seed 1 --output data/simulations/example
+  --start 2026-09-14 --days 14 --seed 1 --with-schedule \
+  --output data/simulations/example
 ```
 
 Use a fresh output directory. The script preserves existing state databases.
 It writes a daily console table, `report.json`, `samples.csv`, `transitions.csv`,
 `state.sqlite3`, and structured `events.jsonl` logs. CSV timestamps and SQLite
 timestamps use UTC; the simulated calendar and displayed dates use Almaty time.
+The console includes daily averages, sleep statistics, and every mood transition.
+The scheduled run also writes `sleep.csv` and `world.csv`, preserving planned
+and actual wake times, accumulated debt, location, and blackout decisions.
 It makes no model calls and publishes nothing.
 
 The workload in `tests/fixtures/mood_scenario.json` is an explicit test scenario,
-not a guessed production event-frequency policy. The mood-only run uses explicit
-sleep-debt fixtures while the scheduling stage is developed.
+not a guessed production event-frequency policy. Omit `--with-schedule` to repeat
+the independently verified step 4 run with explicit sleep-debt fixtures.
+The scheduled run calculates debt from actual sleep intervals, using fixture
+inputs for missing interruption times, sleep labels, and known locations.
 
 The verified mood-only run produced 336 hourly samples and 60 events. Mean PAD
 was P=0.1831, A=-0.0481, D=0.0145. No sample reached either extreme. This exercises
 the specified coefficients; it does not establish psychological validity.
+
+The scheduled run produced 336 hourly PAD samples, 70 events, and 14 actual sleep
+intervals. Mean PAD was P=0.1383, A=-0.0554, D=-0.0203, with no samples at either
+extreme. An additional daily 08:40 check exercises the commute blackout between
+hourly samples. These checks are separate from the PAD averages.
+
+## Sleep and day context
+
+`Schedule.from_config(Path("config"))` reads the timetable, wake rules, and
+blackout windows from `schedule.yaml`, plus the sleep formula values from
+`life.yaml`. All returned datetimes are aware and normalized to Almaty.
+
+- `plan_sleep(activity_day, last_complexity=..., mood=..., rng=...)` implements
+  section 25.1. The usual 01:00 bedtime belongs to the following calendar day.
+  The explicit sleep label is `neutral`, `stuck`, or `down`; there is no inferred
+  mapping from PAD. The result is a provisional `SleepWindow`.
+- `wake_up(day, rng=..., interruption_times=..., trigger_states=...)` implements
+  section 29.1 in configuration order. The first matching interruption that
+  passes its probability check wins. Otherwise, wake is before the first lesson
+  by the configured alarm interval, or uniformly within the free-day window.
+- Create `SleepWindow(plan.bedtime, wake.at)` for actual sleep. Reject impossible
+  intervals instead of resampling or silently changing the formula. Elapsed
+  hours use timestamps, including Almaty's repeated hour in February 2024.
+- `sleep_debt(previous_debt, actual_sleep)` uses the literal deficit-and-clamp
+  formula. Feed its result into `BaselineContext`; mood applies the configured
+  P and A penalties and baseline bounds.
+- Pass a non-null `wake.event_id` or a lesson's `event_id` to
+  `MoodService.record_event`. Their deltas come from the supplied schedule.
+  The schedule does not mutate PAD or insert mood rows.
+- `blackout(at, sleep=..., road_roll=...)` checks half-open sleep and lesson
+  intervals. Timetable breaks remain available. During the configured road
+  window, rolls below 0.3 allow publication. Supply the same roll when rechecking
+  one proposed post; the method does not draw new randomness on each read.
+
+`World.day_context` assembles `bedtime`, `wake_time`, `sleep_debt`, `location`,
+`daypart`, available objects, and the blackout result. The caller supplies the
+relevant sleep interval and known location; location names and objects are
+validated against `life.yaml`. This module returns structured facts without
+constructing model prompts. Writer/context integration belongs to step 7.
+
+Sleep calculations are pure with respect to storage. Mood debt is persisted with
+event snapshots; the caller owns the actual sleep interval and wake history.
+Production persistence for those facts needs the schema decision recorded in
+`TODO(SLEEP-HISTORY)` before scheduling across restarts.
 
 ## Specification conflicts
 

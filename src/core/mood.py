@@ -13,8 +13,10 @@ from ruamel.yaml import YAML
 from src.core.cycle import Cycle
 from src.core.db import Database, insert_mood
 from src.core.pad import AXES, Coefficients, Mood, clamp, finite, sign
+from src.core.schedule import Schedule
 from src.core.time_utils import (
     add_elapsed,
+    daypart_at,
     elapsed_hours,
     from_utc_iso,
     require_aware,
@@ -132,13 +134,6 @@ class UnspecifiedResolution(ValueError):
     """The selected probability mass has no configured outcome."""
 
 
-def _minute(value: str) -> int:
-    hour, minute = map(int, value.split(":"))
-    if not 0 <= hour < 24 or not 0 <= minute < 60:
-        raise ValueError("Invalid local clock time")
-    return hour * 60 + minute
-
-
 class MoodModel:
     def __init__(self, data: dict, life: dict, settings: dict, *, epoch: datetime):
         self._data, self._life, self._settings = data, life, settings
@@ -170,20 +165,15 @@ class MoodModel:
             for item in registry["settings"]
             if item["key"].startswith("mood.")
         }
-        return cls(read("mood.yaml"), read("life.yaml"), settings, epoch=epoch)
+        data = read("mood.yaml")
+        data["events"] = {
+            **data["events"],
+            **Schedule.from_config(directory).event_catalog(),
+        }
+        return cls(data, read("life.yaml"), settings, epoch=epoch)
 
     def daypart(self, at: datetime) -> str:
-        at = require_aware(at)
-        minute = at.hour * 60 + at.minute
-        for name, window in self._life["dayparts"].items():
-            start, end = _minute(window["from"]), _minute(window["to"])
-            if (
-                start <= minute < end
-                if start < end
-                else minute >= start or minute < end
-            ):
-                return name
-        raise ValueError("No configured daypart covers this instant")
+        return daypart_at(at, self._life["dayparts"])
 
     def coefficients(self, at: datetime) -> dict[str, Coefficients]:
         effect = self.cycle.at(at)
@@ -365,6 +355,7 @@ class MoodService:
             raise ValueError("Mood mutations must be strictly chronological")
         decayed = self.model.decay(state, at, context)
         mood = self.model.changed(decayed, delta, pierce=pierce)
+        mood = Mood(*(round(getattr(mood, axis), 4) for axis in AXES))
         insert_mood(
             connection,
             at=at,

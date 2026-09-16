@@ -1,7 +1,7 @@
 # Implementation rules
 
 Read ARCHITECTURE.md before making changes. Follow the delivery order in
-section 38.3. Steps 1–4, including mood and its two-week simulation, are implemented.
+section 38.3. Steps 1–5, including mood, sleep, and two-week simulations, are implemented.
 Live-model compatibility limits and deferred requirements are in docs/TODO.md.
 
 - Keep main limited to the initial architecture. Work on feature branches and
