@@ -163,6 +163,23 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(KAOMOJI): the architecture does not define kaomoji syntax. Bracketed
   expressions with recognizable face punctuation are exempted from the kana
   rule; parentheses around Japanese prose are not an exemption.
+- TODO(OFFTOP-FREQUENCY): overused() has no threshold and inverse-frequency
+  weights have no zero-count rule. The planner requires explicit max_slot_uses
+  and slot_weight inputs. No production threshold or smoothing is inferred.
+- TODO(OFFTOP-ENTITY): legacy entity strings do not preserve variable names or
+  frame history. New events use canonical JSON containing slot and variable
+  values. Frame history is recoverable from unique placeholder sets in the
+  supplied frames. Ambiguous frame signatures or legacy history fail explicitly.
+- TODO(OFFTOP-PEOPLE): people entries provide IDs and descriptions, but not
+  grammatical name forms for frame references. Callers supply reference labels;
+  frames with unresolved references are ineligible instead of inventing names.
+- TODO(DAILY-ISOLATION): write_daily.md requests article complexity inside an
+  off-topic profile. Keep that variant unavailable under strict isolation until
+  the supplied template is corrected. The slot and situation variants are separate.
+- TODO(INSIGHT-PROMPT): insight is listed as a post kind but has no supplied
+  write_insight.md. Do not substitute a different prompt silently.
+- TODO(WEATHER-MONTHS): life.yaml has no July or August fallback. If the API
+  fails in those months, omit weather instead of inventing seasonal conditions.
 
 ## Invariants for later delivery stages
 
