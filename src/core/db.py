@@ -327,6 +327,11 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "ALTER TABLE learner_state ADD COLUMN curator_auth_failed INTEGER NOT NULL "
         "DEFAULT 0 CHECK (curator_auth_failed IN (0,1))",
     ),
+    (
+        "ALTER TABLE sleep_log ADD COLUMN origin TEXT NOT NULL DEFAULT 'observed' "
+        "CHECK (origin IN ('observed','scheduled','override'))",
+        f"ALTER TABLE sleep_log ADD COLUMN {_utc('override_until')}",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 

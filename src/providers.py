@@ -1,4 +1,4 @@
-"""Explicit live observations and database-backed world, sleep, and PAD providers."""
+"""Autonomous world, sleep, and PAD providers with temporary operator overrides."""
 
 import asyncio
 import json
@@ -8,15 +8,25 @@ from pathlib import Path
 from random import Random
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+import structlog
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from src.core.mood import BaselineContext, MoodModel, MoodService
 from src.core.pad import Mood
 from src.core.schedule import SleepWindow
-from src.core.sleep import SleepHistory
-from src.core.time_utils import from_utc_iso, require_aware
+from src.core.sleep_planner import ScheduledSleepProvider as ScheduledSleepProvider
+from src.core.time_utils import from_utc_iso, now, require_aware, to_utc_iso
 from src.core.weather import WeatherClient
 from src.core.world import World
+
+log = structlog.get_logger("blogai.providers")
 
 
 class SleepInput(BaseModel):
@@ -34,36 +44,66 @@ class SleepInput(BaseModel):
 
 class LiveInputs(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    location: str = Field(min_length=1)
-    observed_at: datetime
-    valid_until: datetime
-    road_roll: float = Field(ge=0, le=1)
     initial_mood: dict[str, float]
     initial_mood_at: datetime
-    initial_sleep_debt: float = Field(ge=0)
-    sleep: list[SleepInput] = Field(min_length=1)
+    initial_sleep_debt: float = Field(ge=0, allow_inf_nan=False)
+    location: str | None = Field(default=None, min_length=1)
+    observed_at: datetime | None = None
+    valid_until: datetime | None = None
+    road_roll: float | None = Field(default=None, ge=0, lt=1)
+    sleep: list[SleepInput] | None = None
+    comment: str | None = Field(
+        default=None,
+        exclude=True,
+        validation_alias=AliasChoices("_comment", "_комментарий"),
+    )
 
     @field_validator("observed_at", "valid_until", "initial_mood_at")
     @classmethod
     def aware(cls, value):
-        return require_aware(value)
+        return require_aware(value) if value is not None else None
 
     @model_validator(mode="after")
     def validate_observations(self):
         Mood(**self.initial_mood)
-        if self.valid_until <= self.observed_at:
-            raise ValueError("Observation validity must end after its timestamp")
-        for item in self.sleep:
+        override = any(
+            value is not None for value in (self.location, self.road_roll, self.sleep)
+        )
+        if override and self.valid_until is None:
+            raise ValueError("Temporary overrides require valid_until")
+        if self.valid_until is not None and self.valid_until <= (
+            self.observed_at or self.initial_mood_at
+        ):
+            raise ValueError("Override validity must end after its timestamp")
+        for item in self.sleep or ():
             SleepWindow(item.bedtime, item.wake)
         return self
 
+    def active(self, at):
+        at = require_aware(at)
+        return (
+            self.valid_until is not None
+            and (self.observed_at or self.initial_mood_at) <= at < self.valid_until
+        )
+
+    def snapshot(self):
+        return dict(
+            initial_mood={
+                axis: round(value, 4) for axis, value in self.initial_mood.items()
+            },
+            initial_mood_at=to_utc_iso(self.initial_mood_at),
+            initial_sleep_debt=round(self.initial_sleep_debt, 4),
+        )
+
     @classmethod
-    def read(cls, path):
-        path = Path(path)
-        if not path.is_file():
-            # TODO(LIVE-INITIAL-STATE): supply current observations for this deployment.
-            raise ValueError("An explicit live world-state JSON file is required")
-        return cls.model_validate_json(path.read_text())
+    def read(cls, path=None, *, at=None):
+        if path is None:
+            return cls(
+                initial_mood=dict(P=0, A=0, D=0),
+                initial_mood_at=now() if at is None else at,
+                initial_sleep_debt=0,
+            )
+        return cls.model_validate_json(Path(path).read_text())
 
 
 class SleepProvider(Protocol):
@@ -78,24 +118,6 @@ class WorldProvider(Protocol):
     async def current(self, at): ...
 
 
-class StoredSleepProvider:
-    def __init__(self, database, schedule, inputs_path):
-        self.inputs_path = inputs_path
-        inputs = LiveInputs.read(inputs_path)
-        self.history = SleepHistory(
-            database, schedule, initial_debt=inputs.initial_sleep_debt
-        )
-
-    def current(self, at):
-        for item in LiveInputs.read(self.inputs_path).sleep:
-            self.history.record(
-                SleepWindow(item.bedtime, item.wake),
-                planned_bedtime=item.planned_bedtime,
-                reason=item.reason,
-            )
-        return self.history.current(at)
-
-
 class DatabaseMoodProvider:
     def __init__(self, database, model, sleep, inputs):
         self.database, self.model, self.sleep = database, model, sleep
@@ -107,8 +129,8 @@ class DatabaseMoodProvider:
         )
         self.lock = asyncio.Lock()
 
-    def history(self, at):
-        _, _, debt = self.sleep.current(at)
+    def history(self, at, *, sleep_debt=None):
+        debt = self.sleep.current(at)[2] if sleep_debt is None else sleep_debt
         schedule = self.sleep.history.schedule
         pressure = schedule._data["semester_pressure"]
         period = pressure["weeks"].get(schedule.semester_week(at))
@@ -170,6 +192,16 @@ class DatabaseMoodProvider:
             else None,
         )
 
+    def planning_p(self, at, debt):
+        with self.database.connection() as c:
+            row = c.execute(
+                "SELECT * FROM mood WHERE at<=? ORDER BY at DESC LIMIT 1", (at,)
+            ).fetchone()
+        state = self.service._snapshot(row) if row else self.service._initial
+        if at < state.at:
+            return state.mood.P
+        return self.model.decay(state, at, self.history(at, sleep_debt=debt)).mood.P
+
     def _current(self, at):
         for resolution in self.service.pending_resolutions(at):
             self.service.record_event(
@@ -204,29 +236,29 @@ class WorldObservation:
     weather: object = None
 
 
-class ObservedWorldProvider:
-    def __init__(self, world, sleep, inputs_path, weather):
-        self.world, self.sleep, self.inputs_path, self.weather = (
+class DerivedWorldProvider:
+    def __init__(self, world, sleep, overrides, weather):
+        self.world, self.sleep, self.overrides, self.weather = (
             world,
             sleep,
-            inputs_path,
+            overrides,
             weather,
         )
-        self.rng = Random()
 
     def _day(self, at):
-        inputs = LiveInputs.read(self.inputs_path)
-        if not inputs.observed_at <= at <= inputs.valid_until:
-            raise ValueError(
-                "Current world observations are not yet valid or have expired"
-            )
+        inputs = self.overrides()
+        active = inputs.active(at)
         sleep, reason, debt = self.sleep.current(at)
         day = self.world.day_context(
             at,
             sleep=sleep,
             sleep_debt=debt,
-            location=inputs.location,
-            road_roll=inputs.road_roll,
+            location=inputs.location
+            if active and inputs.location is not None
+            else self.world.where(at, sleep=sleep),
+            road_roll=inputs.road_roll
+            if active and inputs.road_roll is not None
+            else Random("road:" + at.date().isoformat()).random(),
         )
         return WorldObservation(day, reason)
 
@@ -240,20 +272,63 @@ class ObservedWorldProvider:
             client=self.weather,
             location=current.day.location,
             last_mention_at=last_mention_at,
-            rng=self.rng,
+            rng=Random("weather:" + require_aware(at).date().isoformat()),
         )
         return WorldObservation(current.day, current.wake_reason, weather)
 
 
 class RuntimeProviders:
-    def __init__(self, database, config_dir, inputs_path, settings):
-        inputs = LiveInputs.read(inputs_path)
+    def __init__(
+        self, database, config_dir, inputs_path=None, settings=None, *, clock=now
+    ):
+        requested = LiveInputs.read(inputs_path, at=clock())
+
+        def bootstrap(c):
+            previous = c.execute(
+                "SELECT value FROM life_state WHERE key='runtime.initial'"
+            ).fetchone()
+            if previous:
+                return LiveInputs.model_validate_json(previous[0])
+            initial = requested.snapshot()
+            # Adopt an existing mood history instead of resetting an upgraded database.
+            oldest = c.execute("SELECT * FROM mood ORDER BY at LIMIT 1").fetchone()
+            if oldest:
+                initial = dict(
+                    initial_mood=dict(P=oldest["p"], A=oldest["a"], D=oldest["d"]),
+                    initial_mood_at=oldest["at"],
+                    initial_sleep_debt=oldest["sleep_debt"] or 0,
+                )
+            c.execute(
+                "INSERT INTO life_state(key,value,updated_at) "
+                "VALUES ('runtime.initial',?,?)",
+                (json.dumps(initial), from_utc_iso(initial["initial_mood_at"])),
+            )
+            log.info(
+                "world_initial_state_saved",
+                trace_id="world-bootstrap",
+                source="history"
+                if oldest
+                else "file"
+                if inputs_path
+                else "neutral_defaults",
+                initial_mood_at=initial["initial_mood_at"],
+                initial_sleep_debt=initial["initial_sleep_debt"],
+            )
+            return LiveInputs.model_validate(initial)
+
+        initial = database.run_transaction(bootstrap)
+        overrides = (
+            (lambda: LiveInputs.read(inputs_path)) if inputs_path else (lambda: initial)
+        )
         self.model = MoodModel.from_config(config_dir, settings=settings)
         world = World.from_config(config_dir)
-        self.sleep = StoredSleepProvider(database, world.schedule, inputs_path)
-        self.mood = DatabaseMoodProvider(database, self.model, self.sleep, inputs)
+        self.sleep = ScheduledSleepProvider(
+            database, world.schedule, initial, overrides=overrides
+        )
+        self.mood = DatabaseMoodProvider(database, self.model, self.sleep, initial)
+        self.sleep.mood_at = self.mood.planning_p
         self.weather = WeatherClient.from_config(config_dir, settings=settings)
-        self.world = ObservedWorldProvider(world, self.sleep, inputs_path, self.weather)
+        self.world = DerivedWorldProvider(world, self.sleep, overrides, self.weather)
 
     async def context(self, at):
         observation = await self.world.current(at)

@@ -1,8 +1,9 @@
-"""Factual day context assembled from the calendar and caller's known location."""
+"""Factual day context and deterministic calendar-derived location."""
 
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from random import Random
 from types import MappingProxyType
 
 from ruamel.yaml import YAML
@@ -67,6 +68,20 @@ class World:
             self.locations[location],
             self.schedule.blackout(at, sleep=sleep, road_roll=road_roll),
         )
+
+    def where(self, at: datetime, *, sleep: SleepWindow) -> str:
+        """Section 26.1, with a reproducible draw for the local calendar date."""
+        at = require_aware(at)
+        rng = Random(at.date().isoformat())
+        if sleep.contains(at):
+            return "дом"
+        if self.schedule.has_classes(at) and 9 <= at.hour < 14:
+            return rng.choices(["универ", "транспорт"], weights=[0.85, 0.15])[0]
+        if 14 <= at.hour < 19:
+            return rng.choices(["дом", "кофейня", "улица"], weights=[0.6, 0.25, 0.15])[
+                0
+            ]
+        return "дом"
 
     async def relevant_weather(self, at, *, client, location, last_mention_at, rng):
         at = require_aware(at)

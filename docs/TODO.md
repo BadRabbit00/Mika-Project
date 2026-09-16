@@ -13,11 +13,6 @@ rg -n 'TODO\(' src tests scripts docs
   `ab-06.md`, with the IDs, topics, and origin keys required by topics.yaml.
   Startup fails with the exact missing IDs. Later-topic shortages are reported
   by the curator without inventing articles.
-- TODO(LIVE-INITIAL-STATE) — [src/providers.py](../src/providers.py), LiveInputs.read.
-  Supply current location, an explicit observation validity interval, sleep
-  intervals/wake reasons/debt, and the initial PAD observation and timestamp.
-  The runtime requires these inputs and stops generation after they expire.
-  The format is documented in [LIVE_RUNTIME.md](LIVE_RUNTIME.md).
 - TODO(TELEGRAM-DEPLOYMENT) — [src/telegram_runtime.py](../src/telegram_runtime.py),
   run_telegram. Supply the actual owner, group/channel and seven topic IDs, plus
   the three named token environment variables. Then verify a post in the test

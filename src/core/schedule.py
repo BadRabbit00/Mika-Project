@@ -158,16 +158,27 @@ class Schedule:
         return events
 
     def plan_bedtime(
-        self, day: datetime, *, last_complexity: int, mood: str | None, rng: Random
+        self,
+        day: datetime,
+        *,
+        last_complexity: int | None,
+        mood: str | None,
+        rng: Random,
     ) -> datetime:
         day = require_aware(day)
-        if type(last_complexity) is not int or not 1 <= last_complexity <= 10:
+        if last_complexity is not None and (
+            type(last_complexity) is not int or not 1 <= last_complexity <= 10
+        ):
             raise ValueError("Article complexity must be an integer from one to ten")
         if mood not in (None, "neutral", "stuck", "down"):
             raise ValueError("Supply an explicit neutral, stuck, or down sleep label")
         next_day = day + timedelta(days=1)
         base = local_clock(next_day, self._sleep["bedtime_base"])
-        delta = self._sleep["per_complexity_point"] * max(0, last_complexity - 5)
+        delta = (
+            0
+            if last_complexity is None
+            else self._sleep["per_complexity_point"] * max(0, last_complexity - 5)
+        )
         delta += self._sleep["stuck_bonus_min"] if mood == "stuck" else 0
         delta += self._sleep["down_penalty_min"] if mood == "down" else 0
         bedtime = add_elapsed(

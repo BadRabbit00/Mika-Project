@@ -27,43 +27,61 @@ an accepted legacy spelling for `supergroup_id`.
 Missing later-topic articles remain absent from curator selection; shortage is
 reported explicitly. Startup never generates replacement source articles.
 
-## Current world observations
+## Autonomous world and optional initial snapshot
 
-`--world-state` names a JSON file supplied by the operator. This example describes
-its structure only; it is not a production default:
+`--world-state` is optional. Without it, startup logs neutral PAD and zero initial
+sleep debt. The initial snapshot is saved in life_state under runtime.initial;
+a restart reuses it and the existing mood/sleep history. A supplied initial file
+has this minimal shape:
 
 ```json
 {
-  "location": "дом",
-  "observed_at": "2026-09-21T14:00:00Z",
-  "valid_until": "2026-09-21T16:00:00Z",
-  "road_roll": 0.99,
   "initial_mood": {"P": 0.1, "A": 0.0, "D": 0.0},
   "initial_mood_at": "2026-09-21T14:00:00Z",
-  "initial_sleep_debt": 0,
-  "sleep": [{
-    "planned_bedtime": "2026-09-20T20:00:00Z",
-    "bedtime": "2026-09-20T20:00:00Z",
-    "wake": "2026-09-21T02:50:00Z",
-    "reason": "alarm"
-  }]
+  "initial_sleep_debt": 0
 }
 ```
 
-Provide observed or explicitly planned sleep intervals for the relevant calendar
-horizon. The file is read again for current location and sleep inputs. Update it
-atomically when observations change. `valid_until` is the caller's assertion of
-validity; expired observations stop generation and defer public delivery. The
-runtime does not invent location or extend a sleep schedule from stale inputs.
-The approved cycle epoch comes from life.yaml, independently of the initial PAD
-observation. Initial PAD is used only when no persisted mood snapshot exists.
+The snapshot is initialization data, not an instruction to reset a running
+character. All instants must be aware; stored timestamps use UTC. The cycle epoch
+still comes from life.yaml. An existing mood history takes precedence on upgrade.
 
-`StoredSleepProvider` imports intervals idempotently and applies each completed
-night's debt once. `DatabaseMoodProvider` assembles exam/correction history,
-waiting duration, quiz streak, and semester pressure outside the mood model.
-It consumes due trigger resolutions through `record_event` before reading PAD.
-`ObservedWorldProvider` supplies calendar facts, objects, blackout, and an optional
-relevance-filtered weather observation.
+`DerivedWorldProvider` implements where(now) from section 26.1: sleep means home;
+class days from 09:00 to 14:00 select university/transport with probabilities
+0.85/0.15; 14:00–19:00 selects home/cafe/street with probabilities 0.6/0.25/0.15;
+other times mean home. Each draw uses the Almaty date as its seed, so request order
+and process restarts do not move the character. No operator file is read in the
+default mode. Road admission and weather sampling use separate date-based seeds.
+
+`ScheduledSleepProvider` calls the existing plan_bedtime and resolve_wake formulas.
+It supplies the latest stored article complexity, or no article contribution when
+no rated article exists. It obtains stuck/down labels from schedule.mood_label,
+using learner history, quiz rounds, and PAD. It stores plans by their local wake
+date, so bedtime jitter across midnight cannot collide with the previous night.
+Legacy keys are adopted atomically without changing completed observations/debt.
+
+Completed nights advance sleep debt exactly once through debt_applied. Nights
+ending before the initial snapshot are already covered by its initial debt.
+Missed days are processed chronologically. Future planning uses the configured
+night window; an earlier bedtime is detected before that window as well.
+
+DatabaseMoodProvider builds baseline history outside MoodModel and consumes due
+resolutions through record_event. The optional weather provider retains its API,
+seasonal fallback, and relevance filtering.
+
+## Temporary overrides
+
+The same file may additionally contain location, road_roll, and sleep intervals.
+Each interval has planned_bedtime, bedtime, wake, and reason, as before. Overrides
+require an aware valid_until; observed_at optionally sets their start, otherwise
+the initial snapshot timestamp is used. Validity is start-inclusive and
+end-exclusive. Fields that are absent continue to use automatic providers.
+
+The file is reread for overrides; update it with an atomic rename. Expired fields
+fall back to derived location, road admission, and sleep scheduling. They do not
+stop generation or defer publication. Expired, uncompleted sleep overrides are
+removed and replanned; completed observations and charged debt remain history.
+A conflicting override cannot overwrite an already completed night.
 
 ## Recovery and settings
 

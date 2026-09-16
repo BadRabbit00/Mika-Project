@@ -49,13 +49,14 @@ Host llama-server processes are the allowed exception to the devShell rule.
 ```sh
 nix develop --command python -m src.cli run \
   --layout /path/to/telegram.yaml \
-  --world-state /path/to/current-world.json \
   --database data/mika.db \
   --log-file logs/mika.jsonl
 ```
 
-The supplied catalogue requires the six real first-topic articles. Layout IDs,
-token environment variables, and current world observations must be supplied.
+The supplied catalogue requires the six real first-topic articles. Layout IDs
+and token environment variables must be supplied. World and sleep are autonomous
+by default; --world-state optionally supplies an initial snapshot and expiring
+overrides. Without it, startup logs neutral PAD and zero initial sleep debt.
 Their contracts and startup checks are in [docs/LIVE_RUNTIME.md](docs/LIVE_RUNTIME.md).
 The deployment gaps are listed in [docs/TODO.md](docs/TODO.md).
 

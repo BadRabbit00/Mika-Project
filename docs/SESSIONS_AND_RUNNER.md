@@ -35,6 +35,6 @@ settings changes affect subsequent scheduling. Blackout is checked at admission,
 again before queued generation, and before public delivery. Private threads never
 influence public post selection.
 
-The live composition and explicit observation requirements are described in
+The live composition, autonomous world, and temporary overrides are described in
 [LIVE_RUNTIME.md](LIVE_RUNTIME.md). The one-command dry run uses isolated fixtures
 and mocked external boundaries; it is not evidence of live Telegram delivery.

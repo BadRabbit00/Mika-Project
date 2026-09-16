@@ -196,10 +196,11 @@ def main(argv: list[str] | None = None) -> int:
                 from src.live import assemble_live
                 from src.providers import LiveInputs
 
-                if args.layout is None or args.world_state is None:
-                    raise ValueError("Live run requires --layout and --world-state")
+                if args.layout is None:
+                    raise ValueError("Live run requires --layout")
                 Catalogue.load(args.library)
-                LiveInputs.read(args.world_state)
+                if args.world_state is not None:
+                    LiveInputs.read(args.world_state)
                 registry = SettingsRegistry.from_file(args.settings)
                 args.database = args.database or Path(registry.get("system.db_path"))
                 if args.log_file is None:

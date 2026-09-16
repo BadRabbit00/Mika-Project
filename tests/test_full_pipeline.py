@@ -529,12 +529,13 @@ async def test_runtime_providers_use_explicit_state_and_persist_sleep_once(tmp_p
         with db.connection() as c:
             assert (
                 c.execute(
-                    "SELECT count(*) FROM sleep_log WHERE debt_applied=1"
+                    "SELECT count(*) FROM sleep_log WHERE debt_applied=1 "
+                    "AND origin='override'"
                 ).fetchone()[0]
                 == 1
             )
-        with pytest.raises(ValueError, match="expired"):
-            await providers.context(AT + timedelta(hours=2))
+        automatic = await providers.context(AT + timedelta(hours=2))
+        assert automatic["day"].at == AT + timedelta(hours=2)
     finally:
         await providers.close()
 
