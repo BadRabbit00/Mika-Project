@@ -13,6 +13,7 @@ dependencies = [
     "ruamel.yaml>=0.18,<1",
     "pydantic>=2.10,<3",
     "aiogram>=3.26,<4",
+    "apscheduler>=3.11,<4",
 ]
 
 [project.scripts]
