@@ -5,6 +5,11 @@ PAD mood simulation, dialogue sessions, and Telegram publication. The architectu
 is in [ARCHITECTURE.md](ARCHITECTURE.md); approved corrections take precedence in
 [docs/DECISIONS.md](docs/DECISIONS.md).
 
+The startup guide is in [mika-startup/ЗАПУСК.md](mika-startup/ЗАПУСК.md).
+That directory also contains public configuration templates. Keep the filled
+copies in `config/`; the private library, Telegram layout, runtime snapshots,
+and credential files are excluded from Git.
+
 ## Development and verification
 
 Dependencies are locked with uv and built through uv2nix. Run Python and developer
@@ -16,6 +21,8 @@ nix develop --command ruff check src tests scripts
 nix develop --command ruff format --check src tests scripts
 nix develop --command graphify update .
 nix flake check
+nix develop .#audit --command python scripts/check_repository.py
+nix develop .#audit --command actionlint
 ```
 
 After changing dependencies:
@@ -27,6 +34,12 @@ nix develop .#bootstrap --command uv lock
 Work on feature branches and merge verified changes into `develop`. `main`
 contains the initial instructions. Configuration is in `config/`; all model
 instructions and examples are files in `prompts/`.
+
+CI runs on every pull request to `main` and `develop`, pushes to those branches,
+and merge queues. It runs the full test suite, lint and formatting checks, an
+offline startup, a production build, workflow validation, and a history scan
+for secrets. See [docs/CI.md](docs/CI.md) for the required merge checks and local
+audit commands.
 
 ## Offline integration run
 
@@ -58,9 +71,11 @@ working directory; [config/.env.example](config/.env.example) lists the keys.
 Both `run` and `bot` load this file automatically. Use `--env-file /path/to/bots.env`
 to select another file. Exported environment variables take precedence.
 
-The supplied catalogue requires the six real first-topic articles and layout IDs.
-World and sleep are autonomous
-by default; --world-state optionally supplies an initial snapshot and expiring
+Keep your catalogue and source articles in the private `library/` directory.
+The first topic requires its six real articles and a filled Telegram layout.
+Use `channel_id: 0` to publish only to the diary topic; a public channel is optional.
+World and sleep are autonomous by default; --world-state optionally supplies an
+initial snapshot and expiring
 overrides. Without it, startup logs neutral PAD and zero initial sleep debt.
 Their contracts and startup checks are in [docs/LIVE_RUNTIME.md](docs/LIVE_RUNTIME.md).
 The deployment gaps are listed in [docs/TODO.md](docs/TODO.md).

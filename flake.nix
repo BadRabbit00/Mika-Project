@@ -79,6 +79,15 @@
           virtualenv = pythonSet.mkVirtualEnv "blogai-dev-env" workspace.deps.all;
         in
         {
+          audit = pkgs.mkShell {
+            packages = [
+              pkgs.git
+              pkgs.gitleaks
+              pkgs.actionlint
+              pkgs.gh
+              pkgs.python312
+            ];
+          };
           bootstrap = pkgs.mkShell {
             packages = [
               pkgs.python312
@@ -96,6 +105,7 @@
               pkgs.nixfmt
               pkgs.graphify
               pkgs.claude-code
+              pkgs.gitleaks
             ];
             env = {
               UV_NO_SYNC = "1";
@@ -141,6 +151,8 @@
                   testEnv
                   pkgs.uv
                   pkgs.nixfmt
+                  pkgs.git
+                  pkgs.gitleaks
                 ];
                 PYTHONTZPATH = "${pkgs.tzdata}/share/zoneinfo";
                 UV_PYTHON = pkgs.python312.interpreter;
@@ -153,6 +165,7 @@
                 cd source
                 uv lock --check --offline
                 pytest -q
+                python -m src.cli run --dry-run
                 ruff check src tests scripts
                 ruff format --check src tests scripts
                 nixfmt --check flake.nix

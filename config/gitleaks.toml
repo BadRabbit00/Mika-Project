@@ -1,0 +1,11 @@
+title = "Mika repository secret detection"
+
+[extend]
+useDefault = true
+
+# Detect Telegram credentials even without a variable name or API URL.
+[[rules]]
+id = "telegram-bot-token"
+description = "Telegram bot credential"
+regex = '''(?:^|[^0-9])([0-9]{6,12}:[A-Za-z0-9_-]{35})(?:[^A-Za-z0-9_-]|$)'''
+secretGroup = 1
