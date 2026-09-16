@@ -871,6 +871,7 @@ class LifeEngine:
                 "breakfast": "meal",
                 "lunch": "meal",
                 "dinner": "meal",
+                "food_break": "meal",
                 "travel": "journey",
             }.get(activity.kind, activity.kind)
             signature = [
@@ -910,6 +911,8 @@ class LifeEngine:
                     facts = self.rules["facts"]["low_money"]
                 else:
                     money, mood = -cost, "life_rest"
+            if activity.kind in {"tea_break", "short_rest"}:
+                mood = "life_rest"
             event = self._event(
                 c,
                 state,

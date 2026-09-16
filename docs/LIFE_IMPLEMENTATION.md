@@ -26,6 +26,9 @@ boundaries remain mandatory. Work stays in BlogAI-life with temporary databases.
 - [x] Revalidate context before send; rewrite or expire the same saved event.
 - [x] Configure busy/rest cadence, bursts and event-level deduplication. Keep the
       daily target unset until the separately requested count is approved.
+- [x] Persist required activity notices, chosen breaks and intended returns;
+      regenerate stale prose and confirm grouped notices with delivery receipts.
+      See [ACTIVITY_TRANSITIONS.md](ACTIVITY_TRANSITIONS.md).
 - [x] Run life independently of article availability, learner state and curator.
 - [x] Feed the shared life state into chat and persist incoming messages first.
 - [x] Defer unread night messages and reconcile them with session expiry.

@@ -82,8 +82,9 @@ def _continuous(items):
 
 
 class Itinerary:
-    def __init__(self, database, schedule, config):
+    def __init__(self, database, schedule, config, *, transitions=None):
         self.database, self.schedule, self.config = database, schedule, config
+        self.transitions = transitions
 
     def day(self, at):
         key = require_aware(at).date().isoformat()
@@ -295,9 +296,31 @@ class Itinerary:
         )
         until(awake_end, home, "rest")
         until(end, home, "sleep")
+        if self.transitions:
+            for index in range(len(items) - 1, 0, -1):
+                if items[index].kind != "sleep":
+                    continue
+                before = items[index - 1]
+                begins = max(
+                    before.starts_at,
+                    before.ends_at
+                    - timedelta(minutes=self.transitions["wind_down_minutes"]),
+                )
+                winding_down = replace(
+                    before,
+                    id=before.id + ":wind-down",
+                    starts_at=begins,
+                    kind="wind_down",
+                    label=self.transitions["labels"]["wind_down"],
+                )
+                items[index - 1 : index] = (
+                    [replace(before, ends_at=begins), winding_down]
+                    if begins > before.starts_at
+                    else [winding_down]
+                )
         return tuple(items)
 
-    def revise(self, at, replacements, *, cause_id):
+    def revise(self, at, replacements, *, cause_id, connection=None):
         """Revise an uncompleted suffix without moving Mika between locations."""
         at = require_aware(at)
         replacements = tuple(replacements)
@@ -351,7 +374,10 @@ class Itinerary:
             )
             log.info("life_day_revised", trace_id=cause_id, at=to_utc_iso(at))
 
-        self.database.run_transaction(save)
+        if connection is None:
+            self.database.run_transaction(save)
+        else:
+            save(connection)
 
     def adapt(self, at, *, needs, cause_id):
         """Revise future choices in place; finish a journey before replanning."""
@@ -374,7 +400,8 @@ class Itinerary:
             or needs.get("cash", 0) < self.config["money"]["prices"]["coffee"]
         )
         if (illness or rain and current.location == cfg["locations"]["park"]) and any(
-            item.kind not in {"rest", "sleep", "breakfast", "lunch", "dinner"}
+            item.kind
+            not in {"rest", "sleep", "breakfast", "lunch", "dinner", "wind_down"}
             for item in suffix
         ):
             first_sleep = next(
@@ -412,7 +439,7 @@ class Itinerary:
                         )
                     )
             for meal in suffix:
-                if meal.kind not in {"breakfast", "lunch", "dinner"}:
+                if meal.kind not in {"breakfast", "lunch", "dinner", "wind_down"}:
                     continue
                 begins = max(cursor, meal.starts_at)
                 finishes = min(first_sleep, meal.ends_at)
@@ -486,7 +513,17 @@ class Itinerary:
     def reserve_task(self, at, task):
         at = require_aware(at)
         current = self.current(at)
-        if current.task_id is not None:
+        if current.task_id is not None or current.kind in {
+            "sleep",
+            "wind_down",
+            "tea_prepare",
+            "tea_break",
+            "food_prepare",
+            "food_break",
+            "short_rest",
+            "travel",
+            "class",
+        }:
             return False
         cfg = self.config["itinerary"]
         minutes = cfg["task_durations"].get(task["kind"], cfg["task_minutes"])

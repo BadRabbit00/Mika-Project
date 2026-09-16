@@ -405,6 +405,8 @@ class OfftopGenerator:
 
     async def recorded(self, event, *, day, mood, wake_reason, retrospective=None):
         """Render a committed simulation event without choosing consequences."""
+        from src.core.activity_claims import compact_evidence, plan_evidence
+
         kind = (
             "daily"
             if retrospective is not None or event["kind"] == "daily"
@@ -415,6 +417,7 @@ class OfftopGenerator:
         facts = await asyncio.to_thread(self.planner.recorded, event)
         if retrospective is not None:
             facts = {"retrospective": retrospective}
+        facts = compact_evidence(facts | plan_evidence(self.planner.database, day.at))
         return await self.writer.generate(
             kind, day=day, mood=mood, wake_reason=wake_reason, recorded_event=facts
         )

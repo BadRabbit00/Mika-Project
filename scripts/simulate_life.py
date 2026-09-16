@@ -17,6 +17,7 @@ from src.core.life_engine import LifeEngine
 from src.core.time_utils import ALMATY
 from src.core.writing_snapshot import WritingSnapshot
 from src.life import LifeRuntime
+from src.live import LiveApplication
 from src.providers import RuntimeProviders
 from src.publish import Destination, OutboxWorker, Publisher
 from src.writer import WriteResult
@@ -35,10 +36,17 @@ async def simulate(days, output):
 
         async def render(event, **blocks):
             identity = event["id"]
-            text = (
-                json.loads(event["payload"])["facts"]
-                or "Recorded evening retrospective"
-            )
+            facts = json.loads(event["payload"])
+            text = facts["facts"] or "Recorded evening retrospective"
+            if facts.get("mandatory"):
+                text = (
+                    "; ".join(
+                        f"{item['at']}: {item['kind']} ({item['reason']})"
+                        for item in facts["transitions"]
+                    )
+                    + "; current: "
+                    + facts["current"]["kind"]
+                )
             snapshot = WritingSnapshot(
                 "offtop",
                 blocks["day"],
@@ -69,12 +77,20 @@ async def simulate(days, output):
             sent.append(payload)
             return len(sent)
 
+        async def allowed(payload, at):
+            return await LiveApplication.allowed(
+                SimpleNamespace(providers=providers, life=runtime), payload, at
+            )
+
         worker = OutboxWorker(
-            database, SimpleNamespace(send=send), clock=lambda: clock[0]
+            database,
+            SimpleNamespace(send=send),
+            clock=lambda: clock[0],
+            allowed=allowed,
         )
         try:
-            for step in range(days * 72):
-                clock[0] = start + timedelta(minutes=step * 20)
+            restarted = False
+            while clock[0] < start + timedelta(days=days):
                 before = len(sent)
                 decision = await runtime.tick()
                 if runtime._generation:
@@ -82,7 +98,7 @@ async def simulate(days, output):
                 while await worker.run_once(at=clock[0]) not in {"idle", "deferred"}:
                     pass
                 activity = providers.itinerary.current(clock[0])
-                if step == 0 or activity.id != rows[-1][0] or len(sent) > before:
+                if not rows or activity.id != rows[-1][0] or len(sent) > before:
                     event = sent[-1]["text"] if len(sent) > before else "—"
                     rows.append(
                         (
@@ -95,7 +111,8 @@ async def simulate(days, output):
                             "offline publication" if len(sent) > before else decision,
                         )
                     )
-                if step == days * 36:
+                if not restarted and clock[0] >= start + timedelta(days=days / 2):
+                    restarted = True
                     saved_state = providers.life.state()
                     saved_day = providers.itinerary.day(clock[0])
                     receipts = len(sent)
@@ -123,6 +140,7 @@ async def simulate(days, output):
                     }:
                         pass
                     assert len(sent) == receipts
+                clock[0] = min(clock[0] + timedelta(minutes=20), activity.ends_at)
             state = providers.life.state()
             with database.connection(readonly=True) as c:
                 counts = {
@@ -134,6 +152,8 @@ async def simulate(days, output):
                         "money_ledger",
                         "mood",
                         "outbox",
+                        "life_breaks",
+                        "activity_transitions",
                     )
                 }
             restart_state = providers.life.state()

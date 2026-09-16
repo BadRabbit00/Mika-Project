@@ -8,7 +8,9 @@ from random import Random
 
 import structlog
 
+from src.core.breaks import BreakPlanner
 from src.core.time_utils import from_utc_iso, now, require_aware, to_utc_iso
+from src.core.transitions import TransitionJournal
 
 log = structlog.get_logger("blogai.life_runtime")
 
@@ -27,6 +29,10 @@ class LifeRuntime:
         self.providers, self.generator, self.publisher = providers, generator, publisher
         self.destinations, self.clock = destinations, clock
         self.engine, self.database = providers.life, providers.life.database
+        self.transitions, self.breaks = (
+            TransitionJournal(providers),
+            BreakPlanner(providers),
+        )
         self._last_minute, self._generation = None, None
         self.weather_enabled, self._weather_job, self._weather_due = (
             weather_enabled,
@@ -64,8 +70,24 @@ class LifeRuntime:
 
         self.database.run_transaction(save)
 
-    def _advance(self, at):
+    def _advance(self, at, *, mood=None, sleep_debt=0):
+        self.breaks.ensure_wind_down(at)
+        reason = None
+        needs = self.engine.needs(at)
+        if needs["ill"]:
+            self.providers.itinerary.adapt(
+                at,
+                needs=needs,
+                cause_id="illness-admission:" + self.engine.state()["ill_until"],
+            )
+            reason = "health"
+        if mood is not None:
+            reason = (
+                self.breaks.stop_if_exhausted(at, mood=mood, sleep_debt=sleep_debt)
+                or reason
+            )
         activity = self.providers.itinerary.current(at)
+        self.transitions.observe(at, reason=reason)
         if not activity.can_publish:
             self.engine.income(at)
             return
@@ -129,6 +151,11 @@ class LifeRuntime:
         self.providers.itinerary.adapt(
             at, needs=needs, cause_id=f"needs:{at.date()}:{fingerprint}"
         )
+        if mood is not None:
+            self.breaks.consider(at, mood=mood, sleep_debt=sleep_debt)
+        activity = self.providers.itinerary.current(at)
+        self.engine.activity(activity, at)
+        self.transitions.observe(at, reason="health" if needs["ill"] else None)
         self._retrospective_event(at, activity)
 
     def _retrospective_event(self, at, activity):
@@ -172,12 +199,16 @@ class LifeRuntime:
         return result[-16:]
 
     def _next(self, at):
+        if mandatory := self.transitions.next(at):
+            return mandatory
         with self.database.connection(readonly=True) as c:
             cfg = self.providers.life_config["publishing"]
             cutoff = at - timedelta(minutes=cfg["burst_rest_minutes"])
             if (
                 c.execute(
-                    "SELECT count(*) FROM posts WHERE published_at>?", (cutoff,)
+                    "SELECT count(*) FROM posts p WHERE published_at>? AND NOT EXISTS "
+                    "(SELECT 1 FROM activity_transitions t WHERE t.post_id=p.id)",
+                    (cutoff,),
                 ).fetchone()[0]
                 >= cfg["max_burst"]
             ):
@@ -186,7 +217,10 @@ class LifeRuntime:
                 start = at.replace(hour=0, minute=0, second=0, microsecond=0)
                 if (
                     c.execute(
-                        "SELECT count(*) FROM posts WHERE published_at>=?", (start,)
+                        "SELECT count(*) FROM posts p WHERE published_at>=? AND NOT "
+                        "EXISTS "
+                        "(SELECT 1 FROM activity_transitions t WHERE t.post_id=p.id)",
+                        (start,),
                     ).fetchone()[0]
                     >= cfg["daily_target"][1]
                 ):
@@ -198,8 +232,14 @@ class LifeRuntime:
                 return None
             row = c.execute(
                 "SELECT * FROM life_events WHERE publication_status IN "
-                "('pending','draft') "
+                "('pending','draft') AND kind!='transition' "
                 "AND at<=? AND (retry_at IS NULL OR retry_at<=?) AND attempts<3 "
+                "AND NOT EXISTS (SELECT 1 FROM life_events intent WHERE "
+                "json_extract(intent.payload,'$.related_event_id')=life_events.id "
+                "AND (intent.publication_status IN "
+                "('pending','generating','draft','queued') OR EXISTS (SELECT 1 "
+                "FROM activity_transitions notice WHERE notice.intent_id=intent.id "
+                "AND notice.delivered_at IS NULL))) "
                 "ORDER BY (kind='daily') DESC,(task_id IS NOT NULL) DESC,at DESC "
                 "LIMIT 1",
                 (at, at),
@@ -217,7 +257,12 @@ class LifeRuntime:
         blocks = await self.providers.context(at)
         minute = at.replace(second=0, microsecond=0)
         if minute != self._last_minute:
-            await asyncio.to_thread(self._advance, at)
+            await asyncio.to_thread(
+                self._advance,
+                at,
+                mood=blocks["mood"],
+                sleep_debt=blocks["day"].sleep_debt,
+            )
             self._last_minute = minute
         if blocks["day"].blackout.blocked:
             return "sleep"
@@ -235,6 +280,22 @@ class LifeRuntime:
             try:
                 blocks = await self.providers.context(self.clock())
                 if blocks["day"].blackout.blocked:
+                    return
+                mandatory = json.loads(event["payload"]).get("mandatory", False)
+                if (
+                    blocks["day"].location
+                    != self.providers.itinerary.current(blocks["day"].at).location
+                ):
+                    return
+                if mandatory and event["activity_id"] != blocks["day"].activity_id:
+                    await asyncio.to_thread(
+                        self.database.run_transaction,
+                        lambda c: c.execute(
+                            "UPDATE life_events SET publication_status='expired' "
+                            "WHERE id=?",
+                            (event["id"],),
+                        ),
+                    )
                     return
                 if event["post_id"] is None:
                     await asyncio.to_thread(
@@ -269,8 +330,28 @@ class LifeRuntime:
                         ),
                     )
                     if status != "draft":
+                        if mandatory:
+                            await asyncio.to_thread(
+                                self.database.run_transaction,
+                                lambda c: c.execute(
+                                    "UPDATE life_events SET retry_at=? WHERE id=?",
+                                    (
+                                        self.clock()
+                                        + timedelta(
+                                            minutes=self.transitions.config[
+                                                "retry_minutes"
+                                            ]
+                                        ),
+                                        event["id"],
+                                    ),
+                                ),
+                            )
                         return
                     event["post_id"] = result.id
+                if mandatory:
+                    await asyncio.to_thread(
+                        self.transitions.bind, event["id"], event["post_id"]
+                    )
                 fresh = (await self.providers.context(self.clock()))["day"]
                 if (
                     fresh.activity_id != blocks["day"].activity_id
@@ -297,12 +378,15 @@ class LifeRuntime:
                         "UPDATE life_events SET publication_status='queued' WHERE id=?",
                         (event["id"],),
                     )
-                    c.execute(
-                        "INSERT INTO life_state VALUES ('life.next_post',?,?) ON "
-                        "CONFLICT(key) DO UPDATE SET "
-                        "value=excluded.value,updated_at=excluded.updated_at",
-                        (json.dumps(to_utc_iso(due)), self.clock()),
-                    )
+                    if not mandatory or json.loads(event["payload"]).get(
+                        "related_event_id"
+                    ):
+                        c.execute(
+                            "INSERT INTO life_state VALUES ('life.next_post',?,?) ON "
+                            "CONFLICT(key) DO UPDATE SET "
+                            "value=excluded.value,updated_at=excluded.updated_at",
+                            (json.dumps(to_utc_iso(due)), self.clock()),
+                        )
 
                 await asyncio.to_thread(self.database.run_transaction, save)
             except Exception as error:

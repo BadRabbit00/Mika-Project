@@ -360,6 +360,7 @@ class RuntimeProviders:
     def __init__(
         self, database, config_dir, inputs_path=None, settings=None, *, clock=now
     ):
+        self.config_dir = Path(config_dir)
         started_at = require_aware(clock())
         requested = LiveInputs.read(inputs_path, at=started_at)
 
@@ -422,7 +423,14 @@ class RuntimeProviders:
         self.life_config = YAML(typ="safe").load(
             (Path(config_dir) / "life_simulation.yaml").read_text(encoding="utf-8")
         )
-        self.itinerary = Itinerary(database, world.schedule, self.life_config)
+        self.itinerary = Itinerary(
+            database,
+            world.schedule,
+            self.life_config,
+            transitions=YAML(typ="safe").load(
+                self.config_dir / "activity_transitions.yaml"
+            ),
+        )
         self.life = LifeEngine(database, self.life_config, config_dir)
         self.life.bootstrap(started_at)
         world.locations = dict(world.locations) | {

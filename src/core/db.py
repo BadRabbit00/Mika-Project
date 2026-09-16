@@ -440,6 +440,34 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "json_extract(payload,'$.trace_id'),channel) "
         "WHERE sent_at IS NOT NULL AND tg_message_id IS NOT NULL",
     ),
+    (
+        f"""CREATE TABLE life_breaks (
+            id TEXT PRIMARY KEY NOT NULL,
+            source_activity_id TEXT NOT NULL REFERENCES life_activities(id),
+            return_activity_id TEXT REFERENCES life_activities(id),
+            kind TEXT NOT NULL CHECK (kind IN ('tea','food','rest','walk')),
+            reason TEXT NOT NULL, {_utc("starts_at")} NOT NULL,
+            {_utc("ends_at")} NOT NULL,
+            status TEXT NOT NULL DEFAULT 'planned'
+                CHECK (status IN ('planned','resumed','cancelled')),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            CHECK (julianday(ends_at)>julianday(starts_at))
+        )""",
+        f"""CREATE TABLE activity_transitions (
+            id TEXT PRIMARY KEY NOT NULL,
+            {_utc("at")} NOT NULL, kind TEXT NOT NULL,
+            from_activity_id TEXT REFERENCES life_activities(id),
+            to_activity_id TEXT REFERENCES life_activities(id),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            intent_id TEXT REFERENCES life_events(id),
+            post_id TEXT REFERENCES posts(id), {_utc("delivered_at")},
+            {_utc("retry_at")}
+        )""",
+        "CREATE INDEX activity_transitions_pending ON activity_transitions(at) "
+        "WHERE delivered_at IS NULL",
+        "CREATE INDEX activity_transitions_post ON activity_transitions(post_id) "
+        "WHERE post_id IS NOT NULL",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 

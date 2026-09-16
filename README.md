@@ -100,9 +100,11 @@ checks reject stale drafts, and only confirmed replies enter dialogue history.
 
 See the [implementation checklist](docs/LIFE_IMPLEMENTATION.md),
 [runtime guide](docs/AUTONOMOUS_LIFE_WORK.md),
+[mandatory activity transitions](docs/ACTIVITY_TRANSITIONS.md),
 [simulation report](docs/LIFE_SIMULATION.md) and
 [remaining authoring scope](docs/LIFE_GAPS.md). Configuration lives in
-`config/life_simulation.yaml` and `config/life_chains.yaml`.
+`config/life_simulation.yaml`, `config/life_chains.yaml` and
+`config/activity_transitions.yaml`.
 
 Run the offline simulation on temporary storage:
 

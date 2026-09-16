@@ -172,6 +172,8 @@ class ValidationContext:
     max_chars: int | None = None
     complete: bool = True
     dialogue: bool = False
+    activity_evidence: dict | None = None
+    activity_config: str = "config/activity_transitions.yaml"
 
     def __post_init__(self):
         object.__setattr__(self, "at", require_aware(self.at))
@@ -309,6 +311,14 @@ class OutputValidator:
                 reasons.append("prompt_echo")
         if CYCLE.search(scan):
             reasons.append("cycle")
+        if context.activity_evidence is not None:
+            from src.core.activity_claims import activity_conflicts
+
+            reasons.extend(
+                activity_conflicts(
+                    scan, context.activity_evidence, context.activity_config
+                )
+            )
         if context.offtop and technical_match(scan, context.graph_terms):
             reasons.append("offtop_tech")
         current_claims = {

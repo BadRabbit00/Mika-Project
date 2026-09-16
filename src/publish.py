@@ -316,6 +316,11 @@ class OutboxWorker:
                     "post_id=?",
                     (payload["post_id"],),
                 )
+                connection.execute(
+                    "UPDATE activity_transitions SET delivered_at=? WHERE post_id=? "
+                    "AND delivered_at IS NULL",
+                    (at, payload["post_id"]),
+                )
                 event = connection.execute(
                     "SELECT * FROM life_events WHERE post_id=?", (payload["post_id"],)
                 ).fetchone()
@@ -343,6 +348,14 @@ class OutboxWorker:
                         "UPDATE life_events SET journal_id=? WHERE id=?",
                         (journal_id, event["id"]),
                     )
+                    related = json.loads(event["payload"]).get("related_event_id")
+                    if related:
+                        connection.execute(
+                            "UPDATE life_events SET "
+                            "publication_status='published',post_id=?,journal_id=? "
+                            "WHERE id=?",
+                            (payload["post_id"], journal_id, related),
+                        )
                     connection.execute(
                         "INSERT INTO narrative(at,kind,gist,trace_id,post_id) VALUES "
                         "(?,?,?,?,?)",

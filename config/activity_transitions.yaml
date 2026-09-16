@@ -1,0 +1,97 @@
+# Authored break choices and deterministic activity-claim rules.
+version: 1
+# Durations include a separate preparation interval; a return needs 15 free minutes.
+study_before_break_minutes: 50
+minimum_resume_minutes: 15
+fatigue_energy: -0.45
+fatigue_debt_hours: 3
+stop_energy: -0.85
+stop_debt_hours: 7
+wind_down_minutes: 12
+max_transitions_per_post: 4
+retry_minutes: 15
+transition_chars: [120, 500]
+breaks:
+  tea: {prepare_minutes: [3, 5], minutes: [10, 20], weight: 5}
+  food: {prepare_minutes: [5, 10], minutes: [15, 25], weight: 2}
+  rest: {prepare_minutes: [0, 0], minutes: [8, 18], weight: 3}
+  walk: {prepare_minutes: [0, 0], minutes: [15, 30], weight: 1}
+labels:
+  tea_prepare: приготовление чая
+  tea_break: перерыв на чай
+  food_prepare: приготовление еды
+  food_break: перерыв на еду
+  short_rest: короткий отдых
+  wind_down: подготовка ко сну
+  walking_travel: дорога пешком
+reasons:
+  fatigue: накопилась усталость, это подтверждается текущим состоянием
+  planned_break: запланированный перерыв между учебными шагами
+  meal: время поесть
+  next_activity: наступило время другого сохранённого занятия
+  scheduled_end: запланированное время домашней учёбы на сегодня закончилось
+  health: самочувствие ухудшилось, возвращение к учёбе отменено
+  bedtime: пора готовиться ко сну
+  resume: перерыв закончился, домашняя учёба снова допустима
+  arrival: завершилось сохранённое перемещение
+  departure: началось сохранённое перемещение
+facts:
+  start_study: Начинаю домашнюю учёбу.
+  resume_study: Возвращаюсь к домашней учёбе после перерыва.
+  pause_study: Приостанавливаю домашнюю учёбу ради следующего занятия в плане.
+  finish_study: На сегодня домашняя учёба закончена.
+  depart: Выхожу в путь; место назначения и способ передвижения сохранены.
+  arrive: Пришла в место назначения.
+  home: Вернулась домой.
+  wind_down: Собираюсь ложиться спать; сейчас ещё бодрствую.
+# Patterns describe claims, not generation instructions. Unsupported claims fail closed.
+claims:
+  tea:
+    pattern: '(?:иду|пойду|собираюсь|буду|сейчас|заварила|пью|попью|готовлю).{0,35}\bча[йюя]\b|(?:having|making|make|drink|drinking)\s+(?:some\s+)?tea'
+    kinds: [tea_prepare, tea_break]
+  food:
+    pattern: '(?:иду|пойду|буду|сейчас|готовлю|приготовила|поем).{0,25}(?:есть|поесть|еду|обед|ужин)|(?:made|making|having)\s+(?:dinner|lunch|breakfast)'
+    kinds: [food_prepare, food_break, breakfast, lunch, dinner]
+  tea_drinking:
+    pattern: '\b(?:пью|пила|попила|выпила)\s+ча[йюя]|\bdrinking\s+tea'
+    kinds: [tea_break]
+  sleep:
+    pattern: '(?:ложусь|пойду|собираюсь|иду|буду).{0,25}спать|(?:going|go).{0,20}(?:sleep|bed)'
+    kinds: [wind_down]
+  study:
+    pattern: '(?:сейчас\s+учусь|сажусь\s+учиться|возвращаюсь\s+к\s+уч[её]бе|начинаю\s+уч[её]бу)|(?:starting|resuming)\s+(?:my\s+)?stud(?:y|ies)'
+    kinds: [study]
+  walk:
+    pattern: '(?:иду|пойду|выхожу|собираюсь|гуляю|буду).{0,30}(?:гулять|прогул|парк)|(?:going|go)\s+(?:out\s+)?for\s+a\s+walk'
+    kinds: [walk]
+    destinations: [парк]
+  shop:
+    pattern: '(?:иду|пойду|выхожу|собираюсь|еду).{0,30}магазин'
+    kinds: [shop]
+    destinations: [магазин]
+  university:
+    pattern: '(?:иду|пойду|выхожу|собираюсь|еду).{0,30}универ'
+    kinds: [class]
+    destinations: [университет]
+  meeting:
+    pattern: 'встречаюсь|встретилась|встретимся|договорились\s+встретиться|(?:meeting|met)\s+(?:with\s+)?(?:Dasha|Aika|Timur)'
+    kinds: [meeting]
+  restaurant:
+    pattern: 'ресторан|restaurant'
+    kinds: [restaurant]
+  ice_cream:
+    pattern: 'морожен|ice\s*cream'
+    kinds: [ice_cream_order]
+  purchase:
+    pattern: 'купила|заказала|оплатила|потратила|bought|ordered|paid'
+    kinds: []
+  dasha_present:
+    pattern: '(?:вместе|встретилась|встречаюсь|гуляем|сидим|ужинаем|заказали).{0,30}Даш|Даш[а-я]*.{0,30}(?:встретились|встречаемся|сидим|гуляем|ужинаем|заказали)'
+    kinds: []
+    recorded_only: true
+    evidence_pattern: 'Даш'
+  aika_present:
+    pattern: '(?:вместе|встретилась|встречаюсь|гуляем|сидим|ужинаем|заказали).{0,30}Айк|Айк[а-я]*.{0,30}(?:встретились|встречаемся|сидим|гуляем|ужинаем|заказали)'
+    kinds: []
+    recorded_only: true
+    evidence_pattern: 'Айк'

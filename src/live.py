@@ -172,7 +172,7 @@ class LiveApplication(LearningApplication):
                     raise DeliveryExpired()
                 return day.chat_allowed
             row = c.execute(
-                "SELECT kind,context_snapshot FROM posts WHERE id=?",
+                "SELECT kind,text,context_snapshot FROM posts WHERE id=?",
                 (payload["post_id"],),
             ).fetchone()
         if row is None:
@@ -189,6 +189,17 @@ class LiveApplication(LearningApplication):
             ):
                 await asyncio.to_thread(self.life.expire, payload["post_id"], at)
                 raise DeliveryExpired()
+            if evidence := snapshot.payload.get("recorded_event"):
+                from src.core.activity_claims import activity_conflicts, plan_evidence
+
+                evidence = evidence | plan_evidence(database, at)
+                if activity_conflicts(
+                    row["text"],
+                    evidence,
+                    self.providers.config_dir / "activity_transitions.yaml",
+                ):
+                    await asyncio.to_thread(self.life.expire, payload["post_id"], at)
+                    raise DeliveryExpired()
         return not day.blackout.blocked
 
 

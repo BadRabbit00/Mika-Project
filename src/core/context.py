@@ -344,9 +344,15 @@ class ContextBuilder:
         for name in ("issue", "correct", "wrong_post_gist"):
             if name in values:
                 values[name] = json.dumps(values[name], ensure_ascii=False)
-        raw = (
-            self.prompt_dir / ("write_life.md" if recorded else f"write_{kind}.md")
-        ).read_text(encoding="utf-8")
+        mandatory = recorded and payload["recorded_event"].get("mandatory", False)
+        filename = (
+            "write_transition.md"
+            if mandatory
+            else "write_life.md"
+            if recorded
+            else f"write_{kind}.md"
+        )
+        raw = (self.prompt_dir / filename).read_text(encoding="utf-8")
         temperature = re.search(r"\btemp\s+([0-9.]+)", raw)
         output = re.search(r"(?:регистр|register)\s+<(\w+)>\s*\|\s*(\d+)[–-](\d+)", raw)
         if temperature is None or output is None:
@@ -362,9 +368,16 @@ class ContextBuilder:
                 if day.busy
                 else "rest_chars"
             )
+            limits = (
+                YAML(typ="safe").load(self.config_dir / "activity_transitions.yaml")[
+                    "transition_chars"
+                ]
+                if mandatory
+                else cfg[key]
+            )
             raw = (
                 raw[: output.start(2)]
-                + f"{cfg[key][0]}–{cfg[key][1]}"
+                + f"{limits[0]}–{limits[1]}"
                 + raw[output.end(3) :]
             )
             output = re.search(r"register\s+<(\w+)>\s*\|\s*(\d+)[–-](\d+)", raw)
@@ -429,7 +442,13 @@ class ContextBuilder:
             key: value.isoformat() if hasattr(value, "isoformat") else value
             for key, value in supplemental["day_context"].items()
         }
-        supplemental.update({key: payload[key] for key in optional if key in payload})
+        supplemental.update(
+            {
+                key: payload[key]
+                for key in optional
+                if key in payload and key not in fields
+            }
+        )
         user = (
             render(template[boundary:]).strip()
             + "\n\n"
