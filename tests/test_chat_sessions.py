@@ -1,0 +1,186 @@
+"""Session isolation, exact budgets, citation boundaries, and closure receipts."""
+
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import AsyncMock
+
+import pytest
+
+from src.chat import ChatService, ChatSettings, SessionStore, validate_facts
+from src.core.chat_context import ChatContext
+from src.core.context import ContextIsolationError, ContextOverflow
+from src.core.db import Database
+from src.core.mood import MoodModel
+from src.core.pad import Mood
+from src.core.schedule import SleepWindow
+from src.core.time_utils import ALMATY
+from src.core.world import World
+from src.retrieve import RetrievedNode
+
+AT = datetime(2026, 9, 16, 19, tzinfo=ALMATY)
+
+
+@pytest.fixture
+def database(tmp_path):
+    result = Database(tmp_path / "chat.sqlite3")
+    result.initialize()
+    return result
+
+
+@pytest.fixture
+def day():
+    return World.from_config(Path("config")).day_context(
+        AT,
+        sleep=SleepWindow(AT.replace(hour=1), AT.replace(hour=9)),
+        sleep_debt=0,
+        location="дом",
+        road_roll=1,
+    )
+
+
+@pytest.fixture
+def service(database):
+    llm = AsyncMock()
+    llm.prompt_tokens.return_value = [1] * 100
+    llm.tokenize.return_value = [2] * 20
+    llm.generate.return_value = json.dumps(
+        {"answer": "I had tea by the window and enjoyed the quiet evening.",
+         "cited": [], "confident": True}
+    )
+    retriever = AsyncMock()
+    retriever.search.return_value = []
+    summarizer = AsyncMock(return_value="A conversation about tea.")
+    facts = AsyncMock(return_value=[])
+    context = ChatContext(Path("prompts"), MoodModel.from_config(Path("config")))
+    return ChatService(
+        database, llm, retriever, context,
+        ChatSettings.from_registry(Path("config/settings.yaml")),
+        person_id="123", summarizer=summarizer, facts_extractor=facts,
+    )
+
+
+async def test_closed_chat_does_not_call_model(service, day):
+    assert await service.reply("dm", "Hello", trace_id="closed", day=day,
+                               mood=Mood(0, 0, 0), wake_reason="alarm", topic="security") is None
+    service.llm.generate.assert_not_awaited()
+    service.retriever.search.assert_not_awaited()
+
+
+async def test_dialogue_channels_and_replays_are_isolated(service, day):
+    dm = await service.open("dm", at=AT)
+    topic = await service.open("topic", at=AT)
+    assert dm["id"] != topic["id"]
+    kwargs = dict(day=day, mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    first = await service.reply("dm", "Private tea preference", trace_id="dm-1", **kwargs)
+    assert await service.reply("dm", "Private tea preference", trace_id="dm-1", **kwargs) == first
+    await service.reply("topic", "Public greeting", trace_id="topic-1", **kwargs)
+    assert service.llm.generate.await_count == 2
+    request = service.llm.generate.call_args.args[0]
+    assert "Private tea preference" not in request.user
+    reopened = SessionStore(service.database)
+    assert len(reopened.turns(dm["id"])) == 2
+    assert reopened.active("topic")["id"] == topic["id"]
+
+
+async def test_chat_routes_unknown_and_opens_one_question(service, database, day):
+    await service.open("dm", at=AT)
+    service.llm.generate.return_value = json.dumps(
+        {"answer": "I do not know this yet. Please send me an article about seccomp.",
+         "cited": [], "confident": False}
+    )
+    result = await service.reply("dm", "What is seccomp?", trace_id="unknown", day=day,
+                                 mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    assert result.mode == "unknown" and not result.cited
+    request = service.llm.generate.call_args.args[0]
+    assert request.profile == "chat_unknown"
+    with database.connection() as c:
+        assert c.execute("SELECT kind FROM threads").fetchall()[0][0] == "question"
+        assert c.execute("SELECT count(*) FROM nodes").fetchone()[0] == 0
+
+
+async def test_chat_rejects_citations_outside_retrieved_nodes(service, database, day):
+    database.run_transaction(lambda c: c.execute("INSERT INTO nodes(id,name) VALUES ('n','seccomp')"))
+    service.retriever.search.return_value = [RetrievedNode("n", "seccomp", "A filter", ())]
+    service.llm.generate.return_value = json.dumps(
+        {"answer": "A fabricated citation must not become a stored answer.",
+         "cited": ["invented"], "confident": True}
+    )
+    session = await service.open("dm", at=AT)
+    with pytest.raises(ValueError, match="citation"):
+        await service.reply("dm", "seccomp?", trace_id="citation", day=day,
+                            mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    assert all(turn["role"] == "user" for turn in service.store.turns(session["id"]))
+
+
+def test_chat_mode_blocks_are_isolated(service, day):
+    kwargs = dict(question="Hello", history=[], summary="", people_facts=[],
+                  day=day, mood=Mood(0, 0, 0), wake_reason="alarm")
+    with pytest.raises(ContextIsolationError):
+        service.context.build("personal", nodes=[{"id": "n"}], **kwargs)
+    request = service.context.build("topical", nodes=[{"id": "n", "summary": "Graph evidence"}], **kwargs)
+    assert "Graph evidence" in request.user
+    assert "кофе" not in request.user and "life_state" not in request.user
+    assert "people_facts" in request.user
+
+
+async def test_chat_compresses_only_head_and_preserves_last_twelve(service, day):
+    session = await service.open("dm", at=AT)
+    for idx in range(14):
+        service.store.add_user(session["id"], f"turn-{idx}", trace_id=f"seed-{idx}", at=AT)
+    service.llm.prompt_tokens.side_effect = [[1] * 16001, [1] * 100]
+    await service.reply("dm", "Newest question", trace_id="newest", day=day,
+                        mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    head = service.summarizer.call_args.kwargs["turns"]
+    assert [turn["text"] for turn in head] == ["turn-0", "turn-1", "turn-2"]
+    request = service.llm.generate.call_args.args[0]
+    assert all(f'"turn-{idx}"' in request.user for idx in range(3, 14))
+    assert "Newest question" in request.user
+    assert len(service.store.turns(session["id"])) == 16
+
+
+async def test_chat_overflow_never_truncates_protected_tail(service, day):
+    await service.open("dm", at=AT)
+    service.llm.prompt_tokens.return_value = [1] * 16001
+    with pytest.raises(ContextOverflow):
+        await service.reply("dm", "Large turn", trace_id="large", day=day,
+                            mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    service.llm.generate.assert_not_awaited()
+    service.summarizer.assert_not_awaited()
+
+
+async def test_session_expires_after_six_hours_and_saves_only_direct_facts(service, database, day):
+    session = await service.open("dm", at=AT)
+    service.store.add_user(session["id"], "My name is Alex.", trace_id="name", at=AT)
+    turn = service.store.turns(session["id"])[0]
+    service.facts_extractor.return_value = [{"kind": "name", "fact": "My name is Alex.", "source": turn["id"]}]
+    assert await service.expire(at=AT + timedelta(hours=5, minutes=59)) == []
+    assert await service.expire(at=AT + timedelta(hours=6)) == [session["id"]]
+    assert service.store.active("dm") is None
+    assert await service.expire(at=AT + timedelta(hours=7)) == []
+    with database.connection() as c:
+        assert c.execute("SELECT fact FROM people_facts").fetchone()[0] == "My name is Alex."
+        assert c.execute("SELECT kind FROM narrative").fetchone()[0] == "chat"
+        assert c.execute("SELECT count(*) FROM nodes").fetchone()[0] == 0
+    assert json.loads(await service.export(session["id"]))["session"]["closed_at"].endswith("Z")
+
+
+def test_fact_filter_rejects_inferences_sensitive_data_and_wrong_speaker():
+    turns = [
+        {"id": 1, "role": "user", "text": "My name is Alex. My salary is 1000."},
+        {"id": 2, "role": "mika", "text": "You are a student."},
+    ]
+    candidates = [
+        {"kind": "name", "fact": "My name is Alex.", "source": 1},
+        {"kind": "context", "fact": "My salary is 1000.", "source": 1},
+        {"kind": "context", "fact": "You are a student.", "source": 2},
+        {"kind": "prefs", "fact": "Interested in security", "source": 1},
+    ]
+    assert validate_facts(candidates, turns) == candidates[:1]
+
+
+def test_chat_settings_and_times_are_validated(database):
+    settings = ChatSettings.from_registry(Path("config/settings.yaml"))
+    assert (settings.budget, settings.keep_last_turns, settings.ttl_hours) == (16000, 12, 6)
+    with pytest.raises(ValueError, match="aware"):
+        SessionStore(database).open("dm", at=AT.replace(tzinfo=None))
