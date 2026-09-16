@@ -47,6 +47,24 @@ def pick(planner, at=AT, **kwargs):
     )
 
 
+def test_offtop_resolves_configured_people_and_coffee_bindings(planner):
+    planner = OfftopPlanner.from_config(planner.database, Path("config"))
+    slot = next(s for s in planner.life["slots"] if s["id"] == "dom")
+    planner.life["slots"] = [slot]
+    slot["frames"] = ["{people:dasha.nom} {dasha_thing}"]
+    event = pick(planner)
+    assert event.text.startswith("Даша ")
+    slot["frames"] = ["кофеварка {coffee_state}"]
+    event = pick(planner)
+    assert event and "{" not in event.text
+    assert (
+        event.values["coffee_state"]
+        in planner.life["progress"]["coffee_machine"]["stages"]
+    )
+    assert planner.slot_weight(slot, 0) == slot["weight"]
+    assert planner.slot_weight(slot, 1) == slot["weight"] / 2
+
+
 def test_offtop_pick_is_read_only_and_commits_only_after_publication(planner):
     event = pick(planner)
     assert event is not None and event.text and event.entity

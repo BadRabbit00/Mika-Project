@@ -13,6 +13,7 @@ import structlog
 from ruamel.yaml import YAML
 
 from src.core.pad import finite
+from src.core.settings import SettingsRegistry
 from src.core.time_utils import from_utc_iso, require_aware, to_utc_iso
 from src.writer import WriteResult
 
@@ -49,17 +50,26 @@ class OfftopEvent:
 
 
 class OfftopPlanner:
-    def __init__(self, database, life, *, max_slot_uses: int, slot_weight):
-        if type(max_slot_uses) is not int or max_slot_uses <= 0:
+    def __init__(
+        self,
+        database,
+        life,
+        *,
+        max_slot_uses: int | None = None,
+        slot_weight=None,
+        settings=None,
+    ):
+        if max_slot_uses is not None and (
+            type(max_slot_uses) is not int or max_slot_uses <= 0
+        ):
             raise ValueError("An explicit positive slot-use limit is required")
         self.database, self.life = database, life
-        self.max_slot_uses, self.slot_weight = max_slot_uses, slot_weight
+        self._limit_override, self._weight_override = max_slot_uses, slot_weight
+        self.settings = settings or SettingsRegistry.from_file("config/settings.yaml")
         for slot in life["slots"]:
             signatures = [frozenset(_FIELDS.findall(frame)) for frame in slot["frames"]]
             if len(signatures) != len(set(signatures)):
-                raise OfftopHistoryError(
-                    "TODO(OFFTOP-ENTITY): ambiguous frame signatures"
-                )
+                raise OfftopHistoryError("Ambiguous frame signatures")
 
     @classmethod
     def from_config(cls, database, directory: Path, **policy):
@@ -67,6 +77,26 @@ class OfftopPlanner:
             (Path(directory) / "life.yaml").read_text(encoding="utf-8")
         )
         return cls(database, life, **policy)
+
+    @property
+    def max_slot_uses(self):
+        return self._limit_override or self.settings.get("offtop.max_slot_uses")
+
+    def slot_weight(self, slot, count):
+        if self._weight_override is not None:
+            return self._weight_override(slot, count)
+        return slot["weight"] / (count + self.settings.get("offtop.slot_smoothing"))
+
+    def _progress_value(self, key, state):
+        if key in state:
+            return int(state[key])
+        group, field = key.split(".")
+        config = self.life["progress"][group]
+        return (
+            config["stages"].index(config["state"])
+            if field == "stage"
+            else config[field]
+        )
 
     def _snapshot(self, at):
         with self.database.connection() as connection:
@@ -97,7 +127,7 @@ class OfftopPlanner:
             except (ValueError, TypeError, KeyError) as error:
                 if row["at"].timestamp() >= cutoff.timestamp():
                     raise OfftopHistoryError(
-                        "TODO(OFFTOP-ENTITY): legacy event history"
+                        "Legacy event history has no canonical entity"
                     ) from error
                 row["values"] = {}
         return rows, state
@@ -210,9 +240,24 @@ class OfftopPlanner:
             ),
             None,
         )
+        labels = {
+            f"{person['id']}.{case}": value
+            for person in self.life["people"]
+            for case, value in person.get("ref", {}).items()
+        } | people_labels
+
+        def references(value):
+            fields = _FIELDS.findall(value)
+            if any(
+                not field.startswith("people:") or field[7:] not in labels
+                for field in fields
+            ):
+                return None
+            return _FIELDS.sub(lambda match: labels[match[1][7:]], value)
+
         for name in fields:
             if name.startswith("people:"):
-                value = people_labels.get(name.split(":", 1)[1])
+                value = labels.get(name.split(":", 1)[1])
                 options.append([value] if value else [])
             elif name.startswith("progress:"):
                 group, key = name.split(":", 1)[1].split(".", 1)
@@ -221,9 +266,7 @@ class OfftopPlanner:
                 if progress_ref is None:
                     raise ValueError("Episode frame has no progress reference")
                 key = f"{progress_ref}.episode"
-                current = int(
-                    state.get(key, self.life["progress"][progress_ref]["episode"])
-                )
+                current = self._progress_value(key, state)
                 options.append(
                     [str(current)]
                     if 1 <= current <= self.life["progress"][progress_ref]["total"]
@@ -235,16 +278,33 @@ class OfftopPlanner:
             elif name in slot.get("vars", {}):
                 used = {row["values"].get(name) for row in recent}
                 options.append(
-                    [str(value) for value in slot["vars"][name] if value not in used]
+                    [
+                        resolved
+                        for value in slot["vars"][name]
+                        if (resolved := references(str(value))) is not None
+                        and resolved not in used
+                    ]
                 )
             elif name in bindings:
                 options.append([bindings[name]])
+            elif name in slot.get("bindings", {}):
+                binding = slot["bindings"][name]
+                if binding["from"] != "progress":
+                    raise ValueError("Unsupported configured binding source")
+                group, field = binding["key"].split(".")
+                if field != "stages":
+                    raise ValueError("A progress binding must reference stages")
+                stages, key = self.life["progress"][group][field], f"{group}.stage"
+                current = self._progress_value(key, state)
+                if not 0 <= current < len(stages):
+                    raise ValueError("Progress stage is outside its configured range")
+                options.append([stages[current]])
+                progress.append((key, current, min(current + 1, len(stages) - 1)))
             else:
                 log.warning(
                     "offtop_frame_unavailable",
                     field=name,
                     slot=slot["id"],
-                    todo="OFFTOP-BINDINGS",
                 )
                 return [], progress
         entities = {row["entity"] for row in recent}
@@ -285,11 +345,7 @@ class OfftopPlanner:
                 row = connection.execute(
                     "SELECT value FROM life_state WHERE key=?", (key,)
                 ).fetchone()
-                current = (
-                    int(row[0])
-                    if row
-                    else self.life["progress"][key.split(".")[0]]["episode"]
-                )
+                current = self._progress_value(key, {key: row[0]} if row else {})
                 if current != before:
                     raise ValueError("Progress changed since event selection")
                 connection.execute(

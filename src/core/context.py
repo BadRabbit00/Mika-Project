@@ -16,6 +16,7 @@ from src.core.content_rules import FORBIDDEN_TECH as FORBIDDEN_TECH
 from src.core.context_blocks import BLOCKS as BLOCKS
 from src.core.context_blocks import register_value_blocks, writing_memory
 from src.core.pad import Mood
+from src.core.settings import SettingsRegistry
 from src.core.world import DayContext
 
 log = structlog.get_logger("blogai.context")
@@ -70,6 +71,8 @@ WRITE_INPUTS = {
     "correction": {"issue", "correct", "wrong_post_gist"},
     "offtop": {"offtop_event"},
     "situation": {"weather"},
+    "daily": {"weather", "sleep_state", "tired_reason", "recent_greetings"},
+    "insight": {"node_a", "relation", "node_b", "edge_summary", "source_title"},
 }
 OFFTOP_KINDS = frozenset({"offtop", "situation", "daily"})
 _DAY_FIELDS = {
@@ -87,7 +90,7 @@ _DAY_FIELDS = {
 register_value_blocks(
     _DAY_FIELDS
     | set().union(*WRITE_INPUTS.values())
-    | {"mood", "recent_situations", "emoji_max"}
+    | {"mood", "recent_situations", "emoji_max", "output_envelope", "day_context"}
     | {
         name
         for profile in PROFILES.values()
@@ -116,6 +119,8 @@ class Request:
     max_chars: int | None = None
     tokens_in: int | None = None
     forbidden_terms: tuple[str, ...] = ()
+    node_ids: tuple[str, ...] = ()
+    thread_ids: tuple[int, ...] = ()
 
 
 class ContextBuilder:
@@ -127,10 +132,14 @@ class ContextBuilder:
         mood_model=None,
         config_dir: Path = Path("config"),
         offtop_persona: str | None = None,
+        settings=None,
     ):
         self.prompt_dir = Path(prompt_dir)
         self.database, self.mood_model = database, mood_model
         self.config_dir, self.offtop_persona = Path(config_dir), offtop_persona
+        self.settings = settings or SettingsRegistry.from_file(
+            self.config_dir / "settings.yaml"
+        )
         if offtop_persona not in (None, "nontechnical_sections"):
             raise ValueError("Unknown explicit off-topic persona selection")
         for kind, inputs in WRITE_INPUTS.items():
@@ -153,6 +162,8 @@ class ContextBuilder:
                         "subgraph",
                         "recent_slots",
                         "recent_situations",
+                        "output_envelope",
+                        "day_context",
                     }
                 )
                 if fields - known:
@@ -260,14 +271,8 @@ class ContextBuilder:
         )
 
     def _writing(self, profile, *, kind, day, mood, wake_reason, **payload):
-        if kind == "daily":
-            raise ValueError(
-                "TODO(DAILY-ISOLATION): article complexity in off-topic template"
-            )
         if kind not in WRITE_INPUTS:
-            raise ValueError(
-                f"Unsupported writing kind: {kind}; see TODO(INSIGHT-PROMPT)"
-            )
+            raise ValueError(f"Unsupported writing kind: {kind}")
         offtop = kind in OFFTOP_KINDS
         if (profile == "write_offtop") != offtop:
             raise ContextIsolationError("Writing kind does not belong to this profile")
@@ -287,21 +292,18 @@ class ContextBuilder:
             )
         yaml = YAML(typ="safe")
         life = yaml.load((self.config_dir / "life.yaml").read_text(encoding="utf-8"))
-        settings = yaml.load(
-            (self.config_dir / "settings.yaml").read_text(encoding="utf-8")
-        )
-        emoji_max = next(
-            item["default"]
-            for item in settings["settings"]
-            if item["key"] == "persona.emoji_max"
-        )
+        emoji_max = self.settings.get("persona.emoji_max")
         mood_text = self.mood_model.mood_block(mood)
         persona = _COMMENTS.sub(
-            "", (self.prompt_dir / "_base.md").read_text(encoding="utf-8")
+            "", (self.prompt_dir / "_base_core.md").read_text(encoding="utf-8")
         ).strip()
-        if offtop and self.offtop_persona == "nontechnical_sections":
-            # Explicit caller choice for TODO(OFFTOP-PERSONA); source text stays intact.
-            persona = "\n\n".join(persona.split("\n\n")[2:])
+        if not offtop:
+            persona += (
+                "\n\n"
+                + _COMMENTS.sub(
+                    "", (self.prompt_dir / "_base_study.md").read_text(encoding="utf-8")
+                ).strip()
+            )
         persona_values = {"mood": mood_text, "emoji_max": str(emoji_max)}
         if set(_PLACEHOLDER.findall(persona)) != persona_values.keys():
             raise ValueError("Unexpected persona placeholders")
@@ -339,6 +341,23 @@ class ContextBuilder:
         output = re.search(r"регистр\s+<(\w+)>\s*\|\s*(\d+)[–-](\d+)", raw)
         if temperature is None or output is None:
             raise ValueError("Missing writing temperature, mode, or length metadata")
+        envelope = _COMMENTS.sub(
+            "", (self.prompt_dir / "output_envelope.md").read_text()
+        ).strip()
+        envelope_values = {
+            "mode": output[1],
+            "min_chars": output[2],
+            "max_chars": output[3],
+            "envelope_example": (self.prompt_dir / "examples" / f"{output[1]}.md")
+            .read_text()
+            .strip(),
+        }
+        if set(_PLACEHOLDER.findall(envelope)) != envelope_values.keys():
+            raise ValueError("Unexpected output-envelope placeholders")
+        values["output_envelope"] = _PLACEHOLDER.sub(
+            lambda m: envelope_values[m[1]], envelope
+        )
+        values["day_context"] = {"location": day.location, "daypart": day.daypart}
         template = _COMMENTS.sub("", raw).strip()
         fields = set(_PLACEHOLDER.findall(template))
         if fields - values.keys():
@@ -346,7 +365,7 @@ class ContextBuilder:
         first = next(
             match
             for match in _PLACEHOLDER.finditer(template)
-            if match[1] not in {"persona", "identity"}
+            if match[1] not in {"persona", "identity", "output_envelope"}
         )
         boundary = template.rfind("\n", 0, first.start()) + 1
 
@@ -386,6 +405,8 @@ class ContextBuilder:
             output[1],
             int(output[2]),
             int(output[3]),
+            node_ids=tuple(node["id"] for node in memory.get("subgraph", [])),
+            thread_ids=tuple(thread["id"] for thread in memory.get("open_threads", [])),
         )
         if offtop and self.database is not None:
             with self.database.connection() as connection:
