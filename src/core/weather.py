@@ -57,17 +57,21 @@ class WeatherClient:
         self._cached = self._cached_at = None
 
     @classmethod
-    def from_config(cls, directory: Path, *, transport=None):
+    def from_config(cls, directory: Path, *, transport=None, settings=None):
         yaml = YAML(typ="safe")
         life = yaml.load((Path(directory) / "life.yaml").read_text(encoding="utf-8"))
         registry = yaml.load(
             (Path(directory) / "settings.yaml").read_text(encoding="utf-8")
         )
-        settings = {
-            item["key"]: item["default"]
-            for item in registry["settings"]
-            if item["key"] in {"world.weather_source", "world.weather_chance"}
-        }
+        settings = (
+            settings
+            if settings is not None
+            else {
+                item["key"]: item["default"]
+                for item in registry["settings"]
+                if item["key"] in {"world.weather_source", "world.weather_chance"}
+            }
+        )
         return cls(life, settings, transport=transport)
 
     async def __aenter__(self):
@@ -78,11 +82,12 @@ class WeatherClient:
 
     async def fetch(self, at: datetime, *, rng: Random | None = None) -> Weather | None:
         at = require_aware(at)
-        source = self.settings["world.weather_source"]
+        source = self.settings.get("world.weather_source")
         if source == "off":
             return None
         if (
             self._cached_at is not None
+            and self._cached_source == source
             and 0 <= elapsed_hours(self._cached_at, at) * 3600 < 1800
         ):
             return self._cached
@@ -100,10 +105,9 @@ class WeatherClient:
                 )
                 log.info("weather_seasonal_fallback", month=at.month)
             else:
-                log.warning(
-                    "weather_missing_fallback", month=at.month, todo="WEATHER-MONTHS"
-                )
+                log.warning("weather_missing_fallback", month=at.month)
         self._cached, self._cached_at = weather, at
+        self._cached_source = source
         return weather
 
     async def _fetch_api(self):

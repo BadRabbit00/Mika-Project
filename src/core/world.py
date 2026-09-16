@@ -85,7 +85,7 @@ class World:
             outdoors=location in ("улица", "транспорт"),
             last_mention_days=days,
             rng=rng,
-            ordinary_chance=client.settings["world.weather_chance"],
+            ordinary_chance=client.settings.get("world.weather_chance"),
             cooldown_days=self._life["greetings"]["weather_cooldown_days"],
         )
         return weather if relevant else None
