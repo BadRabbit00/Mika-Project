@@ -9,14 +9,11 @@ import httpx
 import numpy as np
 import structlog
 
-from src.core.context import Request
+from src.core.context import ContextBuilder, Request
+from src.core.context import ContextOverflow as ContextOverflow
 from src.core.vectors import validate_vector
 
 log = structlog.get_logger("blogai.llm_local")
-
-
-class ContextOverflow(ValueError):
-    """The actual server-rendered request exceeds its profile budget."""
 
 
 class LocalLLM:
@@ -115,11 +112,7 @@ class LocalLLM:
             raise ValueError("Invalid detokenizer response")
         return content
 
-    async def generate(
-        self, request: Request, *, grammar: str | None = None, max_tokens: int = 2048
-    ) -> str:
-        if type(max_tokens) is not int or max_tokens <= 0:
-            raise ValueError("A positive generation limit is required")
+    async def prompt_tokens(self, request: Request) -> list[int]:
         messages = []
         if request.system:
             messages.append({"role": "system", "content": request.system})
@@ -139,10 +132,15 @@ class LocalLLM:
             raise ValueError("Invalid chat-template response")
         # /apply-template omits BOS; token-ID completion skips server tokenization.
         tokens = await self.tokenize(prompt, parse_special=True, add_special=True)
-        if len(tokens) > request.budget:
-            raise ContextOverflow(
-                f"{request.profile}: {len(tokens)} > {request.budget}"
-            )
+        return tokens
+
+    async def generate(
+        self, request: Request, *, grammar: str | None = None, max_tokens: int = 2048
+    ) -> str:
+        if type(max_tokens) is not int or max_tokens <= 0:
+            raise ValueError("A positive generation limit is required")
+        tokens = await self.prompt_tokens(request)
+        ContextBuilder._enforce(request, tokens)
         payload = {
             "prompt": tokens,
             "n_predict": max_tokens,

@@ -67,9 +67,10 @@ These are specification gaps, not defaults chosen by the implementation.
   --min-similarity arguments. No production values are inferred from the document.
 - TODO(QUIZ-PERSONA): section 12 limits the question context to node names and
   earlier questions, while section 16 and selfquiz_ask.md add persona. The supplied
-  persona also needs mood state from step 4. Until that dependency is implemented,
-  the question context uses the narrow section 12 contract and an empty persona
-  substitution. No persona or mood text is invented; supplied files stay intact.
+  persona includes technical and mood content. The question context preserves
+  the user's stricter names-only contract with an empty persona substitution.
+  Mood is implemented, but adding it would still violate that isolation rule.
+  No persona or mood text is invented; supplied files stay intact.
 - TODO(TRUST-PRIOR): section 4.3 does not define the reliability lookup for source
   kind, peer review, and publisher. Extraction preserves explicit trust_prior and
   origin_key metadata, and deduplicates each normalized triple per source. It does
@@ -78,7 +79,10 @@ These are specification gaps, not defaults chosen by the implementation.
   graph retraction and re-extraction semantics before supporting source revisions.
 - TODO(RUNS-PERSISTENCE): multiple calls in one trace are logged in full JSONL with
   distinct call IDs. The contradictory runs primary key is unchanged; multi-call
-  traces are not squeezed into that table or silently overwritten.
+  learning traces are not squeezed into that table or silently overwritten.
+  Writer attempts each receive a separate trace ID and runs row; params_json
+  links those attempts by post_id. A shared trace across attempts remains blocked
+  by TODO(TRACE-IDENTITY).
 - TODO(QUIZ-CONFIDENCE): the answer prompt includes confident, but section 4.2
   supplies no grading rule for it. The field is type-validated and logged. Verdicts
   follow the documented citation checks; the model's confidence does not replace
@@ -150,6 +154,18 @@ These are specification gaps, not defaults chosen by the implementation.
   sections 12 and 16 prohibit technical terms anywhere in off-topic context.
   Prompt files remain read-only. The persona-selection policy needs an explicit
   decision; an isolation failure must not be silently bypassed.
+  ContextBuilder defaults to rejecting that conflict. Its explicit
+  offtop_persona="nontechnical_sections" option selects the existing character
+  and voice sections and obtains identity from life.yaml. Tests exercise that
+  opt-in; no production default or prompt-file modification is applied.
+- TODO(WRITE-MODE-INSTRUCTIONS): section 5 requires a matching closed output
+  mode, but supplied writing templates name only the opening mode in metadata.
+  A live Gemma 12B smoke test on 2026-09-16 omitted mode tags in all three
+  attempts (1259 input tokens each); attempts two and three also exceeded the
+  template's length limit. The writer rejected every attempt and stored killed
+  with NULL text. The templates need an explicit output-envelope instruction
+  before successful live generation can be claimed. Prompt files remain intact;
+  the writer does not manufacture tags or weaken validation to accept these runs.
 - TODO(VALIDATOR-SEMANTICS): no finite list can recognize every euphemism or
   semantic contradiction. Deterministic rules cover explicit physiological
   terminology, known euphemisms, current-time claims, and the five-hour debt
@@ -173,6 +189,9 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(OFFTOP-PEOPLE): people entries provide IDs and descriptions, but not
   grammatical name forms for frame references. Callers supply reference labels;
   frames with unresolved references are ineligible instead of inventing names.
+- TODO(OFFTOP-BINDINGS): the coffee_state placeholder has no explicit binding
+  in the supplied slot. Callers can supply bindings; unresolved frames are logged
+  and ineligible. Other complete frames remain usable.
 - TODO(DAILY-ISOLATION): write_daily.md requests article complexity inside an
   off-topic profile. Keep that variant unavailable under strict isolation until
   the supplied template is corrected. The slot and situation variants are separate.
@@ -194,11 +213,14 @@ Step 3 tests names-only context, empty retrieval without model calls, strict
 citation subsets, fresh answer contexts, topic scope, top-six retrieval, suspect
 exclusion, replay behavior, and the minimum question count and passing fraction.
 
-The executable stage gate in tests/test_stage_contracts.py requires the following
-behavioral tests before each later-stage module may be introduced.
+Steps 6 and 7 test all three output-validation layers, isolated writing memory,
+quoted curator material in the user role, exact server token budgets, rejection
+retries, killed drafts, read-only event selection, publication-time continuity,
+and weather fallback/relevance. Successful generation tests use a mocked model;
+the live output-envelope limitation is documented above.
 
-- TODO(STEP-7-CONTRACTS): isolate off-topic and quiz contexts; curator material
-  uses the user role; context overflow raises instead of truncating; people_facts
-  cannot enter posts; /tokenize determines the budget.
+The executable stage gate in tests/test_stage_contracts.py requires behavioral
+tests before each later-stage module may be introduced.
+
 - TODO(STEP-12-CONTRACTS): state transitions are pure, without storage or model
   side effects. Model calls run through a task queue, outside Telegram handlers.

@@ -1,7 +1,7 @@
 # Implementation rules
 
 Read ARCHITECTURE.md before making changes. Follow the delivery order in
-section 38.3. Steps 1–6, including mood, sleep, and output validation, are implemented.
+section 38.3. Steps 1–7 include mood, sleep, validation, contexts, and draft writing.
 Live-model compatibility limits and deferred requirements are in docs/TODO.md.
 
 - Keep main limited to the initial architecture. Work on feature branches and

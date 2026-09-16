@@ -45,6 +45,7 @@ def source(
 
 def fake_llm(outputs=None):
     llm = AsyncMock()
+    llm.prompt_tokens.return_value = [1, 2, 3]
     llm.tokenize.side_effect = lambda text, **_: list(text.encode("utf-8"))
     llm.detokenize.side_effect = lambda tokens: bytes(tokens).decode("utf-8")
     llm.embed.side_effect = lambda text: np.array(

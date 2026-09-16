@@ -193,8 +193,11 @@ class Extractor:
             chunks = await chunk_text(source.text, self.llm)
             accepted, rejected = [], []
             for chunk in chunks:
-                request = self.context.build(
-                    "extract", existing_node_names=names, article_chunk=chunk.text
+                request = await self.context.build_checked(
+                    "extract",
+                    llm=self.llm,
+                    existing_node_names=names,
+                    article_chunk=chunk.text,
                 )
                 output = await self.llm.generate(
                     request, grammar=self.grammar, max_tokens=self.max_output_tokens
