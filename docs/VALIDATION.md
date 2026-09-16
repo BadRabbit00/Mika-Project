@@ -1,5 +1,28 @@
 # Validation evidence
 
+## Bounded local reasoning: 2026-09-16
+
+- `nix flake check --no-update-lock-file --print-build-logs`: passed on
+  x86_64-linux, with 428 tests, lint, formatting, and the offline application
+  reaching EXAM without external deliveries. aarch64-linux was not built here.
+- `nix build .#default --no-link --no-update-lock-file`: passed.
+- The 23 new regression cases cover separate reasoning/final-answer limits,
+  actual context capacity, lazy grammar activation, malformed/truncated output,
+  runtime settings, deadlines, receipts, and thought redaction in attachments.
+- Live Gemma 4 12B extraction with a 1,024-token thinking limit stopped reasoning
+  at exactly token 1,024 and ended normally after 1,125 generated tokens total.
+  Two claims passed the existing grounding validator. The live embedding endpoint
+  returned a 768-dimensional vector.
+- Shorter-budget probes also produced empty claims or exhausted the total output
+  limit; these were rejected. The live probes establish protocol and validation
+  behavior, not general factual accuracy or an optimal budget for every task.
+- Graphify refreshed the Python graph: 1,600 nodes and 4,101 edges. Its existing
+  optional SQL-parser limitation remains.
+
+Live checks used synthetic inputs and temporary storage. No Telegram delivery
+or production database change was involved. See [REASONING.md](REASONING.md) for
+the per-request protocol and controls.
+
 ## Autonomous world: 2026-09-16
 
 - Full devShell pytest run: 365 passed, including 17 autonomous-provider cases.

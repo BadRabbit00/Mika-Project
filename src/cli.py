@@ -59,8 +59,11 @@ async def _curator(args):
 async def _extract(args):
     database = Database(args.database)
     await asyncio.to_thread(database.initialize)
+    settings = SettingsRegistry.from_file(
+        args.settings, store=SQLiteSettingsStore(database)
+    )
     async with LocalLLM(
-        args.generation_url, args.embedding_url, database=database
+        args.generation_url, args.embedding_url, database=database, settings=settings
     ) as llm:
         extractor = Extractor(
             database,
@@ -91,7 +94,7 @@ async def _quiz(args):
         else None
     )
     async with LocalLLM(
-        args.generation_url, args.embedding_url, database=database
+        args.generation_url, args.embedding_url, database=database, settings=settings
     ) as llm:
         service = SelfQuiz(
             database,
@@ -140,7 +143,6 @@ def main(argv: list[str] | None = None) -> int:
     quiz.add_argument(
         "--question", help="Answer one supplied question instead of a round"
     )
-    quiz.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
     quiz.add_argument("--min-similarity", type=float)
     quiz.add_argument("--rrf-k", type=float)
     curator = commands.add_parser("curator", help="Run a file-backed curator workflow")
@@ -174,6 +176,9 @@ def main(argv: list[str] | None = None) -> int:
             help="Bot token file (default: .env in the working directory; exports win)",
         )
     for command in (extract, quiz):
+        command.add_argument(
+            "--settings", type=Path, default=Path("config/settings.yaml")
+        )
         command.add_argument("--database", type=Path, required=True)
         command.add_argument("--log-file", type=Path, required=True)
         command.add_argument("--prompt-dir", type=Path, default=Path("prompts"))
