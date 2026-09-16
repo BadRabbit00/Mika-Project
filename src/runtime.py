@@ -167,12 +167,6 @@ async def dry_run(workdir):
     workdir.mkdir(parents=True, exist_ok=True)
     database = Database(database_path)
     await asyncio.to_thread(database.initialize)
-    # The proposed contract is installed only in this disposable test database.
-    for statement in (root / "docs/learning-storage.sql").read_text().split(";"):
-        if statement.strip():
-            database.run_transaction(
-                lambda c, statement=statement: c.execute(statement)
-            )
     sources = {}
     for article in scenario["articles"]:
         path = workdir / (article["id"] + ".md")

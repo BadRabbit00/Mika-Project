@@ -236,10 +236,6 @@ async def test_pipeline_selection_binds_validated_allocation(learning_store, pas
 def learning_store(tmp_path):
     db = Database(tmp_path / "runner.sqlite3")
     db.initialize()
-    sql = Path("docs/learning-storage.sql").read_text()
-    for statement in sql.split(";"):
-        if statement.strip():
-            db.run_transaction(lambda c, statement=statement: c.execute(statement))
     return SQLiteLearningStore(db, State(min_articles=3, quiz_threshold=0.6))
 
 

@@ -51,16 +51,7 @@ def test_settings_reads_defaults_without_inventing_missing_storage():
         registry.set("study.quiz_threshold", "0.7", trace_id="setting")
 
 
-def apply_proposed_tables(database):
-    sql = Path("docs/interface-storage.sql").read_text()
-    tables = sql.split("-- Proposed runs migration:")[0]
-    for statement in tables.split(";"):
-        if statement.strip():
-            database.run_transaction(lambda c, sql=statement: c.execute(sql))
-
-
 def test_settings_overrides_survive_reopen_with_explicit_storage_contract(database):
-    apply_proposed_tables(database)
     registry = SettingsRegistry.from_file(
         Path("config/settings.yaml"), store=SQLiteSettingsStore(database)
     )
@@ -73,7 +64,6 @@ def test_settings_overrides_survive_reopen_with_explicit_storage_contract(databa
 
 
 def test_defect_propagates_only_explicit_post_lineage(database):
-    apply_proposed_tables(database)
 
     def seed(c):
         c.execute("INSERT INTO posts(id) VALUES ('p')")

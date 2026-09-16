@@ -75,12 +75,13 @@ class Writer:
 
         def save(connection):
             connection.execute(
-                "INSERT INTO runs(trace_id, at, actor, profile, params_json, "
+                "INSERT INTO runs(call_id, trace_id, at, actor, profile, params_json, "
                 "system, user, "
                 "output, tokens_in, tokens_out, duration_ms, status, error) "
-                "VALUES (?, ?, 'writer', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, 'writer', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     run_id,
+                    trace_id,
                     started_at,
                     request.profile,
                     json.dumps(
