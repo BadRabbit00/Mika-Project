@@ -64,7 +64,7 @@ def service(database):
     context = ChatContext(
         Path("prompts"), MoodModel.from_config(Path("config"), epoch=AT)
     )
-    return ChatService(
+    result = ChatService(
         database,
         llm,
         retriever,
@@ -74,6 +74,9 @@ def service(database):
         summarizer=summarizer,
         facts_extractor=facts,
     )
+    result.router = AsyncMock()
+    result.router.query.return_value = None
+    return result
 
 
 async def test_closed_chat_does_not_call_model(service, day):
@@ -525,6 +528,7 @@ async def test_chat_routes_unknown_and_opens_one_question(
     service, database, day, channel, public_threads
 ):
     await service.open(channel, at=AT)
+    service.router.query.return_value = "What is seccomp?"
     service.llm.generate.return_value = json.dumps(
         {
             "answer": "I do not know this yet. Please send me an article about "
@@ -564,6 +568,7 @@ async def test_chat_routes_unknown_and_opens_one_question(
 
 
 async def test_chat_rejects_citations_outside_retrieved_nodes(service, database, day):
+    service.router.query.return_value = "seccomp"
     database.run_transaction(
         lambda c: c.execute("INSERT INTO nodes(id,name) VALUES ('n','seccomp')")
     )
@@ -879,3 +884,388 @@ async def test_chat_ingress_uses_mika_and_background_queue(channel):
     await jobs.join()
     await jobs.close()
     assert commands.chat.call_args.kwargs["channel"] == channel
+
+
+async def test_mixed_personal_message_does_not_depend_on_graph(service, day):
+    await service.open("dm", at=AT)
+    service.retriever.search.side_effect = AssertionError("No graph request expected")
+    service.llm.generate.return_value = json.dumps(
+        dict(
+            answer="Потихоньку отдыхаю. А что у тебя сегодня было?",
+            cited=[],
+            confident=True,
+        )
+    )
+    reply = await service.reply(
+        "dm",
+        "Веду блог про ИИ агента, сейчас тестирую его. Как настроение у тебя?",
+        trace_id="mixed",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert reply.mode == "personal"
+    service.retriever.search.assert_not_awaited()
+    service.router.query.assert_awaited_once()
+    assert "people_facts" in service.router.query.call_args.args[0].user
+    assert "day_context" in service.llm.generate.call_args.args[0].user
+
+
+async def test_missing_name_asks_person_without_opening_knowledge_thread(service, day):
+    session = await service.open("dm", at=AT)
+    service.llm.generate.return_value = json.dumps(
+        dict(
+            answer="Привет! Не помню, как тебя зовут. Давай знакомиться?",
+            cited=[],
+            confident=False,
+        )
+    )
+    reply = await service.reply(
+        "dm",
+        "Привет, а как меня зовут?",
+        trace_id="missing-name",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert reply.mode == "personal"
+    service.retriever.search.assert_not_awaited()
+    await deliver_reply(service, "missing-name")
+    assert service.store.turns(session["id"])[-1]["text"] == reply.text
+    with service.database.connection(readonly=True) as c:
+        assert c.execute("SELECT count(*) FROM threads").fetchone()[0] == 0
+        assert c.execute("SELECT count(*) FROM people_facts").fetchone()[0] == 0
+
+
+async def test_knowledge_request_can_ask_for_clarification_without_magic_phrase(
+    service, day
+):
+    await service.open("dm", at=AT)
+    service.router.query.return_value = "seccomp"
+    service.llm.generate.return_value = json.dumps(
+        dict(
+            answer="Уточни, что именно ты хочешь разобрать? Пришлёшь свой пример?",
+            cited=[],
+            confident=False,
+        )
+    )
+    reply = await service.reply(
+        "dm",
+        "seccomp?",
+        trace_id="clarify",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert reply.mode == "unknown"
+    service.retriever.search.assert_awaited_once_with("seccomp", topic="security")
+
+
+async def test_optional_knowledge_service_failure_still_allows_dialogue(service, day):
+    await service.open("dm", at=AT)
+    service.router.query.return_value = "seccomp"
+    service.retriever.search.side_effect = httpx.ConnectError(
+        "Embedding server unavailable"
+    )
+    service.llm.generate.return_value = json.dumps(
+        dict(
+            answer="Сейчас не получается проверить заметки. Покажешь свой пример?",
+            cited=[],
+            confident=False,
+        )
+    )
+    result = await service.reply(
+        "dm",
+        "Как работает seccomp?",
+        trace_id="graph-offline",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert result.mode == "unknown"
+    assert (
+        json.loads(service.llm.generate.call_args.args[0].user)["knowledge_status"]
+        == "unavailable"
+    )
+
+
+@pytest.mark.parametrize("delivered", [True, False])
+@pytest.mark.parametrize("name_question", ["Как тебя зовут?", "Как к тебе обращаться?"])
+async def test_name_answer_is_remembered_only_after_delivered_name_question(
+    service, day, delivered, name_question
+):
+    session = await service.open("dm", at=AT)
+    service.llm.generate.return_value = json.dumps(
+        dict(answer=name_question, cited=[], confident=False)
+    )
+    await service.reply(
+        "dm",
+        "Привет, а как меня зовут?",
+        trace_id="ask-name",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    if delivered:
+        await deliver_reply(service, "ask-name")
+    user = service.store.add_user(
+        session["id"], "Лёша", trace_id="name-answer", at=AT + timedelta(minutes=1)
+    )
+    service.facts_extractor.return_value = [
+        {"kind": "name", "fact": "Лёша", "source": user["id"]}
+    ]
+    await service.close(session["id"], at=AT + timedelta(minutes=2))
+    service.store = SessionStore(service.database)
+    await service.open("dm", at=AT + timedelta(minutes=3))
+    await service.reply(
+        "dm",
+        "Помнишь моё имя?",
+        trace_id="recall-name",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    data = json.loads(service.llm.generate.call_args.args[0].user)
+    assert data["people_facts"] == (
+        [{"fact": "Лёша", "kind": "name"}] if delivered else []
+    )
+    assert not data["session_summary"]
+    assert all(turn["text"] != "Лёша" for turn in data["dialog_tail"])
+    service.retriever.search.assert_not_awaited()
+
+
+def test_question_about_unknown_name_is_not_itself_a_personal_fact():
+    turns = [{"id": 1, "role": "user", "text": "Как меня зовут? Может быть, Лёша?"}]
+    assert validate_facts([{"kind": "name", "fact": "Лёша", "source": 1}], turns) == []
+
+
+async def test_conversational_router_is_bounded_and_file_backed(service, day):
+    from src.core.chat_router import ChatRouter
+
+    request = service.context.build(
+        "personal",
+        question="Как настроение?",
+        nodes=[],
+        history=[],
+        summary="",
+        people_facts=[],
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+    )
+    router = ChatRouter(service.llm, Path("prompts"))
+    service.llm.generate.return_value = '{"knowledge_query": null}'
+    assert await router.query(request) is None
+    routed = service.llm.generate.call_args.args[0]
+    assert routed.profile == "chat_route"
+    assert routed.system == Path("prompts/chat_route.md").read_text().strip()
+    service.llm.generate.assert_awaited_once()
+    assert (
+        service.llm.generate.call_args.kwargs["grammar"]
+        == Path("grammars/chat_route.gbnf").read_text()
+    )
+    service.llm.generate.reset_mock()
+    service.llm.prompt_tokens.return_value = [1] * 16001
+    with pytest.raises(ContextOverflow):
+        await router.query(request)
+    service.llm.generate.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        '{"knowledge_query": " "}',
+        '{"knowledge_query": 7}',
+        '{"knowledge_query": null, "write": "evil"}',
+    ],
+)
+async def test_conversational_router_rejects_invalid_requests(service, day, raw):
+    from src.core.chat_router import ChatRouter
+
+    request = service.context.build(
+        "personal",
+        question="Hello",
+        nodes=[],
+        history=[],
+        summary="",
+        people_facts=[],
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+    )
+    service.llm.generate.return_value = raw
+    with pytest.raises(ValueError):
+        await ChatRouter(service.llm, Path("prompts")).query(request)
+
+
+async def test_fact_extractor_receives_delivered_question_as_evidence(service):
+    from src.core.chat_memory import ChatMemory
+
+    turns = [
+        {"id": 1, "role": "mika", "text": "Как тебя зовут?"},
+        {"id": 2, "role": "user", "text": "Лёша"},
+    ]
+    service.llm.generate.return_value = '[{"kind":"name","fact":"Лёша","source":2}]'
+    result = await ChatMemory(service.llm, Path("prompts")).facts(
+        turns=turns, trace_id="facts"
+    )
+    request = service.llm.generate.call_args.args[0]
+    assert "Как тебя зовут?" in request.user
+    assert result == [{"kind": "name", "fact": "Лёша", "source": 2}]
+
+
+@pytest.mark.parametrize(
+    "text,name", [("Меня зовут Лёша.", "Лёша"), ("My name is Alex.", "Alex")]
+)
+def test_explicit_name_can_be_stored_as_verbatim_name(text, name):
+    fact = {"kind": "name", "fact": name, "source": 1}
+    assert validate_facts([fact], [{"id": 1, "role": "user", "text": text}]) == [fact]
+
+
+async def test_retrieved_notes_do_not_prevent_a_clarifying_question(
+    service, database, day
+):
+    database.run_transaction(
+        lambda c: c.execute("INSERT INTO nodes(id,name) VALUES ('n','seccomp')")
+    )
+    service.router.query.return_value = "seccomp"
+    service.retriever.search.return_value = [
+        RetrievedNode("n", "seccomp", "A filter", ())
+    ]
+    service.llm.generate.return_value = json.dumps(
+        dict(
+            answer="Ты про фильтрацию вызовов или конкретный пример?",
+            cited=[],
+            confident=False,
+        )
+    )
+    await service.open("dm", at=AT)
+    reply = await service.reply(
+        "dm",
+        "А как это?",
+        trace_id="clarify-notes",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert reply.mode == "topical"
+    assert not reply.cited
+    await deliver_reply(service, "clarify-notes")
+    exported = await service.export(reply.session_id)
+    assert (
+        json.loads(exported.splitlines()[0])["metrics"]["valid_citation_fraction"]
+        is None
+    )
+
+
+async def test_fact_batches_keep_name_question_with_its_answer(service):
+    from src.core.chat_memory import ChatMemory
+
+    turns = [
+        {"id": 1, "role": "user", "text": "Earlier conversation"},
+        {"id": 2, "role": "mika", "text": "Как тебя зовут?"},
+        {"id": 3, "role": "user", "text": "Лёша"},
+    ]
+
+    async def count(request):
+        return [1] * (
+            16001 if '"id": 1' in request.user and '"id": 3' in request.user else 100
+        )
+
+    service.llm.prompt_tokens.side_effect = count
+    service.llm.generate.return_value = "[]"
+    await ChatMemory(service.llm, Path("prompts")).facts(
+        turns=turns, trace_id="batch-facts"
+    )
+    requests = [call.args[0] for call in service.llm.generate.call_args_list]
+    assert len(requests) == 2
+    assert "Лёша" in requests[-1].user and "Как тебя зовут?" in requests[-1].user
+
+
+async def test_error_payload_never_reaches_next_reply_or_memory_extraction(
+    service, day
+):
+    session = await service.open("dm", at=AT)
+    error_text = '{"error": "An unknown answer must acknowledge missing knowledge"}'
+    service.llm.generate.return_value = json.dumps(
+        dict(answer=error_text, cited=[], confident=False)
+    )
+    common = dict(day=day, mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    with pytest.raises(ValueError, match="structure"):
+        await service.reply(
+            "dm", "Как настроение?", trace_id="internal-error", **common
+        )
+    service.llm.generate.return_value = json.dumps(
+        dict(answer="Привет! Как тебя зовут?", cited=[], confident=False)
+    )
+    await service.reply("dm", "Привет", trace_id="after-error", **common)
+    for request in (
+        service.router.query.call_args.args[0],
+        service.llm.generate.call_args.args[0],
+    ):
+        assert error_text not in request.user
+        assert all(
+            turn["role"] == "user" for turn in json.loads(request.user)["dialog_tail"]
+        )
+    await deliver_reply(service, "after-error")
+    await service.close(session["id"], at=AT + timedelta(minutes=1))
+    turns = service.facts_extractor.call_args.kwargs["turns"]
+    assert error_text not in [turn["text"] for turn in turns]
+    assert [turn["text"] for turn in turns if turn["role"] == "mika"] == [
+        "Привет! Как тебя зовут?"
+    ]
+
+
+async def test_personal_memory_is_scoped_to_the_conversation_owner(service, day):
+    service.database.run_transaction(
+        lambda c: c.executemany(
+            "INSERT INTO people_facts(person_id,fact,kind) VALUES (?,?,'name')",
+            [("123", "Лёша"), ("another-person", "Other person's private name")],
+        )
+    )
+    await service.open("dm", at=AT)
+    await service.reply(
+        "dm",
+        "Как меня зовут?",
+        trace_id="own-name",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    for request in (
+        service.router.query.call_args.args[0],
+        service.llm.generate.call_args.args[0],
+    ):
+        assert json.loads(request.user)["people_facts"] == [
+            {"fact": "Лёша", "kind": "name"}
+        ]
+
+
+@pytest.mark.parametrize(
+    "kind,text,accepted",
+    [
+        (
+            "project",
+            "Веду свой блог про ИИ агента, который учится пользоваться Агентами",
+            True,
+        ),
+        ("context", "Учусь на информационную безопасность", True),
+        ("prefs", "Не люблю кофе.", True),
+        ("project", "Друг ведёт свой блог про ИИ агента.", False),
+        ("prefs", "Друг не любит кофе.", False),
+    ],
+)
+def test_direct_russian_first_person_facts_do_not_require_a_pronoun(
+    kind, text, accepted
+):
+    candidate = dict(kind=kind, fact=text, source=1)
+    turns = [dict(id=1, role="user", text=text)]
+    assert validate_facts([candidate], turns) == ([candidate] if accepted else [])

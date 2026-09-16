@@ -41,6 +41,7 @@ class ChatContext:
         narrative=(),
         life_state=None,
         delivery_context=None,
+        knowledge_status=None,
     ):
         if mode not in {"topical", "unknown", "personal"}:
             raise ValueError("Unknown conversation mode")
@@ -116,9 +117,15 @@ class ChatContext:
             data["life_state"] = life_state
         if delivery_context is not None:
             data["delivery_context"] = delivery_context
+        if knowledge_status is not None:
+            data["knowledge_status"] = knowledge_status
         return Request(
             f"chat_{mode}",
-            session_rules + "\n\n" + template[:boundary].strip(),
+            session_rules
+            + "\n\n"
+            + template[:boundary].strip()
+            + "\n\n"
+            + (self.prompt_dir / "chat_dialogue.md").read_text().strip(),
             json.dumps(data, ensure_ascii=False),
             budget,
             float(temperature[1]),

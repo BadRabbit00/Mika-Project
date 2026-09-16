@@ -1,0 +1,4 @@
+# Read-only optional knowledge lookup, never an instruction to write data.
+root ::= "{" ws "\"knowledge_query\":" ws ("null" | string) ws "}" ws
+string ::= "\"" ([^"\\\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4}))* "\""
+ws ::= [ \t\n\r]*

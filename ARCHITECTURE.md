@@ -1409,6 +1409,13 @@ def next_post_kind(now):
 
 ### 22.1 Два подрежима, роутер между ними
 
+**Superseded routing rule (owner correction, 2026-09-17):** the keyword-based
+router below is historical. Conversation intent now selects an optional
+read-only knowledge request. Personal questions use dialogue and people_facts;
+missing personal data prompts a natural question to the person. See
+[CHAT_DIALOGUE.md](docs/CHAT_DIALOGUE.md) for the current contract. Post and
+self-quiz evidence rules are unchanged.
+
 Это главное решение главы. **В предметных вопросах она отвечает
 строго по графу — так же, как в самопроверке.** Иначе весь проект
 рушится: в посте она честно не знает, а в чате бодро отвечает
@@ -2393,6 +2400,10 @@ CREATE TABLE session_turns (
 в `people_facts`, нити `question` из безответных вопросов.
 
 ### 33.4 Роутер внутри сессии
+
+The 2026-09-17 correction linked in section 22.1 also supersedes the keyword
+selection rule here. Receipt-confirmed history is provided to the conversational
+router; unrelated technical background does not force a study answer.
 
 Работает как в главе 22, но с поправкой: **режим определяется
 по реплике, а история общая**. Один разговор может скакать

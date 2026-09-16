@@ -13,9 +13,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from ruamel.yaml import YAML
 
 from src.core.chat_metrics import encode_mood, mood_metrics
+from src.core.chat_router import ChatRouter
 from src.core.chat_store import SessionStore as SessionStore
 from src.core.chat_store import summary_state
-from src.core.content_rules import normalized_text, technical_match
+from src.core.content_rules import normalized_text
 from src.core.context import ContextBuilder, ContextOverflow
 from src.core.pad import Mood
 from src.core.time_utils import elapsed_hours, from_utc_iso, require_aware
@@ -71,11 +72,56 @@ _SENSITIVE = re.compile(
     re.I,
 )
 _DIRECT = re.compile(r"\b(?:I|my|I'm|меня|я|мне|мой|моя|моё|мои)\b", re.I)
-_UNKNOWN = re.compile(
-    r"не знаю|не изучала|не разбиралась|не читала|"
-    r"do not know|don't know|haven't studied|have not studied",
+_FIRST_PERSON_VERB = re.compile(
+    r"^(?:(?:сейчас|обычно|теперь|ещ[её])\s+)?(?:не\s+)?"
+    r"(?:веду|учусь|работаю|делаю|пишу|разрабатываю|изучаю|занимаюсь|"
+    r"люблю|предпочитаю|тестирую)\b",
     re.I,
 )
+_NAME_QUESTION = re.compile(
+    r"как (?:тебя|вас) зовут|(?:тво[её]|ваше) имя|давай(?:те)? знакомиться|"
+    r"как к (?:тебе|вам) обращаться|как (?:мне )?(?:тебя|вас) называть|"
+    r"what (?:should|can) I call you|"
+    r"(?:what(?:'s| is)|tell me|remind me of) your name",
+    re.I,
+)
+_BARE_NAME = re.compile(
+    r"[a-zа-яё][a-zа-яё'’-]{0,39}(?: [a-zа-яё][a-zа-яё'’-]{0,39}){0,2}[.!]?",
+    re.I,
+)
+
+
+def _name_answer(fact, turns):
+    """Accept a short direct answer only to a visible name question."""
+    for index, turn in enumerate(turns):
+        if turn["id"] != fact.source or turn["role"] != "user":
+            continue
+        text = normalized_text(turn["text"])
+        previous = turns[index - 1] if index else None
+        return bool(
+            fact.kind == "name"
+            and previous
+            and previous["role"] == "mika"
+            and _NAME_QUESTION.search(previous["text"])
+            and _BARE_NAME.fullmatch(text)
+            and text.split()[0] not in {"не", "нет", "no", "not", "maybe", "может"}
+            and normalized_text(fact.fact).rstrip(".!") == text.rstrip(".!")
+        )
+    return False
+
+
+def _declared_name(fact, source):
+    if fact.kind != "name" or not _BARE_NAME.fullmatch(fact.fact):
+        return False
+    pattern = re.compile(
+        r"\b(?:меня зовут|мо[её] имя|my name is)\s+"
+        + re.escape(normalized_text(fact.fact).rstrip(".!"))
+        + r"(?=$|[\s,.!])"
+    )
+    return any(
+        "?" not in sentence and pattern.search(sentence)
+        for sentence in re.split(r"(?<=[.!?])\s*", source)
+    )
 
 
 def validate_facts(candidates, turns):
@@ -92,7 +138,15 @@ def validate_facts(candidates, turns):
         source = normalized_text(evidence.get(fact.source, ""))
         if (
             text not in source
-            or not _DIRECT.search(text)
+            or not text
+            or "?" in text
+            or not (
+                _DIRECT.search(text)
+                or fact.kind != "name"
+                and _FIRST_PERSON_VERB.search(text)
+                or _name_answer(fact, turns)
+                or _declared_name(fact, source)
+            )
             or _SENSITIVE.search(text)
             or (fact.kind, text) in seen
         ):
@@ -126,6 +180,7 @@ class ChatService:
         self.summarizer, self.facts_extractor = summarizer, facts_extractor
         self.store = SessionStore(database)
         self.grammar = (Path(grammar_dir) / "answer.gbnf").read_text()
+        self.router = ChatRouter(llm, context.prompt_dir, grammar_dir=grammar_dir)
         self.validator = validator or OutputValidator(llm)
         self._locks = {channel: asyncio.Lock() for channel in ("topic", "dm")}
 
@@ -200,7 +255,6 @@ class ChatService:
                     (self.person_id,),
                 )
             ]
-            terms = tuple(row[0] for row in c.execute("SELECT name FROM nodes"))
             narrative = (
                 [
                     dict(row)
@@ -213,10 +267,41 @@ class ChatService:
                 if mode == "personal"
                 else []
             )
-            existing = {
-                row[0] for row in c.execute("SELECT id FROM nodes WHERE suspect=0")
-            }
-        return facts, terms, narrative, existing
+            existing = (
+                {row[0] for row in c.execute("SELECT id FROM nodes WHERE suspect=0")}
+                if mode == "topical"
+                else set()
+            )
+        return facts, narrative, existing
+
+    async def _request(self, mode, *, history, state, session, trace_id, **kwargs):
+        request = self.context.build(
+            mode, history=history, summary=state["text"], **kwargs
+        )
+        tokens = await self.llm.prompt_tokens(request)
+        if len(tokens) > self.settings.budget:
+            head, tail = (
+                history[: -self.settings.keep_last_turns],
+                history[-self.settings.keep_last_turns :],
+            )
+            if not head:
+                raise ContextOverflow(
+                    "The protected chat tail exceeds its token budget"
+                )
+            summary = await self.summarizer(
+                turns=head, previous=state["text"], trace_id=trace_id
+            )
+            if not isinstance(summary, str) or not summary.strip():
+                raise ValueError("Dialogue compression returned no summary")
+            request = self.context.build(mode, history=tail, summary=summary, **kwargs)
+            compressed_tokens = await self.llm.prompt_tokens(request)
+            ContextBuilder._enforce(request, compressed_tokens)
+            state.update(text=summary, through_idx=head[-1]["idx"])
+            state.setdefault("tokens_before_first_compression", len(tokens))
+            await asyncio.to_thread(self.store.checkpoint, session["id"], state)
+            tokens, history = compressed_tokens, tail
+        ContextBuilder._enforce(request, tokens)
+        return request, tokens, history
 
     async def reply(
         self,
@@ -265,22 +350,8 @@ class ChatService:
                     if staged["session_id"] != session["id"]:
                         raise ValueError("A reply trace belongs to another session")
                     return self._reply(staged)
-                _, terms, _, _ = await asyncio.to_thread(self._memory, None)
-                nodes = await self.retriever.search(question, topic=topic)
-                mode = (
-                    "topical"
-                    if nodes
-                    else "unknown"
-                    if technical_match(question, terms)
-                    else "personal"
-                )
-                if len(nodes) > 12 or len({node.id for node in nodes}) != len(nodes):
-                    raise ValueError(
-                        "Chat retrieval requires at most twelve distinct nodes"
-                    )
-                facts, _, narrative, existing = await asyncio.to_thread(
-                    self._memory, mode
-                )
+                mode, nodes = "personal", []
+                facts, narrative, existing = await asyncio.to_thread(self._memory, mode)
                 state = await asyncio.to_thread(self.store.confirmed_summary, session)
                 history = [turn for turn in turns if turn["idx"] > state["through_idx"]]
                 kwargs = dict(
@@ -297,37 +368,49 @@ class ChatService:
                     kwargs.update(
                         life_state=life_state, delivery_context=delivery_context
                     )
-                request = self.context.build(
-                    mode, history=history, summary=state["text"], **kwargs
+                request, tokens, history = await self._request(
+                    mode,
+                    history=history,
+                    state=state,
+                    session=session,
+                    trace_id=trace_id,
+                    **kwargs,
                 )
-                tokens = await self.llm.prompt_tokens(request)
-                if len(tokens) > self.settings.budget:
-                    head, tail = (
-                        history[: -self.settings.keep_last_turns],
-                        history[-self.settings.keep_last_turns :],
-                    )
-                    if not head:
-                        raise ContextOverflow(
-                            "The protected chat tail exceeds its token budget"
+                query = await self.router.query(request)
+                if query is not None:
+                    knowledge_status = "empty"
+                    try:
+                        nodes = await self.retriever.search(query, topic=topic)
+                    except (httpx.HTTPError, TimeoutError):
+                        knowledge_status = "unavailable"
+                        log.warning("chat_knowledge_unavailable")
+                    if len(nodes) > 12 or len({node.id for node in nodes}) != len(
+                        nodes
+                    ):
+                        raise ValueError(
+                            "Chat retrieval requires at most twelve distinct nodes"
                         )
-                    summary = await self.summarizer(
-                        turns=head, previous=state["text"], trace_id=trace_id
+                    mode = "topical" if nodes else "unknown"
+                    _, _, existing = await asyncio.to_thread(self._memory, mode)
+                    kwargs.update(
+                        nodes=[asdict(node) for node in nodes],
+                        narrative=(),
+                        knowledge_status="available" if nodes else knowledge_status,
                     )
-                    if not isinstance(summary, str) or not summary.strip():
-                        raise ValueError("Dialogue compression returned no summary")
-                    request = self.context.build(
-                        mode, history=tail, summary=summary, **kwargs
+                    request, tokens, history = await self._request(
+                        mode,
+                        history=history,
+                        state=state,
+                        session=session,
+                        trace_id=trace_id,
+                        **kwargs,
                     )
-                    compressed_tokens = await self.llm.prompt_tokens(request)
-                    ContextBuilder._enforce(request, compressed_tokens)
-                    state.update(text=summary, through_idx=head[-1]["idx"])
-                    state.setdefault("tokens_before_first_compression", len(tokens))
-                    await asyncio.to_thread(self.store.checkpoint, session["id"], state)
-                    tokens = compressed_tokens
-                ContextBuilder._enforce(request, tokens)
+                log.info(
+                    "chat_routed", mode=mode, knowledge_requested=query is not None
+                )
                 raw = await self.llm.generate(request, grammar=self.grammar)
                 answer = Answer.model_validate_json(raw)
-                if mode == "topical":
+                if mode == "topical" and (answer.cited or answer.confident):
                     if (
                         validate_citations(
                             answer, {node.id for node in nodes}, existing
@@ -335,13 +418,9 @@ class ChatService:
                         != "answered"
                     ):
                         raise ValueError("Invalid topical citation")
-                elif answer.cited:
+                elif mode != "topical" and answer.cited:
                     raise ValueError(
                         "A non-topical answer cannot contain graph citations"
-                    )
-                if mode == "unknown" and not _UNKNOWN.search(answer.answer):
-                    raise ValueError(
-                        "An unknown answer must acknowledge missing knowledge"
                     )
                 validation = await self.validator.validate(
                     answer.answer,
@@ -479,7 +558,9 @@ class ChatService:
         topical = [
             turn
             for turn in turns
-            if turn["role"] == "mika" and turn["mode"] == "topical"
+            if turn["role"] == "mika"
+            and turn["mode"] == "topical"
+            and json.loads(turn["cited"] or "[]")
         ]
         replies = [turn for turn in turns if turn["role"] == "mika"]
         voice, voice_status = None, "insufficient_turns"
