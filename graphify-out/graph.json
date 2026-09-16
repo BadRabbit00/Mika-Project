@@ -10289,7 +10289,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L6",
+      "source_location": "L10",
       "_origin": "ast"
     },
     {
@@ -10298,7 +10298,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L51",
+      "source_location": "L66",
       "_origin": "ast"
     },
     {
@@ -10307,7 +10307,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L94",
+      "source_location": "L109",
       "_origin": "ast"
     },
     {
@@ -10316,7 +10316,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L154",
+      "source_location": "L170",
       "_origin": "ast"
     },
     {
@@ -10325,16 +10325,34 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L206",
+      "source_location": "L222",
       "_origin": "ast"
     },
     {
-      "id": "docs_todo_invariants_for_later_delivery_stages",
-      "label": "Invariants for later delivery stages",
+      "id": "docs_todo_dialogue_and_orchestration_contracts",
+      "label": "Dialogue and orchestration contracts",
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L260",
+      "source_location": "L280",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_todo_maintained_validation_contracts",
+      "label": "Maintained validation contracts",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/TODO.md",
+      "source_location": "L336",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_todo_code_marker_index",
+      "label": "Code marker index",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/TODO.md",
+      "source_location": "L370",
       "_origin": "ast"
     },
     {
@@ -34639,7 +34657,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L6",
+      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -34649,7 +34667,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L51",
+      "source_location": "L66",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -34659,7 +34677,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L94",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -34669,7 +34687,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L154",
+      "source_location": "L170",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -34679,17 +34697,37 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L206",
+      "source_location": "L222",
       "weight": 1.0,
       "_origin": "ast"
     },
     {
       "source": "docs_todo_architecture_questions_and_deferred_contracts",
-      "target": "docs_todo_invariants_for_later_delivery_stages",
+      "target": "docs_todo_dialogue_and_orchestration_contracts",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L260",
+      "source_location": "L280",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_todo_architecture_questions_and_deferred_contracts",
+      "target": "docs_todo_maintained_validation_contracts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/TODO.md",
+      "source_location": "L336",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_todo_architecture_questions_and_deferred_contracts",
+      "target": "docs_todo_code_marker_index",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/TODO.md",
+      "source_location": "L370",
       "weight": 1.0,
       "_origin": "ast"
     },
