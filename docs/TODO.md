@@ -144,6 +144,26 @@ These are specification gaps, not defaults chosen by the implementation.
   supplied defaults enable mood. Disabling mutation fails explicitly until those
   semantics are specified; no replacement neutral state is invented.
 
+## Output and writing contracts
+
+- TODO(OFFTOP-PERSONA): the shared prompts/_base.md names AI agents, while
+  sections 12 and 16 prohibit technical terms anywhere in off-topic context.
+  Prompt files remain read-only. The persona-selection policy needs an explicit
+  decision; an isolation failure must not be silently bypassed.
+- TODO(VALIDATOR-SEMANTICS): no finite list can recognize every euphemism or
+  semantic contradiction. Deterministic rules cover explicit physiological
+  terminology, known euphemisms, current-time claims, and the five-hour debt
+  example. A broader semantic judge has no supplied prompt or grading contract.
+- TODO(PROMPT-ECHO): section 34 specifies a threshold but no similarity metric.
+  The validator requires an explicit scoring function. Lexical sequence
+  similarity is available as an opt-in implementation, not an inferred default.
+- TODO(OUTPUT-TRUNCATION): arbitrary mid-word termination cannot be inferred
+  reliably from punctuation. Reject a server truncation signal and trailing
+  commas; do not require sentence-final punctuation for casual messages.
+- TODO(KAOMOJI): the architecture does not define kaomoji syntax. Bracketed
+  expressions with recognizable face punctuation are exempted from the kana
+  rule; parentheses around Japanese prose are not an exemption.
+
 ## Invariants for later delivery stages
 
 The step 1 suite tests time, UTC persistence, storage validation, the closed
@@ -160,8 +180,6 @@ exclusion, replay behavior, and the minimum question count and passing fraction.
 The executable stage gate in tests/test_stage_contracts.py requires the following
 behavioral tests before each later-stage module may be introduced.
 
-- TODO(STEP-6-CONTRACTS): reject CJK output, strip fences, and test all three
-  validation levels.
 - TODO(STEP-7-CONTRACTS): isolate off-topic and quiz contexts; curator material
   uses the user role; context overflow raises instead of truncating; people_facts
   cannot enter posts; /tokenize determines the budget.
