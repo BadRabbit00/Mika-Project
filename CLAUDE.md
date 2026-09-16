@@ -1,9 +1,11 @@
 # Implementation rules
 
 Read ARCHITECTURE.md before making changes. Follow the delivery order in
-section 38.3. Steps 1–10 include publication, curator CLI, and Telegram interfaces.
+section 38.3. Steps 1–12 include chat sessions, pure transitions, and scheduling.
 Live-model compatibility limits and deferred requirements are in docs/TODO.md.
-The proposed interface-storage schema is not installed automatically.
+The proposed interface and learning storage schemas are not installed in live
+databases automatically. The offline dry run installs the learning proposal only
+in its own new, disposable database.
 
 - Keep main limited to the initial architecture. Work on feature branches and
   merge completed, verified changes into develop.

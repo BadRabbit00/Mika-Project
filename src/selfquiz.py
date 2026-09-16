@@ -121,6 +121,7 @@ class SelfQuiz:
                 )
                 if row[0]
             ]
+            connection.execute("COMMIT")
             return names, previous
 
     async def ask(self, topic: str) -> list[QuizQuestion]:

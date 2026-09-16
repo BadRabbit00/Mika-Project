@@ -88,8 +88,9 @@ cleanup, strict JSON validation, retries, and database validation boundaries.
 The runtime uses aiogram 3 with three `Bot` objects and one `Dispatcher`.
 `BotIngress` checks owner, group, topic, and receiving bot before submitting any
 work. Diary, Author, and Curator messages are never consumed as model input.
-Chat sessions belong to step 11. Library documents and control commands enter a
-bounded background queue; CLI/model work never runs synchronously in handlers.
+Chat sessions attach through the runtime's chat factory. Library documents and
+control commands enter a bounded background queue; CLI/model work never runs
+synchronously in handlers.
 
 `TOPIC_ROLES` follows section 23.2. The explicit user request additionally permits
 owner commands in Machine and private chat with ops. Other users receive no reply.

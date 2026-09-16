@@ -50,7 +50,7 @@ class Writer:
                 row[0]
                 for row in connection.execute("SELECT name FROM nodes ORDER BY id")
             )
-            connection.commit()
+            connection.execute("COMMIT")
         return posts, terms
 
     def _save_attempt(
@@ -87,6 +87,9 @@ class Writer:
                         {
                             "post_id": post_id,
                             "trace_id": trace_id,
+                            "action_id": structlog.contextvars.get_contextvars().get(
+                                "action_id"
+                            ),
                             "attempt": attempt,
                             "temperature": request.temperature,
                             "max_tokens": self.max_output_tokens,
@@ -166,7 +169,10 @@ class Writer:
                     ):
                         raise ValueError("Exact output token IDs are required")
                     tokens_out = len(tokens)
-                except (ValueError, httpx.HTTPError):
+                except httpx.HTTPError:
+                    log.exception("writing_transport_failed", attempt=attempt)
+                    raise
+                except ValueError:
                     log.exception("writing_attempt_failed", attempt=attempt)
                     validation = ValidationResult("", ("generation_error",), ())
                 await asyncio.to_thread(

@@ -1,10 +1,30 @@
 # BlogAI
 
-Steps 1–10 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+Steps 1–12 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
 storage, extraction, self-quiz, immutable PAD mood, biological time, isolated
 contexts, draft writing, world events, three-layer output validation, durable
-publication, a headless curator, and Telegram interfaces.
-Live generation and prompt-contract limitations are recorded below.
+publication, a headless curator, Telegram interfaces, isolated dialogue sessions,
+a pure learner state machine, and activity scheduling.
+The assembled dry run works offline. Live composition and prompt-contract
+limitations are recorded below and in docs/TODO.md.
+
+## Run the integration scenario
+
+From the repository root:
+
+```sh
+nix develop --command python -m src.cli run --dry-run
+```
+
+This creates a disposable SQLite database, advances a virtual Almaty calendar,
+processes three fixture articles, runs self-quiz, writes validated drafts, and
+assigns a curator exam. It prints a JSON report. External HTTP/model boundaries
+are mocked; there are no Telegram sends or paid calls. To retain the database,
+pass `--workdir <new-directory>` and optionally `--log-file <path>`.
+
+[docs/SESSIONS_AND_RUNNER.md](docs/SESSIONS_AND_RUNNER.md) explains the runtime
+interfaces, the proposed durable storage contract, and the remaining live-input
+requirements. `run` without `--dry-run` reports those missing contracts explicitly.
 
 ## Development
 

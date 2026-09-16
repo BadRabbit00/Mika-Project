@@ -1,0 +1,85 @@
+{
+  "synthetic": true,
+  "at": "2026-09-16T14:30:00.000000Z",
+  "rhythm": {
+    "sessions": {
+      "weekday": [
+        {
+          "start": "10:00",
+          "len_min": 90
+        },
+        {
+          "start": "19:30",
+          "len_min": 120
+        }
+      ],
+      "weekend": [
+        {
+          "start": "13:00",
+          "len_min": 150
+        }
+      ]
+    },
+    "quiet_hours": [
+      "23:30",
+      "09:00"
+    ],
+    "gap": {
+      "dist": "lognormal",
+      "mu": 2.6,
+      "sigma": 0.7,
+      "min_min": 4,
+      "max_min": 40
+    },
+    "max_events_per_session": 6
+  },
+  "articles": [
+    {
+      "id": "one",
+      "title": "System call filtering",
+      "text": "seccomp filters system calls.",
+      "claim": {
+        "text": "seccomp filters system calls.",
+        "src": "seccomp",
+        "rel": "defends_against",
+        "dst": "system calls"
+      }
+    },
+    {
+      "id": "two",
+      "title": "Separate process views",
+      "text": "namespaces enable process isolation.",
+      "claim": {
+        "text": "namespaces enable process isolation.",
+        "src": "namespaces",
+        "rel": "enables",
+        "dst": "process isolation"
+      }
+    },
+    {
+      "id": "three",
+      "title": "Divided privileges",
+      "text": "capabilities enable reduced privileges.",
+      "claim": {
+        "text": "capabilities enable reduced privileges.",
+        "src": "capabilities",
+        "rel": "enables",
+        "dst": "reduced privileges"
+      }
+    }
+  ],
+  "questions": [
+    "What does seccomp filter?",
+    "What do namespaces enable?",
+    "What do capabilities enable?",
+    "Which mechanism separates process views?",
+    "Which mechanism divides privileges?"
+  ],
+  "bodies": {
+    "casual": "I found another article and have made space for a careful read. There are several terms I want to check against my notes before drawing conclusions. For now I have the source and a question to follow, and I will come back with what the reading actually supports.",
+    "struggle": "I still have too few independent notes to connect the whole topic. The individual statements are clearer, but the important limitations are still unclear. I need another source and a few direct questions before turning these fragments into a summary.",
+    "result": "The notes describe three separate parts of process isolation. seccomp filters system calls, namespaces separate process views, and capabilities divide privileges. These mechanisms address different boundaries and should not be treated as interchangeable. Each statement is tied to a supplied article, and the quiz answers cite only nodes retrieved from that graph. The available evidence is limited to those descriptions. Each statement is tied to a supplied article, and the quiz answers cite only nodes retrieved from that graph. The available evidence is limited to those descriptions. Each statement is tied to a supplied article, and the quiz answers cite only nodes retrieved from that graph. The available evidence is limited to those descriptions. Each statement is tied to a supplied article, and the quiz answers cite only nodes retrieved from that graph. The available evidence is limited to those descriptions."
+  },
+  "answer": "The cited graph nodes describe the mechanism and the boundary recorded in the source.",
+  "curator_comment": "The submitted summary separates the mechanisms and keeps its claims tied to the supplied articles. The exam will check those boundaries with direct questions, rather than asking for facts outside the recorded graph. Answers should identify the mechanism involved and point to the supporting notes. Any missing link should be acknowledged explicitly. This is a synthetic integration fixture, and its verdict is used only to verify the application workflow."
+}

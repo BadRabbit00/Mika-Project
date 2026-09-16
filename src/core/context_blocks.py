@@ -133,5 +133,5 @@ def writing_memory(database, *, day, offtop, topic, include_graph):
         connection.execute("BEGIN")
         ctx = dict(connection=connection, day=day, offtop=offtop, topic=topic)
         result = {name: BLOCKS[name](ctx) for name in names}
-        connection.commit()
+        connection.execute("COMMIT")
         return result

@@ -3,6 +3,8 @@
 import argparse
 import asyncio
 import json
+import logging
+import tempfile
 from dataclasses import asdict
 from pathlib import Path
 from uuid import uuid4
@@ -18,6 +20,7 @@ from src.curator import Curator
 from src.extract import Extractor
 from src.ingest import read_source
 from src.retrieve import RetrievalPolicy, Retriever
+from src.runtime import dry_run
 from src.selfquiz import QuizSettings, SelfQuiz
 from src.telegram_runtime import run_telegram
 
@@ -83,6 +86,10 @@ async def _quiz(args):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="BlogAI storage and learning commands")
     commands = parser.add_subparsers(dest="command", required=True)
+    run = commands.add_parser("run", help="Run the assembled application in test mode")
+    run.add_argument("--dry-run", action="store_true")
+    run.add_argument("--workdir", type=Path)
+    run.add_argument("--log-file", type=Path)
     initialize = commands.add_parser("init-db", help="Create or migrate a database")
     initialize.add_argument("--database", type=Path, required=True)
     initialize.add_argument("--log-file", type=Path, required=True)
@@ -133,7 +140,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     configure_logging()
     try:
-        configure_logging(args.log_file)
+        configure_logging(
+            args.log_file,
+            level=logging.WARNING if args.command == "run" else logging.INFO,
+        )
         if args.command == "init-db":
             Database(args.database).initialize()
         elif args.command == "extract":
@@ -142,6 +152,18 @@ def main(argv: list[str] | None = None) -> int:
             asyncio.run(_curator(args))
         elif args.command == "bot":
             asyncio.run(run_telegram(args))
+        elif args.command == "run":
+            if not args.dry_run:
+                raise ValueError(
+                    "TODO(LIVE-RUNNER): storage and runtime contracts are required"
+                )
+            if args.workdir:
+                report = asyncio.run(dry_run(args.workdir))
+            else:
+                with tempfile.TemporaryDirectory(prefix="blogai-dry-run-") as directory:
+                    report = asyncio.run(dry_run(Path(directory)))
+                    report["ephemeral"] = True
+            print(json.dumps(report, ensure_ascii=False))
         else:
             asyncio.run(_quiz(args))
     except Exception:

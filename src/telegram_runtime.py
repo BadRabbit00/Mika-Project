@@ -23,7 +23,7 @@ from src.library import LibraryInbox
 from src.publish import OutboxWorker, Publisher
 
 
-async def run_telegram(args, *, chat_factory=None):
+async def run_telegram(args, *, chat_factory=None, learning_factory=None):
     layout = TelegramLayout.from_file(args.layout)
     tokens = {
         role: os.environ[f"{role.upper()}_BOT_TOKEN"]
@@ -88,6 +88,13 @@ async def run_telegram(args, *, chat_factory=None):
             dispatcher = Dispatcher()
             dispatcher.include_router(ingress.router)
             await jobs.start()
+            learning = (
+                await learning_factory(database, llm, publisher, layout, jobs)
+                if learning_factory
+                else None
+            )
+            if learning is not None:
+                await learning.start()
 
             async def expire_chat():
                 while not stop.is_set():
@@ -120,6 +127,8 @@ async def run_telegram(args, *, chat_factory=None):
                     finally:
                         stop.set()
             finally:
+                if learning is not None:
+                    await learning.close()
                 await jobs.close()
                 await mirror.drain()
     finally:
