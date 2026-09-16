@@ -477,6 +477,14 @@ async def test_curator_error_policy_persists_without_global_pause(
     alert.assert_awaited_once()
 
 
+def test_topic_catalogue_reports_missing_local_catalogue(tmp_path):
+    from src.catalogue import Catalogue
+
+    with pytest.raises(ValueError, match="Missing topic catalogue.*--library"):
+        Catalogue.load(tmp_path)
+    assert not (tmp_path / "topics.yaml").exists()
+
+
 def test_topic_catalogue_requires_real_first_topic_articles(tmp_path):
     from src.catalogue import Catalogue
 
