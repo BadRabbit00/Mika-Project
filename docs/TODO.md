@@ -84,6 +84,47 @@ These are specification gaps, not defaults chosen by the implementation.
   follow the documented citation checks; the model's confidence does not replace
   evidence. Define any additional abstention semantics explicitly.
 
+## Mood and sleep contracts
+
+- TODO(DECAY-ASSERTION): section 31.1 expects a distance below 0.1 after six
+  hours, but the literal section 28.3 formula and A half-life of two hours give
+  0.1625. Tests preserve that exact result and verify the below-0.1 condition at
+  eight hours. No coefficient or formula is changed to satisfy the inconsistent
+  example.
+- TODO(BASELINE-CLAMP): the -0.93 example in section 28.3 conflicts with the
+  configured baseline bounds [-0.6, 0.6]. The configured clamp is authoritative.
+- TODO(BASELINE-HISTORY): no durations define recent exams/corrections or a good
+  quiz streak. Callers supply these facts explicitly; mood does not infer them
+  by reading the knowledge graph. Baseline targets are evaluated at access time.
+- TODO(CYCLE-EPOCH): no production launch epoch is configured. Callers must pass
+  a stable aware epoch on every restart. start_offset_days counts elapsed days,
+  so offset 11 starts on cycle day 12. Confirm if an ordinal day was intended.
+- TODO(CYCLE-WEEKDAY): 28 is divisible by seven, so section 35.2's claimed drift
+  across weekdays is mathematically impossible. The specified 28-day cycle stays
+  unchanged; no random phase drift is added.
+- TODO(MOOD-BOUNDARIES): adjacent band endpoints overlap in the YAML. Bands use
+  lower-inclusive, upper-exclusive intervals, with +1 in the final band. Octants
+  follow the literal >= -0.15 formula, including its boundary.
+- TODO(MOOD-TIMESTAMP): mood.at is the only primary key. Two mutations at the
+  same instant cannot both be appended. Reject non-increasing mutation times;
+  do not invent microsecond offsets or overwrite history.
+- TODO(TRIGGER-POLICY): a week is not defined as calendar or rolling. Callers
+  supply its start explicitly. Some resolution probabilities sum to less than
+  one, and some triggers have no resolution despite the prose. An unspecified
+  probability outcome must fail before mutation; no new event is invented.
+- TODO(SLEEP-WAKE): sections 25.1 and 29.1 specify different wake algorithms.
+  Keep the provisional sleep plan and the actual schedule-based wake event
+  explicit, without replacing either formula silently.
+- TODO(SLEEP-RECOVERY): the literal debt formula reduces debt only by surplus
+  sleep. The extra 2.5-hour good-night recovery has no defined condition or
+  composition rule; do not subtract it in addition to the formula.
+- TODO(WAKE-TIMES): dasha_hairdryer, delivery_doorbell, and overslept have no
+  structured wake times. Missing times require explicit caller input; text hints
+  are not parsed into scheduling rules.
+- TODO(CLASS-GRACE): grace_min does not specify which side of a lesson boundary
+  it affects. Class interiors remain blocked, with the explicit timetable gaps
+  available for posts; no grace interval is invented inside a lesson.
+
 ## Invariants for later delivery stages
 
 The step 1 suite tests time, UTC persistence, storage validation, the closed
@@ -100,9 +141,6 @@ exclusion, replay behavior, and the minimum question count and passing fraction.
 The executable stage gate in tests/test_stage_contracts.py requires the following
 behavioral tests before each later-stage module may be introduced.
 
-- TODO(STEP-4-CONTRACTS): copy the inertia, piercing, decay, and clamp tests from
-  section 31.1; implement sections 28 and 35 literally and run the two-week
-  simulation. PAD persistence rounding is already tested in step 1.
 - TODO(STEP-6-CONTRACTS): reject CJK output, strip fences, and test all three
   validation levels.
 - TODO(STEP-7-CONTRACTS): isolate off-topic and quiz contexts; curator material

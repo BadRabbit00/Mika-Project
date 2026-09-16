@@ -1,7 +1,7 @@
 # BlogAI
 
-Steps 1–3 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
-SQLite storage, time rules, validated extraction, retrieval, and self-quiz.
+Steps 1–4 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+storage, extraction, self-quiz, and the immutable PAD mood model.
 
 ## Development
 
@@ -222,6 +222,9 @@ backups, Nix results, and tool caches are ignored. Explicit database snapshots
 outside runtime directories can be tracked intentionally.
 
 ## Open requirements
+
+[docs/MOOD_AND_SLEEP.md](docs/MOOD_AND_SLEEP.md) describes mood events, cycle
+modifiers, persistence, and the reproducible two-week simulation.
 
 [docs/VALIDATION.md](docs/VALIDATION.md) separates automated checks, live quiz
 results, and the unresolved live extraction grammar contract.

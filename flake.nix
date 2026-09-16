@@ -149,8 +149,8 @@
                 cd source
                 uv lock --check --offline
                 pytest -q
-                ruff check src tests
-                ruff format --check src tests
+                ruff check src tests scripts
+                ruff format --check src tests scripts
                 nixfmt --check flake.nix
                 touch "$out"
               '';

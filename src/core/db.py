@@ -201,6 +201,14 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "ALTER TABLE node_embeddings ADD COLUMN model TEXT",
         "CREATE UNIQUE INDEX claims_source_hash ON claims(source_id, norm_hash)",
     ),
+    (
+        """CREATE TRIGGER mood_sleep_debt_validate BEFORE INSERT ON mood
+        WHEN NEW.sleep_debt IS NOT NULL AND (
+            typeof(NEW.sleep_debt) NOT IN ('real', 'integer') OR
+            NEW.sleep_debt < 0 OR NEW.sleep_debt >= 1e999 OR
+            NEW.sleep_debt != round(NEW.sleep_debt, 4))
+        BEGIN SELECT RAISE(ABORT, 'Invalid or unrounded sleep debt'); END""",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 
@@ -503,7 +511,7 @@ def insert_mood(
     trigger_id: str | None = None,
     sleep_debt: float | None = None,
 ) -> None:
-    """Append a validated snapshot; mood dynamics belong to delivery step 4."""
+    """Append a validated snapshot with all numeric state rounded to four places."""
     _require_transaction(connection)
     values = (p, a, d, baseline_p, baseline_a, baseline_d)
     if any(
@@ -512,6 +520,14 @@ def insert_mood(
     ):
         raise ValueError("PAD values must be finite numbers between -1 and 1")
     rounded = tuple(round(value, 4) for value in values)
+    if sleep_debt is not None:
+        if (
+            isinstance(sleep_debt, bool)
+            or not math.isfinite(sleep_debt)
+            or sleep_debt < 0
+        ):
+            raise ValueError("Sleep debt must be finite and nonnegative")
+        sleep_debt = round(sleep_debt, 4)
     timestamp = to_utc_iso(at)
     connection.execute(
         """INSERT INTO mood(at, p, a, d, baseline_p, baseline_a, baseline_d,
