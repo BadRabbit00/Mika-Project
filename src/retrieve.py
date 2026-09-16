@@ -85,9 +85,19 @@ class Retriever:
                     (topic,),
                 )
             ]
+            connection.execute("COMMIT")
             return nodes, lexical, edges
 
-    async def search(self, query: str, *, topic: str) -> list[RetrievedNode]:
+    async def search(
+        self, query: str, *, topic: str, threshold: float | None = None
+    ) -> list[RetrievedNode]:
+        cutoff = self.policy.min_similarity if threshold is None else threshold
+        if (
+            type(cutoff) not in (int, float)
+            or not math.isfinite(cutoff)
+            or not -1 <= cutoff <= 1
+        ):
+            raise ValueError("Invalid retrieval cutoff")
         if not query.strip() or not topic.strip():
             return []
         nodes, lexical, edges = await asyncio.to_thread(
@@ -110,11 +120,7 @@ class Retriever:
                 for key, node in embedded.items()
             }
         semantic = sorted(
-            (
-                key
-                for key, score in similarities.items()
-                if score >= self.policy.min_similarity
-            ),
+            (key for key, score in similarities.items() if score >= cutoff),
             key=lambda key: (-similarities[key], key),
         )
         scores: dict[str, float] = {}

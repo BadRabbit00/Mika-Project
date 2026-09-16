@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 
 from src.chat import ChatService, ChatSettings, SessionStore, validate_facts
@@ -112,8 +113,11 @@ async def test_dialogue_channels_and_replays_are_isolated(service, day):
     assert reopened.active("topic")["id"] == topic["id"]
 
 
-async def test_chat_routes_unknown_and_opens_one_question(service, database, day):
-    await service.open("dm", at=AT)
+@pytest.mark.parametrize("channel, public_threads", [("topic", 1), ("dm", 0)])
+async def test_chat_routes_unknown_and_opens_one_question(
+    service, database, day, channel, public_threads
+):
+    await service.open(channel, at=AT)
     service.llm.generate.return_value = json.dumps(
         {
             "answer": "I do not know this yet. Please send me an article about "
@@ -123,7 +127,7 @@ async def test_chat_routes_unknown_and_opens_one_question(service, database, day
         }
     )
     result = await service.reply(
-        "dm",
+        channel,
         "What is seccomp?",
         trace_id="unknown",
         day=day,
@@ -132,10 +136,18 @@ async def test_chat_routes_unknown_and_opens_one_question(service, database, day
         topic="security",
     )
     assert result.mode == "unknown" and not result.cited
+    service.retriever.search.assert_awaited_once_with(
+        "What is seccomp?", topic="security", threshold=0.55
+    )
     request = service.llm.generate.call_args.args[0]
     assert request.profile == "chat_unknown"
     with database.connection() as c:
-        assert c.execute("SELECT kind FROM threads").fetchall()[0][0] == "question"
+        assert (
+            c.execute("SELECT count(*) FROM threads WHERE kind='question'").fetchone()[
+                0
+            ]
+            == public_threads
+        )
         assert c.execute("SELECT count(*) FROM nodes").fetchone()[0] == 0
 
 
@@ -263,6 +275,37 @@ async def test_failed_closure_stays_closed_and_can_finish_after_restart(service)
     service.summarizer.side_effect = None
     assert await service.expire(at=AT + timedelta(hours=7)) == [session["id"]]
     assert await service.expire(at=AT + timedelta(hours=8)) == []
+
+
+@pytest.mark.parametrize("unavailable", [False, True])
+async def test_session_export_measures_first_to_last_reply_similarity(
+    service, day, unavailable
+):
+    session = await service.open("dm", at=AT)
+    for index in range(2):
+        await service.reply(
+            "dm",
+            f"Greeting {index}",
+            trace_id=f"voice-{index}",
+            day=day,
+            mood=Mood(0, 0, 0),
+            wake_reason="alarm",
+            topic="security",
+        )
+    service.llm.embed.side_effect = (
+        httpx.ConnectError("offline") if unavailable else [[1.0, 0.0], [0.6, 0.8]]
+    )
+    exported = (await service.export(session["id"])).splitlines()
+    metrics = json.loads(exported[0])["metrics"]
+    assert len(exported) == 5
+    assert metrics["voice_drift_status"] == (
+        "embedding_unavailable" if unavailable else "measured"
+    )
+    if unavailable:
+        assert metrics["voice_drift"] is None
+    else:
+        assert metrics["voice_drift"] == pytest.approx(0.6)
+        assert service.llm.embed.await_count == 2
 
 
 def test_fact_filter_rejects_inferences_sensitive_data_and_wrong_speaker():

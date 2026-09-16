@@ -83,7 +83,7 @@ class OfftopPlanner:
                 row[0]: row[1]
                 for row in connection.execute("SELECT key, value FROM life_state")
             }
-            connection.commit()
+            connection.execute("COMMIT")
         cutoff = at - timedelta(days=self.life["rules"]["entity_cooldown_days"])
         for row in rows:
             row["at"] = from_utc_iso(row["at"])

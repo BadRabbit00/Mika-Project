@@ -473,6 +473,20 @@ async def test_writer_kills_after_three_invalid_outputs(builder, writing_db, day
         assert row["state"] == "killed" and row["text"] is None
 
 
+async def test_writer_propagates_transport_failure_to_durable_runner(
+    builder, writing_db, day
+):
+    llm = writer_llm([httpx.ConnectError("offline")])
+    writer = Writer(
+        writing_db, llm, builder, OutputValidator(llm, echo_similarity=lambda a, b: 0)
+    )
+    with pytest.raises(httpx.ConnectError):
+        await writer.generate("offtop", **writing_blocks(day, offtop_event=TEXT))
+    llm.generate.assert_awaited_once()
+    with writing_db.connection() as connection:
+        assert connection.execute("SELECT count(*) FROM posts").fetchone()[0] == 0
+
+
 async def test_writer_preserves_incoming_trace(builder, writing_db, day):
     import json
 

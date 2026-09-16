@@ -209,10 +209,10 @@ These are specification gaps, not defaults chosen by the implementation.
   supplied config/settings.yaml defaults provide the requested CLI model and
   effort without hardcoding either string. Curator timeout is a required CLI
   argument. Consolidate these sources when supplying models.yaml.
-- TODO(CURATOR-RETRY-SCHEDULE): CLI timeout and subscription failures do not
-  immediately repeat. The six-hour, three-attempt retry policy needs durable
-  scheduler ownership in step 12; a JSON/schema failure alone gets one immediate
-  repair attempt. No subscription-limit error taxonomy is defined in the document.
+- TODO(CURATOR-SUBSCRIPTION-ERRORS): ActionRunner now persists six-hour curator
+  deferrals, up to three reschedules after the initial attempt. A JSON/schema
+  failure alone gets one immediate repair attempt in the transport. No
+  subscription-limit error taxonomy is defined in the document.
 - TODO(CURATOR-CORRECTION-APPLICATION): validated graph corrections are retained
   in the curator receipt, without changing graph summaries automatically. The
   exam schema stores one row per question and does not identify the whole exam;
@@ -267,9 +267,14 @@ These are specification gaps, not defaults chosen by the implementation.
   markers cannot prove that every generated sentence avoids pretrained facts.
   Verbatim fact grounding and conservative sensitive-word checks cannot cover
   every euphemism. Rejected output is not stored as an answer or fact.
-- TODO(CHAT-VOICE-METRICS): exports include citation and compression counters.
-  No voice-reference embedding or mood-drift metric is specified; these metrics
-  are explicitly unavailable instead of synthesized.
+- TODO(CHAT-MOOD-METRIC): exports include the first/last reply cosine specified
+  in section 33.5, citation and compression counters, and unknown-reply frequency.
+  No mood-drift formula is specified. The undefined mood metric is explicitly
+  unavailable; counts of ignorance markers do not prove semantic honesty.
+- TODO(PRIVATE-THREADS): threads has no session/channel provenance. Unknown
+  topic questions open public question threads. Unknown DM questions stay in
+  session_turns until a scoped thread contract exists, preserving section 33's
+  privacy boundary instead of feeding private questions to public posts.
 - TODO(FACT-DELETION): personal-memory deletion requires the confirmation
   controls described in section 20.5; /facts is currently read-only.
 - TODO(RUNTIME-CONTEXT): live composition requires explicit current sleep,
@@ -278,6 +283,22 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(RHYTHM-CONFIG): config/rhythm.yaml is absent. Section 6 supplies an
   example, but no configured production rhythm. The missing file and durable
   learner/scheduler schema have been raised for a user decision.
+- TODO(LEARNING-STORAGE): docs/learning-storage.sql specifies the proposed
+  event receipts, action dependencies, durable pauses, and activity reservations.
+  SQLiteLearningStore implements it, and isolated tests exercise restart
+  behavior. No production migration is applied without the missing schema
+  decision. run --dry-run installs it only in its own new temporary database.
+- TODO(LIVE-RUNNER): the offline composition is executable. Unattended live
+  startup still needs the missing rhythm and summary files, a durable storage
+  decision, and current world/mood providers. run without --dry-run refuses
+  startup instead of pretending these inputs exist. Both services can be
+  attached to the Telegram runtime through its explicit factory interfaces.
+- TODO(POST-EXAM-INPUTS): LearningPipeline binds grading, literal allocation,
+  remediation, and topic switching. Grading and selection require an explicit
+  pass rule and a supplied topic/library catalogue. library/topics.yaml is absent.
+- TODO(ACTION-RESUME): interrupted running effects are retained as uncertain.
+  Pending timers and receipts recover automatically, but replay of an unknown
+  model outcome needs a verified receipt or an explicit operator decision.
 
 The step 1 suite tests time, UTC persistence, storage validation, the closed
 relation vocabulary, FTS synchronization, transaction atomicity, retry limits,
@@ -299,5 +320,7 @@ the live output-envelope limitation is documented above.
 The executable stage gate in tests/test_stage_contracts.py requires behavioral
 tests before each later-stage module may be introduced.
 
-- TODO(STEP-12-CONTRACTS): state transitions are pure, without storage or model
-  side effects. Model calls run through a task queue, outside Telegram handlers.
+Steps 11 and 12 test channel isolation, exact context compression, recoverable
+expiry, direct-fact validation, pure transitions, action receipts, retry timing,
+activity gates, and the complete offline article-to-exam scenario. All ten tests
+listed in section 38.2 and the section 18.2 boundaries run in the full suite.

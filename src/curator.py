@@ -117,7 +117,7 @@ class Curator:
                     (topic,),
                 )
             ]
-            connection.commit()
+            connection.execute("COMMIT")
         return {
             "curator_log": history,
             "sources_with_trust": sources,

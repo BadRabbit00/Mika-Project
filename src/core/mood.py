@@ -317,7 +317,9 @@ class MoodService:
         with self.database.connection() as connection:
             connection.execute("BEGIN")
             self._clear_due(connection, at)
-            return self.model.decay(self._latest(connection), at, context)
+            snapshot = self.model.decay(self._latest(connection), at, context)
+            connection.execute("COMMIT")
+            return snapshot
 
     def pending_resolutions(self, until: datetime) -> list[Resolution]:
         with self.database.connection() as connection:

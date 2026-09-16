@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
+import httpx
 import structlog
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from ruamel.yaml import YAML
@@ -16,6 +17,7 @@ from src.core.chat_store import summary_state
 from src.core.content_rules import normalized_text, technical_match
 from src.core.context import ContextBuilder, ContextOverflow
 from src.core.time_utils import elapsed_hours, from_utc_iso, require_aware
+from src.core.vectors import cosine
 from src.selfquiz import Answer, validate_citations
 from src.validator import OutputValidator, ValidationContext, lexical_echo_similarity
 
@@ -202,7 +204,9 @@ class ChatService:
                 if previous:
                     return self._reply(previous)
                 _, terms, _, _ = await asyncio.to_thread(self._memory, None)
-                nodes = await self.retriever.search(question, topic=topic)
+                nodes = await self.retriever.search(
+                    question, topic=topic, threshold=0.55
+                )
                 mode = (
                     "topical"
                     if nodes
@@ -390,6 +394,21 @@ class ChatService:
             for turn in turns
             if turn["role"] == "mika" and turn["mode"] == "topical"
         ]
+        replies = [turn for turn in turns if turn["role"] == "mika"]
+        voice, voice_status = None, "insufficient_turns"
+        if len(replies) >= 2:
+            with structlog.contextvars.bound_contextvars(
+                trace_id="session-export:" + session_id,
+                chat_channel=session["channel"],
+            ):
+                try:
+                    first = await self.llm.embed(replies[0]["text"])
+                    last = await self.llm.embed(replies[-1]["text"])
+                    voice, voice_status = cosine(first, last), "measured"
+                except (httpx.HTTPError, ValueError):
+                    voice_status = "embedding_unavailable"
+                    log.exception("session_export_embedding_unavailable")
+        unknown = sum(turn["mode"] == "unknown" for turn in replies)
         header = json.dumps(
             {
                 "session": session,
@@ -398,8 +417,14 @@ class ChatService:
                     "tokens_before_first_compression": summary_state(session).get(
                         "tokens_before_first_compression"
                     ),
-                    "voice_drift": None,
-                    "voice_drift_status": "TODO(CHAT-VOICE-METRICS)",
+                    "voice_drift": voice,
+                    "voice_drift_status": voice_status,
+                    "voice_drift_metric": "first_last_reply_cosine",
+                    "unknown_reply_count": unknown,
+                    "unknown_reply_fraction": unknown / len(replies)
+                    if replies
+                    else None,
+                    "mood_drift_status": "TODO(CHAT-MOOD-METRIC)",
                 },
             },
             ensure_ascii=False,

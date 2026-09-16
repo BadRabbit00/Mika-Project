@@ -156,7 +156,8 @@ class SessionStore:
                 "WHERE id=?",
                 (tokens, session_id),
             )
-            if mode == "unknown":
+            # Private questions stay in session_turns until provenance is specified.
+            if mode == "unknown" and session["channel"] == "topic":
                 question = c.execute(
                     "SELECT text FROM session_turns WHERE id=?", (user_id,)
                 ).fetchone()[0]
