@@ -130,8 +130,9 @@ class SelfQuiz:
         if not names:
             log.info("quiz_has_no_nodes", topic=topic)
             return []
-        request = self.context.build(
+        request = await self.context.build_checked(
             "selfquiz_ask",
+            llm=self.llm,
             topic_node_names=names,
             asked_questions=previous,
             n=str(self.settings.questions_per_round),
@@ -209,8 +210,9 @@ class SelfQuiz:
         if nodes:
             if len(nodes) > 6 or len(set(retrieved)) != len(retrieved):
                 raise ValueError("Retriever must return at most six distinct nodes")
-            request = self.context.build(
+            request = await self.context.build_checked(
                 "selfquiz_answer",
+                llm=self.llm,
                 question=question,
                 retrieved_nodes=[asdict(node) for node in nodes],
             )

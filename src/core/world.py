@@ -9,7 +9,8 @@ from ruamel.yaml import YAML
 
 from src.core.pad import finite
 from src.core.schedule import Blackout, Schedule, SleepWindow
-from src.core.time_utils import daypart_at, require_aware
+from src.core.time_utils import daypart_at, elapsed_hours, require_aware
+from src.core.weather import weather_relevant
 
 
 @dataclass(frozen=True)
@@ -66,3 +67,25 @@ class World:
             self.locations[location],
             self.schedule.blackout(at, sleep=sleep, road_roll=road_roll),
         )
+
+    async def relevant_weather(self, at, *, client, location, last_mention_at, rng):
+        at = require_aware(at)
+        if location not in self.locations:
+            raise ValueError("Unknown configured location")
+        days = (
+            float("inf")
+            if last_mention_at is None
+            else elapsed_hours(last_mention_at, at) / 24
+        )
+        if days < 0:
+            raise ValueError("A weather mention cannot be in the future")
+        weather = await client.fetch(at, rng=rng)
+        relevant = weather_relevant(
+            weather,
+            outdoors=location in ("улица", "транспорт"),
+            last_mention_days=days,
+            rng=rng,
+            ordinary_chance=client.settings["world.weather_chance"],
+            cooldown_days=self._life["greetings"]["weather_cooldown_days"],
+        )
+        return weather if relevant else None

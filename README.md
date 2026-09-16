@@ -1,7 +1,9 @@
 # BlogAI
 
-Steps 1–5 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
-storage, extraction, self-quiz, immutable PAD mood, biological time, and day context.
+Steps 1–7 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+storage, extraction, self-quiz, immutable PAD mood, biological time, isolated
+contexts, draft writing, world events, and three-layer output validation.
+Live generation and prompt-contract limitations are recorded below.
 
 ## Development
 
@@ -132,6 +134,22 @@ fraction of at least 0.6, with a hard minimum of five questions. Repeated questi
 are deduplicated per topic. A completed question can be replayed by its ID without
 another retrieval or model call. Learning-state transitions remain in step 12.
 
+## Contexts and draft writing
+
+[docs/WRITING.md](docs/WRITING.md) describes the ContextBuilder, Writer,
+OfftopGenerator, output validator, and explicit policy inputs.
+
+Every production path builds a fresh context and checks its complete token
+sequence using the model server. Technical and off-topic memory have separate
+queries. Rejected output retries up to three attempts, then persists a killed
+draft. Draft generation does not publish or advance life events.
+
+The supplied shared persona conflicts with off-topic isolation, so the default
+fails explicitly. A live Gemma writing smoke test also omitted the required mode
+tags in all three attempts and was correctly killed. These prompt contracts need
+resolution before successful live draft generation can be claimed. Supplied
+configurations and prompts remain unchanged; see the writing TODOs.
+
 ## Storage
 
 `src/core/db.py` contains the complete explicitly defined schema: 24 ordinary
@@ -173,7 +191,7 @@ The unresolved remote-delivery crash window is TODO(OUTBOX-DELIVERY).
 
 `insert_mood` validates and rounds the six PAD/baseline values with
 `round(value, 4)`, then appends a snapshot. SQL constraints reject unrounded
-values, and an update trigger preserves history. Mood formulas remain in step 4.
+values, and an update trigger preserves history. Mood formulas are in core/mood.py.
 
 ## Time
 
