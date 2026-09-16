@@ -259,6 +259,26 @@ These are specification gaps, not defaults chosen by the implementation.
 
 ## Invariants for later delivery stages
 
+- TODO(CHAT-SUMMARY-PROMPT): section 33 requires dialogue-head compression, but
+  no dedicated summary prompt is supplied. `gist.md` describes a single public
+  post and is not silently repurposed. `ChatMemory` requires dialog_summary.md
+  with dialog and previous placeholders; callers may inject a summarizer.
+- TODO(CHAT-SEMANTIC-FILTERS): graph citation checks and explicit-ignorance
+  markers cannot prove that every generated sentence avoids pretrained facts.
+  Verbatim fact grounding and conservative sensitive-word checks cannot cover
+  every euphemism. Rejected output is not stored as an answer or fact.
+- TODO(CHAT-VOICE-METRICS): exports include citation and compression counters.
+  No voice-reference embedding or mood-drift metric is specified; these metrics
+  are explicitly unavailable instead of synthesized.
+- TODO(FACT-DELETION): personal-memory deletion requires the confirmation
+  controls described in section 20.5; /facts is currently read-only.
+- TODO(RUNTIME-CONTEXT): live composition requires explicit current sleep,
+  location, cycle epoch, and mood baseline inputs. Do not reuse stale prompt
+  text as a current world snapshot.
+- TODO(RHYTHM-CONFIG): config/rhythm.yaml is absent. Section 6 supplies an
+  example, but no configured production rhythm. The missing file and durable
+  learner/scheduler schema have been raised for a user decision.
+
 The step 1 suite tests time, UTC persistence, storage validation, the closed
 relation vocabulary, FTS synchronization, transaction atomicity, retry limits,
 outbox keys, PAD storage precision, and absence of copied prompt strings.

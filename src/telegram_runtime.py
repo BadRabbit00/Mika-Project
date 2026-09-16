@@ -16,13 +16,14 @@ from src.core.ops_log import OpsMirror
 from src.core.settings import SettingsRegistry, SQLiteSettingsStore
 from src.core.tasks import JobQueue
 from src.core.telegram import TelegramLayout, TelegramTransport
+from src.core.time_utils import now, to_utc_iso
 from src.defects import SQLiteLineageStore
 from src.extract import Extractor
 from src.library import LibraryInbox
 from src.publish import OutboxWorker, Publisher
 
 
-async def run_telegram(args):
+async def run_telegram(args, *, chat_factory=None):
     layout = TelegramLayout.from_file(args.layout)
     tokens = {
         role: os.environ[f"{role.upper()}_BOT_TOKEN"]
@@ -70,6 +71,11 @@ async def run_telegram(args):
                 LibraryInbox(args.library),
                 log_path=args.log_file,
                 extractor=extractor,
+                chat_gateway=(
+                    await chat_factory(database, llm, publisher, layout)
+                    if chat_factory
+                    else None
+                ),
                 lineage=SQLiteLineageStore() if args.interface_storage else None,
                 health_urls={
                     "llama": args.generation_url,
@@ -82,9 +88,27 @@ async def run_telegram(args):
             dispatcher = Dispatcher()
             dispatcher.include_router(ingress.router)
             await jobs.start()
+
+            async def expire_chat():
+                while not stop.is_set():
+                    if service.chat_gateway is not None:
+                        instant = now()
+                        jobs.submit(
+                            "chat-expiry:" + to_utc_iso(instant),
+                            "chat-expiry",
+                            lambda at=instant: service.chat_gateway.service.expire(
+                                at=at
+                            ),
+                        )
+                    try:
+                        await asyncio.wait_for(stop.wait(), timeout=60)
+                    except TimeoutError:
+                        pass
+
             try:
                 async with asyncio.TaskGroup() as tasks:
                     tasks.create_task(drain())
+                    tasks.create_task(expire_chat())
                     try:
                         await tasks.create_task(
                             dispatcher.start_polling(

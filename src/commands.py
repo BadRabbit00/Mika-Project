@@ -33,6 +33,7 @@ class CommandService:
         extractor=None,
         health_urls=None,
         lineage=None,
+        chat_gateway=None,
     ):
         self.database, self.layout, self.registry, self.library = (
             database,
@@ -50,6 +51,17 @@ class CommandService:
             extractor,
         )
         self.health_urls = health_urls or {}
+        self.chat_gateway = chat_gateway
+
+    async def chat(self, message, bot, trace_id, *, channel):
+        if self.chat_gateway is not None:
+            await self.chat_gateway.handle(message, channel=channel, trace_id=trace_id)
+        elif message.text.startswith("/chat"):
+            await self.reply(
+                message,
+                {"error": "TODO(RUNTIME-CONTEXT): chat has no context provider"},
+                trace_id,
+            )
 
     def _reply_destination(self, message):
         if message.chat.type == "private":

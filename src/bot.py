@@ -62,6 +62,11 @@ class BotIngress:
 
     def _origin(self, message, bot):
         if message.chat.type == "private":
+            if (
+                message.chat.id == self.layout.owner_id
+                and self.bot_roles.get(bot.id) == "mika"
+            ):
+                return "chat_private"
             return (
                 "private"
                 if message.chat.id == self.layout.owner_id
@@ -90,9 +95,29 @@ class BotIngress:
         if user is None or user.is_bot or user.id != self.layout.owner_id:
             return
         origin = self._origin(message, bot)
-        if origin not in {"library", "machine", "control", "private"}:
+        if origin not in {
+            "library",
+            "machine",
+            "control",
+            "private",
+            "chat",
+            "chat_private",
+        }:
             return
         trace_id = self._trace(message, bot)
+        if origin in {"chat", "chat_private"}:
+            if message.text:
+                self._submit(
+                    trace_id,
+                    "chat",
+                    lambda: self.service.chat(
+                        message,
+                        bot,
+                        trace_id,
+                        channel="dm" if origin == "chat_private" else "topic",
+                    ),
+                )
+            return
         if origin == "library":
             if message.document is not None:
                 self._submit(
