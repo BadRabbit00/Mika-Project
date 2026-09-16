@@ -165,6 +165,19 @@ def test_approved_telegram_layout_accepts_named_token_variables(tmp_path):
     assert result.group_id == -100123 and result.bots["mika"] == "TEST_MIKA_TOKEN"
 
 
+@pytest.mark.parametrize("channel", [None, 0, "", "   "])
+def test_empty_channel_id_publishes_only_to_diary(channel, tmp_path):
+    path = tmp_path / "telegram.yaml"
+    data = layout().model_dump()
+    data["channel_id"] = channel
+    from ruamel.yaml import YAML
+
+    YAML().dump(data, path)
+    destinations = TelegramLayout.from_file(path).publication_destinations()
+    assert len(destinations) == 1
+    assert destinations[0].channel == "diary"
+
+
 async def test_fact_deletion_requires_owner_confirmation_and_expires(
     database, tmp_path
 ):

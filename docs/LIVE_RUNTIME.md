@@ -12,7 +12,7 @@ The layout file uses this shape. These are illustrative IDs, not deployment valu
 ```yaml
 owner_id: 123
 supergroup_id: -100123
-channel_id: -100124
+channel_id: 0
 topics: {diary: 1, author: 2, curator: 3, chat: 4,
          library: 5, machine: 6, control: 7}
 bots: {mika: MIKA_BOT_TOKEN, curator: CURATOR_BOT_TOKEN, ops: OPS_BOT_TOKEN}
@@ -41,8 +41,13 @@ Keep the local credentials file private (`chmod 600 .env`); `.env`, `.env.*`, an
 
 Layout validation rejects token strings in `bots`; all seven distinct topic IDs
 are required. `group_id` remains an accepted legacy spelling for `supergroup_id`.
+`channel_id: 0`, a blank value, or an omitted channel disables public-channel
+delivery. Posts then go only to the diary topic. A configured channel ID must be
+negative. The filled `config/telegram.yaml` stays local; public templates live
+under `mika-startup/startup/config/`.
 
-`library/topics.yaml` is the supplied catalogue. The first topic requires
+`library/topics.yaml` is your local catalogue; the entire library is excluded
+from Git. CI supplies its own synthetic data. The first topic requires
 `ab-01.md` through `ab-06.md`, with matching IDs/topics and nonempty origin keys.
 Missing later-topic articles remain absent from curator selection; shortage is
 reported explicitly. Startup never generates replacement source articles.

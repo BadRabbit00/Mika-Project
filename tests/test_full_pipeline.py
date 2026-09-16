@@ -478,12 +478,20 @@ async def test_curator_error_policy_persists_without_global_pause(
 
 
 def test_topic_catalogue_requires_real_first_topic_articles(tmp_path):
-    import shutil
-
     from src.catalogue import Catalogue
 
-    shutil.copy("library/topics.yaml", tmp_path / "topics.yaml")
-    with pytest.raises(ValueError, match="ab-01"):
+    (tmp_path / "topics.yaml").write_text(
+        "start: fixture-topic\n"
+        "allocation:\n"
+        "  on_pass: {core: 2, adjacent: 4, switch_topic: true}\n"
+        "  on_fail: {core: 4, adjacent: 2, switch_topic: false}\n"
+        "topics:\n"
+        "  - name: fixture-topic\n"
+        "    status: active\n"
+        "    adjacent: []\n"
+        "    articles: [fixture-article]\n"
+    )
+    with pytest.raises(ValueError, match="fixture-article"):
         Catalogue.load(tmp_path)
 
 

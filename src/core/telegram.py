@@ -11,7 +11,14 @@ from aiogram.exceptions import (
 )
 from aiogram.types import BufferedInputFile
 from dotenv import dotenv_values
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 from ruamel.yaml import YAML
 
 from src.publish import DeliveryRejected, Destination
@@ -47,6 +54,13 @@ class TelegramLayout(BaseModel):
             role: f"{role.upper()}_BOT_TOKEN" for role in ("mika", "curator", "ops")
         }
     )
+
+    @field_validator("channel_id", mode="before")
+    @classmethod
+    def empty_channel_is_disabled(cls, value):
+        if type(value) is int and value == 0:
+            return None
+        return None if isinstance(value, str) and not value.strip() else value
 
     @model_validator(mode="after")
     def validate_topics(self):

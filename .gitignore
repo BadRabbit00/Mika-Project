@@ -19,6 +19,12 @@ result-*
 *.env
 !.env.example
 
+# Private deployment inputs and the local article library
+/library/
+/config/telegram.yaml
+/config/telegram.yml
+/config/world-*.json
+
 # Runtime files; intentional SQLite snapshots may be committed separately.
 data/
 logs/
