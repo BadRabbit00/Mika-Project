@@ -105,6 +105,17 @@ class BotIngress:
         }:
             return
         trace_id = self._trace(message, bot)
+        if (
+            origin in {"chat", "chat_private"}
+            and message.text
+            and message.text.split(" ", 1)[0] in {"/facts", "/forget-fact"}
+        ):
+            self._submit(
+                trace_id,
+                "command",
+                lambda: self.service.command(message, bot, trace_id),
+            )
+            return
         if origin in {"chat", "chat_private"}:
             if message.text:
                 self._submit(
@@ -160,6 +171,18 @@ class BotIngress:
             return
         parts = query.data.split(":", 2)
         trace_id = "callback-" + hashlib.sha256(query.id.encode()).hexdigest()[:24]
+        if len(parts) == 3 and parts[:2] == ["facts", "confirm"]:
+            if origin not in {"machine", "control", "private"}:
+                return
+            await query.answer()
+            self._submit(
+                trace_id,
+                "fact-confirmation",
+                lambda: self.service.confirm(
+                    parts[2], query.message, trace_id, owner_id=query.from_user.id
+                ),
+            )
+            return
         if len(parts) == 3 and parts[:2] == ["settings", "view"]:
             if origin not in {"machine", "control", "private"}:
                 return

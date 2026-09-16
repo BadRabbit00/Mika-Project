@@ -147,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     bot.add_argument(
         "--interface-storage",
         action="store_true",
-        help="Use explicitly installed settings and lineage tables",
+        help=argparse.SUPPRESS,
     )
     bot.add_argument("--database", type=Path, required=True)
     bot.add_argument("--log-file", type=Path, required=True)

@@ -9,19 +9,6 @@ including structured log fields written as `todo="<id>"`.
 
 ## Storage and delivery
 
-- TODO(LEARNING-STATE), sections 3 and 13: the pure state machine and
-  SQLiteLearningStore are implemented. The architecture omits the durable schema;
-  [learning-storage.sql](learning-storage.sql) is the explicit proposal exercised
-  by tests and dry runs. The store requires these tables to be installed already.
-  The remaining work is the production migration decision and wiring
-  CommandService._state() to this store: /state still returns the marker instead
-  of the learner snapshot. Do not substitute life_state for learning state.
-  See also TODO(LEARNING-STORAGE).
-- Embedding storage in schema version 3 uses the self-describing NumPy NPY format,
-  float64 values, and an explicit model identity. Dimensions come from the server;
-  cosine similarity normalizes vectors at comparison time. Pickle is disabled.
-  TODO(EMBEDDING-UPGRADE): legacy unlabelled blobs and model changes require an
-  explicit reindexing policy; incompatible vectors fail instead of being mixed.
 - TODO(UNSPECIFIED-STORES), sections 5, 20.5, 22.4, 31.4 and 36: the initial
   document did not define every persistence contract. Off-topic repeat history
   now uses canonical entities in life_journal; explicit proposals cover settings
@@ -54,16 +41,6 @@ including structured log fields written as `todo="<id>"`.
   writing constructors and runtime factories still need a defined refresh path
   for changed settings. A successful override write does not update an already
   created model instance automatically.
-- TODO(JOB-RECOVERY): JobQueue is process-local. Publication intents persist in
-  outbox, and learner events/actions persist through SQLiteLearningStore when
-  its proposed schema is installed. Ordinary Telegram command, chat, and library
-  jobs are not automatically journaled there. Recovery of those jobs still needs
-  durable identities and replay rules; uncertain learner effects are tracked
-  separately under TODO(ACTION-RESUME).
-- TODO(OPS-LOG-RECOVERY): full JSONL is authoritative. Event cards are queued
-  durably after the mirror drains them; an in-memory mirror event can be lost on
-  a crash before that point. Automatic replay checkpoints are not specified.
-
 ## Dialogue and orchestration contracts
 
 - TODO(CHAT-SUMMARY-PROMPT): section 33 requires dialogue-head compression, but
@@ -82,8 +59,6 @@ including structured log fields written as `todo="<id>"`.
   topic questions open public question threads. Unknown DM questions stay in
   session_turns until a scoped thread contract exists, preserving section 33's
   privacy boundary instead of feeding private questions to public posts.
-- TODO(FACT-DELETION): personal-memory deletion requires the confirmation
-  controls described in section 20.5; /facts is currently read-only.
 - TODO(RUNTIME-CONTEXT): live composition requires explicit current sleep,
   location, cycle epoch, and mood baseline inputs. Do not reuse stale prompt
   text as a current world snapshot.

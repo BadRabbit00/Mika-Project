@@ -62,7 +62,7 @@ class ChatGateway:
                 elif command == "/facts":
                     if argument:
                         raise ValueError(
-                            "TODO(FACT-DELETION): confirmation controls are required"
+                            "Use the owner confirmation controls to delete facts"
                         )
                     facts, _, _, _ = await asyncio.to_thread(self.service._memory, None)
                     text, document = json.dumps(facts, ensure_ascii=False), True

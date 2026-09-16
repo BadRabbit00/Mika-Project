@@ -25,17 +25,14 @@ from src.publish import OutboxWorker, Publisher
 
 async def run_telegram(args, *, chat_factory=None, learning_factory=None):
     layout = TelegramLayout.from_file(args.layout)
-    tokens = {
-        role: os.environ[f"{role.upper()}_BOT_TOKEN"]
-        for role in ("mika", "curator", "ops")
-    }
+    tokens = {role: os.environ[name] for role, name in layout.bots.items()}
     if len(set(tokens.values())) != 3:
         raise ValueError("Three distinct Telegram bot tokens are required")
     configure_logging(args.log_file, secret_values=tuple(tokens.values()))
     bots = {role: Bot(token) for role, token in tokens.items()}
     database = Database(args.database)
     await asyncio.to_thread(database.initialize)
-    store = SQLiteSettingsStore(database) if args.interface_storage else None
+    store = SQLiteSettingsStore(database)
     registry = SettingsRegistry.from_file(args.settings, store=store)
     jobs = JobQueue()
     publisher = Publisher(database)
@@ -57,11 +54,13 @@ async def run_telegram(args, *, chat_factory=None, learning_factory=None):
                 pass
 
     try:
-        async with LocalLLM(args.generation_url, args.embedding_url) as llm:
+        async with LocalLLM(
+            args.generation_url, args.embedding_url, database=database
+        ) as llm:
             extractor = Extractor(
                 database,
                 llm,
-                ContextBuilder(args.prompt_dir),
+                ContextBuilder(args.prompt_dir, settings=registry),
                 grammar_dir=args.grammar_dir,
             )
             service = CommandService(
@@ -76,7 +75,8 @@ async def run_telegram(args, *, chat_factory=None, learning_factory=None):
                     if chat_factory
                     else None
                 ),
-                lineage=SQLiteLineageStore() if args.interface_storage else None,
+                lineage=SQLiteLineageStore(),
+                llm=llm,
                 health_urls={
                     "llama": args.generation_url,
                     "embeddings": args.embedding_url,
