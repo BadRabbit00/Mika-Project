@@ -37,6 +37,6 @@ and documentation.
 
 The new life requirements have a separate, still-active implementation plan in
 [AUTONOMOUS_LIFE_WORK.md](AUTONOMOUS_LIFE_WORK.md). Missing scenario decisions are
-listed in [LIFE_GAPS.md](LIFE_GAPS.md), and concrete proposed financial parameters
-await owner approval in [LIFE_CALIBRATION.md](LIFE_CALIBRATION.md). These documents
+listed in [LIFE_GAPS.md](LIFE_GAPS.md), and the owner-approved financial parameters
+are recorded in [LIFE_CALIBRATION.md](LIFE_CALIBRATION.md). These documents
 distinguish completed chat/storage changes from runtime work still required.

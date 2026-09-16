@@ -4,6 +4,8 @@ This audit compares the requested causal simulation with the existing code,
 `life.yaml`, `schedule.yaml`, `rhythm.yaml`, and writing/chat templates. Items below
 are authoring decisions, not facts the language model may invent. Proposed
 calibration values must be approved before they become deployment defaults.
+The owner has approved the complete financial table in LIFE_CALIBRATION.md.
+Items settled by that approval are removed from the missing-decision column.
 
 ## Required decisions
 
@@ -11,21 +13,21 @@ calibration values must be approved before they become deployment defaults.
 | --- | --- | --- |
 | Publication frequency | Two daily posts, two weekly off-topic posts, study sessions | Approved daily range, minimum life share, minimum/maximum gaps, burst limit and recovery gap; behavior when fewer meaningful events occur |
 | Availability | Owner confirmed: life posts and ordinary chat while awake; busy periods reduce frequency/length; learning only during home study | Exact busy/rest cadence and long evening-summary frequency remain to be calibrated |
-| Money | Transfer on day 5, scholarship on day 25; owner confirmed scholarship of KZT 52,000 | Approve the concrete amounts, household support and loan terms in LIFE_CALIBRATION.md; define failed/late income |
-| Parent assistance | Sunday calls and food questions | Mother's own availability and persistent mood, support capacity, refusal/lecture/help conditions, delays, transfer amounts, contact cooldown, alternatives after refusal |
-| Food | Dish names and random outcomes | Initial pantry, portions/ingredients, meal consumption, shopping quantities/costs, preparation time, takeaway restrictions, compensation after shared food is eaten |
-| Home | Coffee-machine stages and chores | Repair duration/cost, failure conditions, replacement price and saving rule; whether other belongings can change state |
+| Money | Approved opening balances, income, housing split, prices, reserves and loan terms in LIFE_CALIBRATION.md | Failed/late scheduled income and effects on due obligations |
+| Parent assistance | Sunday calls and food questions; approved request and monthly aid limits | Mother's own availability and persistent mood, refusal/lecture/help conditions, delays, contact cooldown, alternatives after refusal |
+| Food | Dish names; approved opening pantry, eight-portion basket and prices | Ingredients and meal consumption, preparation time, spoilage, compensation after shared food is eaten |
+| Home | Coffee-machine stages; approved repair-supply and replacement prices | Repair duration and success/failure conditions, saving schedule; whether other belongings can change state |
 | Relationship | Timur's initial closeness and decay/contact coefficients | His schedule and own mood, realistic reply delays, misunderstanding/conflict/reconciliation conditions, boundaries and lasting consequences |
-| Neighbour | Dasha's traits | Availability, shared resources, requests and consent, compensation/loan rules, whether promises are kept |
+| Neighbour | Dasha's traits and approved loan terms | Availability, available funds, shared resources, consent and compensation outcomes, whether promises are kept |
 | Health | Weekly illness chance, duration, mood and class/gym effects | Symptom onset/progression/recovery, effect on actual sleep and meals, plans cancelled or deferred, recovery restrictions; avoid invented medical claims |
 | University | Exact class subjects/times, coursework stages and deadline week | Assignment issue dates, workload and progress units, deadlines as instants, class cancellations, deadline extensions, submission/grade rules |
-| Leisure | Series/anime episode counts, gym stages | Episode duration, opinion transitions, attendance opportunities and cost; reconcile gym progress and arc stages |
+| Leisure | Series/anime episode counts, gym stages and approved renewal price | Episode duration, opinion transitions and attendance opportunities; reconcile gym progress and arc stages |
 | Cat | Four arc stages | Arrival date, owner and collection arrangement, feeding/supplies/tasks, responsibility for costs, delayed collection |
 | Family | Brother asks about school | His availability, specific request and deadline, outcome criteria and follow-up task |
 | City | Five broad locations and example objects | Travel edges/durations beyond the university commute, shop/park/gym locations, opening hours, resting stops, weather alternatives |
 | Weather | Live/fallback observations | Replanning thresholds, persistence of the observation that changed a plan, safe fallback when current weather is unknown |
 | Commitments | Open threads and narrative summaries | Priority/conflict resolution, dependencies, expiry, missed promises, debt repayment and rescheduling rules |
-| Startup | Existing progress, NPC and arc tables | Author-approved initial resource state and unfinished obligations; importing existing history must not create retroactive purchases or invented conversations |
+| Startup | Existing progress, NPC and arc tables; approved opening money and pantry | Remaining initial health, relationship and unfinished-task state; importing existing history must not create retroactive purchases or invented conversations |
 
 ## Contradictions to resolve explicitly
 

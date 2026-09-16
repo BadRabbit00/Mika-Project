@@ -21,7 +21,7 @@ use the Nix devShell and temporary databases. Graphify is refreshed after edits.
 7. Provide a multi-day offline simulation with time, location, activity, event,
    publication or silence reason, including divergent money-request outcomes.
 8. Run all tests, Nix checks, privacy checks and Graphify; integrate into develop
-   and update the main PR. Deployment requires a graceful stop, receipt review
+   and prepare a new main PR. Deployment requires a graceful stop, receipt review
    and a SQLite backup; do not restart the live process during development.
 
 The unresolved authoring/calibration questions are collected in
@@ -41,15 +41,68 @@ presented as approved deployment facts.
 - Legacy dialogue rows remain stored. Their visibility requires a matching
   Telegram receipt; old compression is ignored if it included an unconfirmed
   reply. This prevents an upgrade from reintroducing unsent text into context.
-- The financial proposal and confirmed availability rules are recorded in
-  [LIFE_CALIBRATION.md](LIFE_CALIBRATION.md). Only the scholarship amount is
-  approved; proposed balances and prices are not live configuration.
+- The complete financial table and availability rules are owner-approved and
+  recorded in [LIFE_CALIBRATION.md](LIFE_CALIBRATION.md). The financial engine
+  still needs to consume these values; approval does not initialize live data.
 
 The runtime itinerary, causal scenario engine, activity-dependent publication
 cadence, durable overnight inbox, shared life/chat context, and home-study commit
 guards remain implementation work. The storage schema is not evidence that
 these behaviors are already connected to LiveApplication. No multi-day causal
 simulation or deployment is claimed at this checkpoint.
+
+## Remaining implementation and acceptance work
+
+1. Persist complete daily itineraries, including activities, actual class subjects,
+   sleep, travel intervals and deterministic choices. Both `where(at)` and all
+   model contexts must read the saved itinerary. Preserve completed activities
+   when illness, weather, an obligation or a resource shortage changes the plan.
+2. Implement resource state and dependent tasks. Load approved financial values
+   from configuration; apply income, purchases, transfers and repayments once.
+   Persist pantry, belongings, health, relationships, NPC availability, deadlines,
+   promises and story stages. Changes must create or revise actual tasks and
+   affect mood through `record_event` or `fire_trigger`.
+3. Author and connect the requested causal chains: money assistance and repayment,
+   shopping and cooking, repair and replacement, relationship and roommate
+   conflicts, illness and recovery, coursework, leisure, cat care, weather and
+   family help. Preserve selected outcomes independently of model calls and post
+   delivery. Outstanding authoring detail is listed in LIFE_GAPS.md.
+4. Add home-study admission before enqueue, execution and result persistence for
+   every learning entry point, including library uploads and curator exam
+   answers. Leaving home must defer the action and preserve the last valid
+   checkpoint. Uploading a file must not mark it as read or immediately extract it.
+5. Build truthful writing contexts from recorded events and current activities.
+   Connect offtop, daily, situation and continuations through existing writing
+   components; retain found, impression, struggle and summary. Generate occasional
+   evening retrospectives from actual events and linked mood changes. Recheck
+   applicability before delivery; cancel or rewrite stale text without repeating
+   the event or applying its effects twice.
+6. Configure activity-dependent cadence and event-level deduplication. Retire the
+   two-offtopic-per-week limit, broad category bans and exam-day life exclusion.
+   Busy awake periods allow shorter, less frequent life posts and ordinary chat;
+   rest allows longer messages. Sleep forbids persona sends. The exact daily
+   target and life/study distribution still require separate owner agreement.
+7. Connect chat to the same activity, class subject, resources, health and mood
+   snapshot. Persist incoming messages before background processing; keep night
+   messages unread until waking and supply received/seen times to the model.
+   Reconcile overnight waiting with the six-hour session timeout and delivery
+   freshness. Existing delivery-confirmed history must remain intact.
+8. Assemble an independent life loop in LiveApplication. An empty or absent
+   article catalogue, waiting exam, slow curator or curator failure must not
+   block life state, life publications or ordinary conversation. Separate durable
+   work and scheduling boundaries and recover pending work without duplicates.
+9. Test all new invariants, then run a multi-day offline simulation with a table
+   of time, location, activity, event and publication/silence reason. Force calm
+   help, delayed help and refusal branches and verify their distinct effects on
+   balances, mood, plans and posts. Exercise departures during generation,
+   overnight chat, stale drafts, restart recovery and compatible upgrades.
+10. Run the complete Nix checks and refresh Graphify, integrate into develop and
+    prepare a new PR into main. Deploy with a verified SQLite backup, graceful
+    shutdown, review of unfinished/uncertain actions and post-upgrade checks.
+    The production checkout is not an implementation or simulation workspace.
+
+The existing 472-test result validates the current checkpoint. It is not evidence
+that these remaining behaviors have been implemented or acceptance-tested.
 
 ## Verification of this checkpoint
 

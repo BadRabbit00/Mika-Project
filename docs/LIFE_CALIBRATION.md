@@ -1,8 +1,10 @@
-# Proposed life calibration
+# Approved life calibration
 
-Status: awaiting owner approval. These values must not initialize the live
-simulation until approved. The scholarship of KZT 52,000 is already confirmed.
-All amounts are integer tenge. Prices are simulation parameters, not live quotes.
+Status: the owner approved the complete table in the conversation following
+commit 226e057. The amounts, opening state, payment dates, spending rules and
+loan terms below are authorized for implementation. They have not yet been
+connected to the live simulation. All amounts are integer tenge. Prices are
+simulation parameters, not live quotes.
 
 ## Evidence reviewed on 2026-09-16
 
@@ -14,15 +16,15 @@ All amounts are integer tenge. Prices are simulation parameters, not live quotes
 - [Krisha apartment listing](https://krisha.kz/a/show/1015393815): a furnished
   one-room apartment on Rozybakiyev Street at KZT 250,000 per month. The listing
   is archived; it is a scale reference, not evidence of current availability or
-  the market average. A half share of KZT 125,000 is a proposed story parameter.
+  the market average. A half share of KZT 125,000 is an approved story parameter.
 
-The remaining numbers below are explicit authoring proposals. In particular,
+The remaining numbers below are approved authoring parameters. In particular,
 the grocery basket, family means, utility share, and loan terms are not sourced
-facts. They require approval independently of the retail examples above.
+facts. The owner's approval makes them simulation defaults, not market claims.
 
 ## Opening state and cash flows
 
-| Parameter | Proposed value | Timing and rule |
+| Parameter | Approved value | Timing and rule |
 | --- | ---: | --- |
 | Spendable opening balance | 22,000 | Once, on first initialization; no implicit past transactions |
 | Opening savings | 0 | No hidden emergency fund |
@@ -31,7 +33,7 @@ facts. They require approval independently of the retail examples above.
 | Parents' living allowance | 45,000 | Monthly on day 5, as already configured |
 | Parents' housing contribution | 135,000 | Monthly on day 5; restricted to rent and utilities |
 | Mika's rent share | 125,000 | Monthly on day 5; Dasha pays her own half separately |
-| Mika's utilities / home internet share | 10,000 | Monthly on day 5; provisional fixed amount |
+| Mika's utilities / home internet share | 10,000 | Monthly on day 5; fixed simulation amount |
 | Mobile service | 3,500 | Monthly on day 6 |
 | Household / hygiene budget | 2,500 | Purchases charged individually; this is a planning allowance |
 | Opening pantry | 8 portions | Separate inventory; do not charge for an invented opening purchase |
@@ -43,12 +45,12 @@ installation, imported balances override opening defaults.
 
 Housing support and living money use separate accounts. Mika cannot spend the
 rent reserve at a cafe. Parents' total regular contribution is KZT 180,000 per
-month under this proposal. Their ability and willingness to make additional
+month under this calibration. Their ability and willingness to make additional
 transfers are separate persistent state.
 
 ## Prices and consumption
 
-| Item | Proposed value, KZT | Accounting rule |
+| Item | Approved value, KZT | Accounting rule |
 | --- | ---: | --- |
 | Public transport | 120 / boarding | Charge actual boardings, including transfers |
 | Home food portion | 550 | Consume inventory; charge money when buying ingredients |
@@ -57,11 +59,11 @@ transfers are separate persistent state.
 | Simple snack | 500 | Optional purchase, never an automatic daily deduction |
 | Cafe coffee | 1,200 | A discretionary expense |
 | Cafe coffee and pastry | 2,000 | One combined purchase, not an additional coffee charge |
-| Food delivery | 2,500 | Includes provisional delivery cost |
+| Food delivery | 2,500 | Includes delivery cost in the simulation |
 | Cinema / paid leisure | 3,000 | Optional; reserve money before committing |
 | Coffee-maker replacement | 15,990 | Save toward purchase; no automatic replacement on stage change |
 | Small repair supplies | 700 | May improve the appliance temporarily; no guaranteed repair |
-| Gym renewal | 15,000 | Optional proposal; existing paid subscription remains valid |
+| Gym renewal | 15,000 | Optional purchase; existing paid subscription remains valid |
 
 Portions are a deliberately simple inventory unit. Recipe-specific ingredient
 prices, spoilage rates, shared purchases, and Dasha's reimbursement rules remain
@@ -69,7 +71,7 @@ authoring decisions. Refunds and compensation require explicit ledger events.
 
 ## Help and borrowing
 
-| Parameter | Proposal |
+| Parameter | Approved rule |
 | --- | --- |
 | Low-money warning | Unrestricted balance below 5,000, or projected essential costs exceed balance before the next confirmed income |
 | Spending response | Cancel optional purchases first; keep existing obligations visible |
