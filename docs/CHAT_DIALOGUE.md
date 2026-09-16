@@ -45,24 +45,53 @@ Personal facts are extracted at session closure, as before. Exact names can come
 from an explicit introduction or a short answer to a delivered name question.
 The extraction batches keep that question with its answer even across a budget
 boundary. Facts remain scoped to the configured person and excluded from posts.
+Direct Russian first-person clauses can omit a pronoun: project, study and
+preference statements remain eligible, while third-person descriptions do not
+become facts about the speaker. Verbatim source and sensitive-data filters still
+apply.
 
 No database migration or reset is required. Existing sessions, personal facts,
 graph, life state and outbox remain compatible. The new helper calls use the
 existing local model, reasoning limits, tokenization and trace logging.
 
-## Verification, 2026-09-17
+## Verification
 
-- `nix flake check --no-update-lock-file --print-build-logs`: 547 tests passed
-  on x86_64-linux, including all 64 chat tests, offline CLI startup, Ruff,
-  formatting and lock checks.
-- `nix build .#default --no-link --no-update-lock-file`: passed.
-- `nix develop --command python scripts/check_repository.py`: passed.
-- Gitleaks working-tree scan and actionlint: passed.
-- `nix develop --command graphify update .`: 1,953 nodes, 5,138 edges,
-  167 communities. The existing optional SQL parser warning concerns two
+The gates run through Nix on x86_64-linux. Current CI results are attached to
+[PR #4](https://github.com/BadRabbit00/Mika-Project/pull/4).
+
+- `nix flake check --no-update-lock-file --print-build-logs`: the complete test
+  suite, offline CLI startup, Ruff, formatting and lock checks.
+- `nix build .#default --no-link --no-update-lock-file`: production environment.
+- `nix develop --command python scripts/check_repository.py`: repository privacy.
+- Gitleaks working-tree and complete-history scans, plus actionlint.
+- `nix develop --command graphify update .`: 1,955 nodes, 5,142 edges,
+  158 communities. The existing optional SQL parser warning concerns two
   unchanged fixtures; no dependency was installed outside Nix.
 
 The new regressions were observed failing before implementation. They cover
 mixed technical/personal messages, optional retrieval failures, name questions,
 short name answers, session restart, source and person isolation, exact budgets,
 malformed routing requests, unsupported citations and rejected output.
+
+## Live local-model check, 2026-09-17
+
+Gemma 4 12B, with the existing bounded-reasoning settings, completed these cases
+using temporary SQLite storage and simulated delivery receipts:
+
+| Input | Observed result |
+| --- | --- |
+| A name question before introductions | Asked how to address the person. |
+| An introduction with a name and information-security studies | Used the supplied name in a conversational reply. |
+| An AI-agent project description followed by a mood question | Answered about mood in personal mode; no graph lookup. |
+| A name question in a fresh session after closure | Recalled the name from people_facts. |
+
+The real extraction output supplied name, study and project facts with source
+turn IDs. Revalidating it with the final filter accepted all three. The name was
+also persisted and recalled through the actual session-close/store-reopen path.
+The regression suite covers short name answers to delivered questions separately.
+
+The first delivery harness used a frozen clock and hit the correct outbox pacing
+guard. Its already validated introductions were replayed with advancing fixture
+time before continuing the model check. There were no Telegram API sends.
+Some calls consumed the full 8,192-token reasoning allowance and took several
+minutes; this change does not alter the deployment's reasoning budget.

@@ -1247,3 +1247,25 @@ async def test_personal_memory_is_scoped_to_the_conversation_owner(service, day)
         assert json.loads(request.user)["people_facts"] == [
             {"fact": "Лёша", "kind": "name"}
         ]
+
+
+@pytest.mark.parametrize(
+    "kind,text,accepted",
+    [
+        (
+            "project",
+            "Веду свой блог про ИИ агента, который учится пользоваться Агентами",
+            True,
+        ),
+        ("context", "Учусь на информационную безопасность", True),
+        ("prefs", "Не люблю кофе.", True),
+        ("project", "Друг ведёт свой блог про ИИ агента.", False),
+        ("prefs", "Друг не любит кофе.", False),
+    ],
+)
+def test_direct_russian_first_person_facts_do_not_require_a_pronoun(
+    kind, text, accepted
+):
+    candidate = dict(kind=kind, fact=text, source=1)
+    turns = [dict(id=1, role="user", text=text)]
+    assert validate_facts([candidate], turns) == ([candidate] if accepted else [])

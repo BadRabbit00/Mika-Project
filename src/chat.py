@@ -72,6 +72,12 @@ _SENSITIVE = re.compile(
     re.I,
 )
 _DIRECT = re.compile(r"\b(?:I|my|I'm|меня|я|мне|мой|моя|моё|мои)\b", re.I)
+_FIRST_PERSON_VERB = re.compile(
+    r"^(?:(?:сейчас|обычно|теперь|ещ[её])\s+)?(?:не\s+)?"
+    r"(?:веду|учусь|работаю|делаю|пишу|разрабатываю|изучаю|занимаюсь|"
+    r"люблю|предпочитаю|тестирую)\b",
+    re.I,
+)
 _NAME_QUESTION = re.compile(
     r"как (?:тебя|вас) зовут|(?:тво[её]|ваше) имя|давай(?:те)? знакомиться|"
     r"как к (?:тебе|вам) обращаться|как (?:мне )?(?:тебя|вас) называть|"
@@ -136,6 +142,8 @@ def validate_facts(candidates, turns):
             or "?" in text
             or not (
                 _DIRECT.search(text)
+                or fact.kind != "name"
+                and _FIRST_PERSON_VERB.search(text)
                 or _name_answer(fact, turns)
                 or _declared_name(fact, source)
             )
