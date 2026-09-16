@@ -371,6 +371,25 @@ async def test_generation_calls_share_trace_but_keep_distinct_receipts(database)
     assert {r[2] for r in rows} == {"completed"}
 
 
+def test_retrieval_and_quiz_read_current_settings(database):
+    from src.core.settings import SettingsRegistry, SQLiteSettingsStore
+
+    settings = SettingsRegistry.from_file(
+        Path("config/settings.yaml"), store=SQLiteSettingsStore(database)
+    )
+    retriever = Retriever(database, fake_llm(), settings=settings)
+    quiz = SelfQuiz(
+        database, fake_llm(), retriever, ContextBuilder(Path("prompts")), settings
+    )
+    assert retriever.policy.min_similarity == 0.55
+    assert retriever.top_k == 6
+    assert quiz.settings.threshold == 0.6
+    settings.set("retrieval.top_k", "9", trace_id="updated")
+    settings.set("study.quiz_threshold", "0.7", trace_id="updated")
+    assert retriever.top_k == 9
+    assert quiz.settings.threshold == 0.7
+
+
 async def test_embedding_endpoint_is_separate():
     requests = []
 

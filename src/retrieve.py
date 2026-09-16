@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 import structlog
 
 from src.core.db import Database
+from src.core.settings import SettingsRegistry
 from src.core.vectors import cosine, decode_vector
 from src.extract import fts_query
 
@@ -15,11 +16,7 @@ log = structlog.get_logger("blogai.retrieve")
 
 @dataclass(frozen=True)
 class RetrievalPolicy:
-    """Caller-selected cutoff and reciprocal-rank-fusion constant.
-
-    TODO(RETRIEVAL-POLICY): no ranking formula or defaults exist in the architecture.
-    Callers must explicitly opt into this policy and supply both parameters.
-    """
+    """Validated cutoff and equal-weight reciprocal-rank-fusion constant."""
 
     min_similarity: float
     rrf_k: float
@@ -49,8 +46,27 @@ class RetrievedNode:
 
 
 class Retriever:
-    def __init__(self, database: Database, llm, policy: RetrievalPolicy):
-        self.database, self.llm, self.policy = database, llm, policy
+    def __init__(
+        self,
+        database: Database,
+        llm,
+        policy: RetrievalPolicy | None = None,
+        *,
+        settings=None,
+    ):
+        self.database, self.llm, self._policy = database, llm, policy
+        self.settings = settings or SettingsRegistry.from_file("config/settings.yaml")
+
+    @property
+    def policy(self):
+        return self._policy or RetrievalPolicy(
+            self.settings.get("retrieval.min_similarity"),
+            self.settings.get("retrieval.rrf_k"),
+        )
+
+    @property
+    def top_k(self):
+        return self.settings.get("retrieval.top_k")
 
     def _snapshot(self, query: str, topic: str):
         with self.database.connection() as connection:
@@ -91,7 +107,8 @@ class Retriever:
     async def search(
         self, query: str, *, topic: str, threshold: float | None = None
     ) -> list[RetrievedNode]:
-        cutoff = self.policy.min_similarity if threshold is None else threshold
+        policy, top_k = self.policy, self.top_k
+        cutoff = policy.min_similarity if threshold is None else threshold
         if (
             type(cutoff) not in (int, float)
             or not math.isfinite(cutoff)
@@ -126,8 +143,8 @@ class Retriever:
         scores: dict[str, float] = {}
         for ranking in (lexical, semantic):
             for rank, key in enumerate(ranking, start=1):
-                scores[key] = scores.get(key, 0.0) + 1.0 / (self.policy.rrf_k + rank)
-        selected = sorted(scores, key=lambda key: (-scores[key], key))[:6]
+                scores[key] = scores.get(key, 0.0) + 1.0 / (policy.rrf_k + rank)
+        selected = sorted(scores, key=lambda key: (-scores[key], key))[:top_k]
         selected_ids = set(selected)
         induced = [
             edge
@@ -138,7 +155,7 @@ class Retriever:
             "nodes_retrieved",
             topic=topic,
             query=query,
-            policy=asdict(self.policy),
+            policy=asdict(policy),
             node_ids=selected,
             lexical=lexical,
             similarities=similarities,
