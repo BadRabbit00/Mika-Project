@@ -23,7 +23,7 @@ class OpsMirror(logging.Handler):
         if not isinstance(record.msg, dict):
             return
         event = dict(record.msg)
-        if event.get("ops_mirror"):
+        if event.get("ops_mirror") or event.get("chat_channel") == "dm":
             return
         name = event.get("event", "")
         domain_change = name == "db_row_change" and event.get("table") not in {

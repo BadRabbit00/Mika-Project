@@ -1,0 +1,7 @@
+# Verbatim personal facts with the source user-turn ID for code validation.
+root ::= "[" ws (fact (ws "," ws fact)*)? ws "]" ws
+fact ::= "{" ws "\"kind\":" ws kind "," ws "\"fact\":" ws string "," ws "\"source\":" ws integer ws "}"
+kind ::= "\"name\"" | "\"prefs\"" | "\"context\"" | "\"project\""
+integer ::= [1-9] [0-9]*
+string ::= "\"" ([^"\\\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4}))* "\""
+ws ::= [ \t\n\r]*
