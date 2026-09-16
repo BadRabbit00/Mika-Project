@@ -16,12 +16,32 @@ class Catalogue:
     sources: dict
 
     @classmethod
-    def load(cls, directory):
+    def load(cls, directory, *, allow_empty=False):
         directory = Path(directory)
         catalogue_path = directory / "topics.yaml"
         try:
             contents = catalogue_path.read_text(encoding="utf-8")
         except FileNotFoundError as exc:
+            if allow_empty:
+                sources, topics = {}, {}
+                for path in sorted(directory.glob("*.md")):
+                    source = read_source(path)
+                    if path.stem != source.id or not source.origin_key:
+                        raise ValueError(
+                            "Uploaded article identity or origin is invalid"
+                        ) from None
+                    sources[source.id] = source
+                    topic = topics.setdefault(
+                        source.topic,
+                        dict(
+                            name=source.topic,
+                            status="pending",
+                            adjacent=[],
+                            articles=[],
+                        ),
+                    )
+                    topic["articles"].append(source.id)
+                return cls(next(iter(topics), ""), topics, sources)
             raise ValueError(
                 f"Missing topic catalogue: {catalogue_path}. "
                 "Restore your private library or use --library <directory> "
@@ -58,7 +78,7 @@ class Catalogue:
                     raise ValueError("An article appears in more than one topic")
                 sources[identity] = source
         missing = sorted(set(topics[data["start"]]["articles"]) - sources.keys())
-        if missing:
+        if missing and not allow_empty:
             # TODO(FIRST-TOPIC-ARTICLES): supply the six source files manually.
             raise ValueError("Missing first-topic articles: " + ", ".join(missing))
         return cls(data["start"], topics, sources)

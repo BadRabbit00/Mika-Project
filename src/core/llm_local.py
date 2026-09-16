@@ -159,6 +159,9 @@ class LocalLLM:
     async def generate(
         self, request: Request, *, grammar: str | None = None, max_tokens: int = 2048
     ) -> str:
+        from src.core.admission import check_study
+
+        check_study()
         if type(max_tokens) is not int or max_tokens <= 0:
             raise ValueError("A positive generation limit is required")
         reasoning = self._reasoning_enabled()
@@ -231,6 +234,7 @@ class LocalLLM:
         thinking_tokens = answer_tokens = 0
         response = {}
         try:
+            check_study()
             async with asyncio.timeout(deadline):
                 kwargs = {"timeout": deadline} if deadline is not None else {}
                 response = await self._request(

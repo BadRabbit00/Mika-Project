@@ -1,5 +1,61 @@
 # Validation evidence
 
+## Mandatory activity transitions: 2026-09-17
+
+- `nix flake check --no-update-lock-file --print-build-logs`: passed on
+  x86_64-linux, with **527 tests**, dependency-lock verification, Ruff lint/format
+  and Nix formatting. The aarch64-linux outputs were not built on this host.
+- The included `python -m src.cli run --dry-run` reached EXAM with a draft summary,
+  five answered questions and zero external deliveries.
+- `nix build .#default --no-link --no-update-lock-file`: passed.
+- The 23 new cases cover break persistence and UTC storage, admission during a
+  break, cancellation before return, factual ending reasons, ordinary/mandatory
+  budgets, real Writer retries, combined receipts, uncertain sends, stale
+  generation and stale delivery, old-day bedtime preparation and migration 14→15.
+- The five-day offline simulation recorded 71 transitions, nine selected breaks,
+  194 events, 23 tasks, six money entries, 42 mood rows and 92 test deliveries.
+  Its midpoint restart preserved plans, resources and receipts. The report retains
+  four assistance outcomes with their financial and actual mood consequences.
+  See [LIFE_SIMULATION.md](LIFE_SIMULATION.md).
+- Graphify refreshed the graph to 1,917 nodes and 5,063 edges. The two existing
+  SQL fixtures still lack the optional SQL parser; no dependencies were installed
+  outside Nix. A redacted Gitleaks worktree scan found no secrets.
+
+These checks used the isolated life worktree and temporary databases. Models and
+Telegram were mocked; arbitrary natural-language entailment and live delivery
+are not claimed. The main checkout, credentials, library and running process
+were preserved. See [ACTIVITY_TRANSITIONS.md](ACTIVITY_TRANSITIONS.md) for behavior,
+configuration and validation boundaries, and [LIFE_UPGRADE.md](LIFE_UPGRADE.md)
+for a separate deployment with backup and receipt review.
+
+## Causal autonomous life: 2026-09-16
+
+- `nix flake check --no-update-lock-file --print-build-logs`: passed on
+  x86_64-linux with **504 tests**, locked dependencies, Ruff lint/format and Nix
+  formatting. aarch64-linux was not built on this host.
+- The included `python -m src.cli run --dry-run` reached EXAM, with three sources,
+  five answered questions, a draft summary and zero external deliveries.
+- `nix build .#default --no-link --no-update-lock-file`: passed.
+- The five-day offline life run recorded 99 events, 23 tasks, six money entries,
+  34 mood rows and 38 publication receipts. A midpoint runtime restart preserved
+  the itinerary and resources without another delivery. See
+  [LIFE_SIMULATION.md](LIFE_SIMULATION.md) for the timeline and four forced
+  assistance outcomes, including actual PAD consequences and spending restrictions.
+- Coverage includes persisted journeys/subjects, illness and rain replanning,
+  preserved meals, task duration, financial/effect idempotency, empty-library
+  life, actual Writer/validator wiring, rollback after a study departure,
+  unread night chat, confirmed-only history and stale delivery cancellation.
+- Repository privacy checks, actionlint and a redacted Gitleaks worktree scan
+  passed. A complete scan of the 81 existing commits found no credentials.
+- Graphify refreshed the Python graph: 1,856 nodes and 4,838 edges. Two existing
+  SQL fixture files still lack the optional SQL parser; no parser was installed
+  outside Nix.
+
+All new execution used Nix, isolated databases and mocked external boundaries.
+The simulation renders factual drafts; it does not validate live model prose or
+claim Telegram delivery. The running main checkout, credentials and production
+database were not changed. Deployment steps are in [LIFE_UPGRADE.md](LIFE_UPGRADE.md).
+
 ## Bounded local reasoning: 2026-09-16
 
 - `nix flake check --no-update-lock-file --print-build-logs`: passed on

@@ -171,6 +171,9 @@ class ValidationContext:
     min_chars: int = 40
     max_chars: int | None = None
     complete: bool = True
+    dialogue: bool = False
+    activity_evidence: dict | None = None
+    activity_config: str = "config/activity_transitions.yaml"
 
     def __post_init__(self):
         object.__setattr__(self, "at", require_aware(self.at))
@@ -178,7 +181,7 @@ class ValidationContext:
             raise ValueError("Sleep debt must be nonnegative")
         if self.mode not in (None, "casual", "result", "struggle"):
             raise ValueError("Unknown output mode")
-        if self.min_chars < 40 or (
+        if self.min_chars < (1 if self.dialogue else 40) or (
             self.max_chars is not None and self.max_chars < self.min_chars
         ):
             raise ValueError("Invalid post length interval")
@@ -279,7 +282,9 @@ class OutputValidator:
             reasons.append("placeholder")
         if _REFUSAL.search(scan):
             reasons.append("refusal")
-        if len(visible.strip()) < 40:
+        if not any(character.isalnum() for character in visible) or (
+            not context.dialogue and len(visible.strip()) < 40
+        ):
             reasons.append("empty")
         if len(visible) < context.min_chars or (
             context.max_chars is not None and len(visible) > context.max_chars
@@ -306,6 +311,14 @@ class OutputValidator:
                 reasons.append("prompt_echo")
         if CYCLE.search(scan):
             reasons.append("cycle")
+        if context.activity_evidence is not None:
+            from src.core.activity_claims import activity_conflicts
+
+            reasons.extend(
+                activity_conflicts(
+                    scan, context.activity_evidence, context.activity_config
+                )
+            )
         if context.offtop and technical_match(scan, context.graph_terms):
             reasons.append("offtop_tech")
         current_claims = {

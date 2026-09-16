@@ -118,6 +118,16 @@ class BotIngress:
             return
         if origin in {"chat", "chat_private"}:
             if message.text:
+                gateway = getattr(self.service, "chat_gateway", None)
+                inbox = getattr(gateway, "inbox", None)
+                if inbox is not None and not message.text.startswith("/"):
+                    await inbox.accept(
+                        "dm" if origin == "chat_private" else "topic",
+                        message.text,
+                        trace_id,
+                        received_at=message.date,
+                    )
+                    return
                 self._submit(
                     trace_id,
                     "chat",

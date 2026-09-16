@@ -12,7 +12,7 @@ class RunRecorder:
 
     async def begin(self, *, call_id, trace_id, actor, request, params, tokens_in):
         await asyncio.to_thread(
-            self.database.run_transaction,
+            self.database.run_audit_transaction,
             lambda c: c.execute(
                 "INSERT INTO runs(call_id,trace_id,at,actor,profile,params_json,"
                 "system,user,tokens_in,status) VALUES (?,?,?,?,?,?,?,?,?,?)",
@@ -44,7 +44,7 @@ class RunRecorder:
         error=None,
     ):
         await asyncio.to_thread(
-            self.database.run_transaction,
+            self.database.run_audit_transaction,
             lambda c: c.execute(
                 "UPDATE runs SET output=?,thought=?,tokens_out=?,duration_ms=?,model=?,"
                 "cost_usd=?,status=?,error=? WHERE call_id=?",

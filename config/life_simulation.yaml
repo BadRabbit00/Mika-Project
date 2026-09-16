@@ -1,0 +1,120 @@
+# Authored simulation parameters; monetary amounts were approved by the owner.
+version: 1
+seed: mika-life-v1
+money:
+  initial_cash: 22000
+  initial_savings: 0
+  initial_debt: 0
+  scholarship: 52000
+  scholarship_day: 25
+  allowance: 45000
+  allowance_day: 5
+  housing_support: 135000
+  housing_day: 5
+  rent: 125000
+  utilities: 10000
+  mobile: 3500
+  mobile_day: 6
+  low_balance: 5000
+  essentials_reserve: 3000
+  mother_request_limit: 15000
+  mother_monthly_extra_limit: 20000
+  loan_limit: 10000
+  loan_max_days: 14
+  prices:
+    transport: 120
+    groceries: 4400
+    campus_lunch: 1000
+    snack: 500
+    coffee: 1200
+    coffee_pastry: 2000
+    delivery: 2500
+    leisure: 3000
+    coffee_machine: 15990
+    repair: 700
+    gym: 15000
+food:
+  initial_portions: 8
+  basket_portions: 8
+  low_portions: 2
+health:
+  restless_wake_minutes: 30
+itinerary:
+  preparation_minutes: 30
+  arrival_buffer_minutes: 10
+  minimum_preparation_minutes: 10
+  walk_university_minutes: 75
+  task_minutes: 15
+  task_minimum_minutes: 5
+  task_durations: {coursework: 40, series: 45, groceries: 25, brother_help: 25, gym: 55}
+  task_label: бытовое дело
+  task_labels:
+    mother_contact: разговор с мамой
+    mother_followup: разговор с мамой
+    dasha_loan: разговор с Дашей о займе
+    groceries: выбор и покупка продуктов
+    coffee_repair: починка кофеварки
+    coffee_replace: заказ новой кофеварки
+    coffee_delivery: получение кофеварки
+    roommate_talk: разговор с Дашей
+    timur_reply: разговор с Тимуром
+    brother_help: помощь брату
+    coursework: работа над курсовой
+    submit_coursework: сдача курсовой
+    series: просмотр серии
+    aika_discussion: разговор с Айкой
+    cat_care: уход за котом
+    gym: тренировка
+  breakfast_minutes: 25
+  lunch_minutes: 35
+  dinner_minutes: 45
+  outing_start: "15:30"
+  outing_chance: 0.65
+  outing_minutes: {walk: 50, cafe: 40, shop: 25, gym: 55}
+  evening_rest_start: "22:00"
+  dinner_start: "18:30"
+  # Durations are fictional route parameters. University commute uses schedule.yaml.
+  travel_minutes:
+    home_shop: 10
+    home_park: 20
+    home_cafe: 15
+    home_gym: 20
+  labels:
+    sleep: сон
+    breakfast: завтрак
+    prepare: сборы
+    travel: дорога
+    walk_travel: дорога пешком
+    class: пара
+    break: перерыв между парами
+    lunch: обед
+    dinner: ужин
+    study: домашняя учёба
+    rest: отдых дома
+    walk: прогулка
+    cafe: отдых в кофейне
+    shop: покупка продуктов
+    gym: тренировка
+  locations:
+    home: дом
+    university: универ
+    road: транспорт
+    shop: магазин
+    park: парк
+    cafe: кофейня
+    gym: зал
+  extra_locations:
+    магазин: {objects: [список покупок, корзина, продукты, очередь]}
+    парк: {objects: [дорожка, деревья, скамейка, телефон]}
+    зал: {objects: [абонемент, раздевалка, вода, тренажёры]}
+publishing:
+  daily_target: null
+  minimum_life_share: null
+  busy_gap_minutes: [100, 180]
+  rest_gap_minutes: [45, 90]
+  max_burst: 2
+  burst_rest_minutes: 90
+  evening_summary_chance: 0.35
+  busy_chars: [120, 320]
+  rest_chars: [200, 600]
+  evening_chars: [700, 1400]

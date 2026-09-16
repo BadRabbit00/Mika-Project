@@ -24,6 +24,8 @@ class WritingSnapshot:
         value = asdict(self)
         for name in ("at", "bedtime", "wake_time"):
             value["day"][name] = to_utc_iso(getattr(self.day, name))
+        if self.day.activity_until is not None:
+            value["day"]["activity_until"] = to_utc_iso(self.day.activity_until)
 
         def rounded(item):
             if isinstance(item, dict):
@@ -40,6 +42,8 @@ class WritingSnapshot:
         day = value.pop("day")
         for name in ("at", "bedtime", "wake_time"):
             day[name] = from_utc_iso(day[name])
+        if day.get("activity_until") is not None:
+            day["activity_until"] = from_utc_iso(day["activity_until"])
         day["available_objects"] = tuple(day["available_objects"])
         day["blackout"] = Blackout(**day["blackout"])
         value["mood"] = Mood(**value["mood"])

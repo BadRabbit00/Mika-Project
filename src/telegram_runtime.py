@@ -129,7 +129,7 @@ async def run_telegram(
                     if assemble is not None:
 
                         async def allowed(payload, at):
-                            return not (await learning.providers.blackout(at)).blocked
+                            return await learning.allowed(payload, at)
 
                         worker.allowed = allowed
                     await learning.start()

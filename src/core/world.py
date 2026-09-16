@@ -24,17 +24,30 @@ class DayContext:
     daypart: str
     available_objects: tuple[str, ...]
     blackout: Blackout
+    activity_id: str | None = None
+    activity_kind: str | None = None
+    activity_label: str | None = None
+    subject: str | None = None
+    activity_until: datetime | None = None
+    busy: bool = False
+    study_allowed: bool = False
+    chat_allowed: bool = True
 
     def __post_init__(self):
         for key in ("at", "bedtime", "wake_time"):
             object.__setattr__(self, key, require_aware(getattr(self, key)))
         if finite(self.sleep_debt) < 0:
             raise ValueError("Sleep debt must be nonnegative")
+        if self.activity_until is not None:
+            object.__setattr__(
+                self, "activity_until", require_aware(self.activity_until)
+            )
 
 
 class World:
     def __init__(self, life: dict, schedule: Schedule):
         self._life, self.schedule = life, schedule
+        self.location_provider = None
         self.locations = MappingProxyType(
             {name: tuple(data["objects"]) for name, data in life["locations"].items()}
         )
@@ -72,6 +85,8 @@ class World:
     def where(self, at: datetime, *, sleep: SleepWindow) -> str:
         """Section 26.1, with a reproducible draw for the local calendar date."""
         at = require_aware(at)
+        if self.location_provider is not None:
+            return self.location_provider(at)
         rng = Random(at.date().isoformat())
         if sleep.contains(at):
             return "дом"

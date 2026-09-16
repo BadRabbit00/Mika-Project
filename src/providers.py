@@ -2,8 +2,8 @@
 
 import asyncio
 import json
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 from pathlib import Path
 from random import Random
 from typing import Protocol
@@ -17,10 +17,13 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from ruamel.yaml import YAML
 
+from src.core.itinerary import Itinerary
+from src.core.life_engine import LifeEngine
 from src.core.mood import BaselineContext, MoodModel, MoodService
 from src.core.pad import Mood
-from src.core.schedule import SleepWindow
+from src.core.schedule import Blackout, SleepWindow
 from src.core.sleep_planner import ScheduledSleepProvider as ScheduledSleepProvider
 from src.core.time_utils import from_utc_iso, now, require_aware, to_utc_iso
 from src.core.weather import WeatherClient
@@ -128,6 +131,48 @@ class DatabaseMoodProvider:
             initial_at=inputs.initial_mood_at,
         )
         self.lock = asyncio.Lock()
+
+    async def apply_life_effect(self, at):
+        at = require_aware(at)
+        async with self.lock:
+            await asyncio.to_thread(self._current, at)
+            context = await asyncio.to_thread(self.history, at)
+
+            def save(c):
+                row = c.execute(
+                    "SELECT e.* FROM life_effects e JOIN life_events v ON "
+                    "v.id=e.event_id "
+                    "WHERE e.kind='mood' AND e.applied_at IS NULL AND v.at<=? ORDER "
+                    "BY v.at,e.id LIMIT 1",
+                    (at,),
+                ).fetchone()
+                latest = c.execute(
+                    "SELECT at FROM mood ORDER BY at DESC LIMIT 1"
+                ).fetchone()
+                if row is None or latest and from_utc_iso(latest[0]) >= at:
+                    return
+                before = self.service.model.decay(
+                    self.service._latest(c), at, context
+                ).mood
+                payload = json.loads(row["payload"])
+                after = self.service.record_event(
+                    payload["event"], at=at, context=context, connection=c
+                ).mood
+                payload.update(
+                    before={
+                        axis: round(getattr(before, axis), 4)
+                        for axis in ("P", "A", "D")
+                    },
+                    after={axis: getattr(after, axis) for axis in ("P", "A", "D")},
+                    before_label=self.model.mood_block(before),
+                    after_label=self.model.mood_block(after),
+                )
+                c.execute(
+                    "UPDATE life_effects SET payload=?,applied_at=? WHERE id=?",
+                    (json.dumps(payload, ensure_ascii=False), at, row["id"]),
+                )
+
+            await asyncio.to_thread(self.database.run_transaction, save)
 
     def history(self, at, *, sleep_debt=None):
         debt = self.sleep.current(at)[2] if sleep_debt is None else sleep_debt
@@ -237,18 +282,37 @@ class WorldObservation:
 
 
 class DerivedWorldProvider:
-    def __init__(self, world, sleep, overrides, weather):
+    def __init__(self, world, sleep, overrides, weather, itinerary=None, life=None):
         self.world, self.sleep, self.overrides, self.weather = (
             world,
             sleep,
             overrides,
             weather,
         )
+        self.itinerary = itinerary
+        self.life = life
+        if itinerary is not None:
+            self.world.location_provider = self._location
+
+    def _location(self, at):
+        inputs = self.overrides()
+        if inputs.active(at) and inputs.location is not None:
+            return inputs.location
+        return self.itinerary.current(at).location
 
     def _day(self, at):
         inputs = self.overrides()
         active = inputs.active(at)
         sleep, reason, debt = self.sleep.current(at)
+        activity = None
+        if self.itinerary is not None:
+            self.itinerary.ensure(
+                at,
+                self.sleep.plan(at.date(), at=at),
+                self.sleep.plan(at.date() + timedelta(days=1), at=at),
+                needs=self.life.needs(at) if self.life is not None else None,
+            )
+            activity = self.itinerary.current(at)
         day = self.world.day_context(
             at,
             sleep=sleep,
@@ -260,6 +324,21 @@ class DerivedWorldProvider:
             if active and inputs.road_roll is not None
             else Random("road:" + at.date().isoformat()).random(),
         )
+        if activity is not None:
+            sleeping = sleep.contains(at) or activity.kind == "sleep"
+            overridden = day.location != activity.location
+            day = replace(
+                day,
+                activity_id=activity.id,
+                activity_kind=activity.kind if not overridden else "override",
+                activity_label=activity.label if not overridden else None,
+                subject=activity.subject if not overridden else None,
+                activity_until=activity.ends_at,
+                busy=activity.busy,
+                study_allowed=activity.can_study and not sleeping and not overridden,
+                chat_allowed=not sleeping,
+                blackout=Blackout(sleeping, "sleep" if sleeping else None),
+            )
         return WorldObservation(day, reason)
 
     async def current(self, at):
@@ -281,6 +360,7 @@ class RuntimeProviders:
     def __init__(
         self, database, config_dir, inputs_path=None, settings=None, *, clock=now
     ):
+        self.config_dir = Path(config_dir)
         started_at = require_aware(clock())
         requested = LiveInputs.read(inputs_path, at=started_at)
 
@@ -340,13 +420,32 @@ class RuntimeProviders:
         )
         self.model = MoodModel.from_config(config_dir, settings=settings)
         world = World.from_config(config_dir)
+        self.life_config = YAML(typ="safe").load(
+            (Path(config_dir) / "life_simulation.yaml").read_text(encoding="utf-8")
+        )
+        self.itinerary = Itinerary(
+            database,
+            world.schedule,
+            self.life_config,
+            transitions=YAML(typ="safe").load(
+                self.config_dir / "activity_transitions.yaml"
+            ),
+        )
+        self.life = LifeEngine(database, self.life_config, config_dir)
+        self.life.bootstrap(started_at)
+        world.locations = dict(world.locations) | {
+            name: tuple(value["objects"])
+            for name, value in self.life_config["itinerary"]["extra_locations"].items()
+        }
         self.sleep = ScheduledSleepProvider(
             database, world.schedule, initial, overrides=overrides
         )
         self.mood = DatabaseMoodProvider(database, self.model, self.sleep, initial)
         self.sleep.mood_at = self.mood.planning_p
         self.weather = WeatherClient.from_config(config_dir, settings=settings)
-        self.world = DerivedWorldProvider(world, self.sleep, overrides, self.weather)
+        self.world = DerivedWorldProvider(
+            world, self.sleep, overrides, self.weather, self.itinerary, self.life
+        )
 
     async def context(self, at):
         observation = await self.world.current(at)

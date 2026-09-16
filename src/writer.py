@@ -157,6 +157,8 @@ class Writer:
             )
             return WriteResult(post_id, "blocked", None, 0, (day.blackout.reason,))
         offtop = kind in OFFTOP_KINDS
+        if day.activity_id is not None and not offtop and not day.study_allowed:
+            return WriteResult(post_id, "blocked", None, 0, ("home_study_required",))
         profile = "write_offtop" if offtop else "write_tech"
         posts, terms = await asyncio.to_thread(self._history, day.at)
         feedback = {}
@@ -205,6 +207,10 @@ class Writer:
                             mode=request.mode,
                             min_chars=request.min_chars,
                             max_chars=request.max_chars,
+                            activity_evidence=blocks.get("recorded_event"),
+                            activity_config=str(
+                                self.context.config_dir / "activity_transitions.yaml"
+                            ),
                         ),
                         recent_posts=posts,
                     )
@@ -244,14 +250,15 @@ class Writer:
                 )
             if validation.accepted:
                 return WriteResult(post_id, "draft", validation.text, attempt)
+            feedback = {"validation_feedback": {"reasons": validation.reasons}}
             if validation.duplicate_of is not None:
                 similar = next(
                     post for post in posts if post.id == validation.duplicate_of
                 )
-                feedback = {
-                    "validation_feedback": {
+                feedback["validation_feedback"].update(
+                    {
                         "duplicate_of": similar.id,
                         "similar_text": similar.text,
                     }
-                }
+                )
         return WriteResult(post_id, "killed", None, max_attempts, validation.reasons)

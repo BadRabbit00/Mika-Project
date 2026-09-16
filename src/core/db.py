@@ -336,6 +336,138 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "CREATE TABLE telegram_delivery_limits ("
         f"scope TEXT PRIMARY KEY NOT NULL, {_utc('next_at')} NOT NULL)",
     ),
+    (
+        f"""CREATE TABLE life_days (
+            day TEXT PRIMARY KEY NOT NULL CHECK (is_calendar_date(day)),
+            seed TEXT NOT NULL,
+            config_json TEXT NOT NULL CHECK (json_valid(config_json)),
+            {_utc("created_at")} NOT NULL
+        )""",
+        f"""CREATE TABLE life_activities (
+            id TEXT PRIMARY KEY NOT NULL, day TEXT NOT NULL REFERENCES life_days(day),
+            {_utc("starts_at")} NOT NULL, {_utc("ends_at")} NOT NULL,
+            location TEXT NOT NULL, kind TEXT NOT NULL, label TEXT NOT NULL,
+            subject TEXT, origin TEXT, destination TEXT, task_id TEXT,
+            can_publish INTEGER NOT NULL CHECK (can_publish IN (0,1)),
+            can_chat INTEGER NOT NULL CHECK (can_chat IN (0,1)),
+            can_study INTEGER NOT NULL CHECK (can_study IN (0,1)),
+            state TEXT NOT NULL DEFAULT 'active'
+                CHECK (state IN ('active','cancelled')),
+            revision INTEGER NOT NULL DEFAULT 0 CHECK (revision>=0),
+            CHECK (julianday(ends_at)>julianday(starts_at)),
+            CHECK (can_study=0 OR (location='дом' AND kind!='sleep')),
+            CHECK (kind!='sleep' OR (can_chat=0 AND can_publish=0 AND can_study=0))
+        )""",
+        "CREATE INDEX life_activities_time ON life_activities(starts_at,ends_at) "
+        "WHERE state='active'",
+        *tuple(
+            f"""CREATE TRIGGER life_activities_overlap_{operation.lower()}
+            BEFORE {operation} ON life_activities
+            WHEN NEW.state='active' AND EXISTS (
+                SELECT 1 FROM life_activities a WHERE a.state='active' AND a.id!=NEW.id
+                AND julianday(a.starts_at)<julianday(NEW.ends_at)
+                AND julianday(a.ends_at)>julianday(NEW.starts_at)
+            ) BEGIN SELECT RAISE(ABORT,'Overlapping life activities'); END"""
+            for operation in ("INSERT", "UPDATE")
+        ),
+        f"""CREATE TABLE life_tasks (
+            id TEXT PRIMARY KEY NOT NULL, cause_id TEXT, kind TEXT NOT NULL,
+            reason TEXT NOT NULL, priority INTEGER NOT NULL,
+            places TEXT NOT NULL CHECK (json_valid(places)),
+            {_utc("earliest_at")} NOT NULL, {_utc("deadline")},
+            dependencies TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(dependencies)),
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN
+                    ('pending','waiting','running','completed','cancelled')),
+            payload TEXT NOT NULL CHECK (json_valid(payload)), {_utc("completed_at")}
+        )""",
+        f"""CREATE TABLE life_events (
+            id TEXT PRIMARY KEY NOT NULL, entity TEXT NOT NULL UNIQUE,
+            activity_id TEXT REFERENCES life_activities(id),
+            task_id TEXT REFERENCES life_tasks(id),
+            cause_id TEXT REFERENCES life_events(id),
+            {_utc("at")} NOT NULL, kind TEXT NOT NULL,
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            journal_id INTEGER REFERENCES life_journal(id),
+            post_id TEXT REFERENCES posts(id), {_utc("valid_until")},
+            publication_status TEXT NOT NULL DEFAULT 'pending'
+                CHECK (publication_status IN
+                    ('pending','generating','draft','queued','published',
+                     'expired','killed','silent')),
+            attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts>=0),
+            {_utc("retry_at")}, error TEXT
+        )""",
+        "CREATE INDEX life_events_pending ON life_events(at) "
+        "WHERE publication_status='pending'",
+        f"""CREATE TABLE life_effects (
+            id TEXT PRIMARY KEY NOT NULL,
+            event_id TEXT NOT NULL REFERENCES life_events(id),
+            kind TEXT NOT NULL, payload TEXT NOT NULL CHECK (json_valid(payload)),
+            {_utc("applied_at")}
+        )""",
+        f"""CREATE TABLE money_ledger (
+            id TEXT PRIMARY KEY NOT NULL,
+            event_id TEXT NOT NULL REFERENCES life_events(id),
+            account TEXT NOT NULL,
+            delta INTEGER NOT NULL CHECK (typeof(delta)='integer'),
+            balance_after INTEGER NOT NULL CHECK (typeof(balance_after)='integer'),
+            {_utc("at")} NOT NULL
+        )""",
+        f"""CREATE TABLE chat_inbox (
+            id TEXT PRIMARY KEY NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(id),
+            channel TEXT NOT NULL CHECK (channel IN ('topic','dm')),
+            question TEXT NOT NULL,
+            {_utc("received_at")} NOT NULL, {_utc("seen_at")}, {_utc("next_try_at")},
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN
+                ('pending','generating','ready','delivered','rejected','cancelled')),
+            deferred_reason TEXT,
+            attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts>=0),
+            error TEXT
+        )""",
+        "CREATE INDEX chat_inbox_pending ON chat_inbox(channel,received_at) "
+        "WHERE status IN ('pending','generating','ready')",
+        f"""CREATE TABLE chat_replies (
+            trace_id TEXT PRIMARY KEY NOT NULL,
+            session_id TEXT NOT NULL REFERENCES sessions(id),
+            user_id INTEGER NOT NULL REFERENCES session_turns(id),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            {_utc("created_at")} NOT NULL, {_utc("sent_at")},
+            outbox_id INTEGER REFERENCES outbox(id),
+            activity_id TEXT REFERENCES life_activities(id), {_utc("valid_until")}
+        )""",
+        "CREATE INDEX outbox_confirmed_chat_trace ON outbox("
+        "json_extract(payload,'$.trace_id'),channel) "
+        "WHERE sent_at IS NOT NULL AND tg_message_id IS NOT NULL",
+    ),
+    (
+        f"""CREATE TABLE life_breaks (
+            id TEXT PRIMARY KEY NOT NULL,
+            source_activity_id TEXT NOT NULL REFERENCES life_activities(id),
+            return_activity_id TEXT REFERENCES life_activities(id),
+            kind TEXT NOT NULL CHECK (kind IN ('tea','food','rest','walk')),
+            reason TEXT NOT NULL, {_utc("starts_at")} NOT NULL,
+            {_utc("ends_at")} NOT NULL,
+            status TEXT NOT NULL DEFAULT 'planned'
+                CHECK (status IN ('planned','resumed','cancelled')),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            CHECK (julianday(ends_at)>julianday(starts_at))
+        )""",
+        f"""CREATE TABLE activity_transitions (
+            id TEXT PRIMARY KEY NOT NULL,
+            {_utc("at")} NOT NULL, kind TEXT NOT NULL,
+            from_activity_id TEXT REFERENCES life_activities(id),
+            to_activity_id TEXT REFERENCES life_activities(id),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            intent_id TEXT REFERENCES life_events(id),
+            post_id TEXT REFERENCES posts(id), {_utc("delivered_at")},
+            {_utc("retry_at")}
+        )""",
+        "CREATE INDEX activity_transitions_pending ON activity_transitions(at) "
+        "WHERE delivered_at IS NULL",
+        "CREATE INDEX activity_transitions_post ON activity_transitions(post_id) "
+        "WHERE post_id IS NOT NULL",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 
@@ -517,11 +649,15 @@ class Database:
             execute("BEGIN IMMEDIATE")
             log.debug("db_transaction_started")
             try:
+                from src.core.admission import check_study
+
+                check_study(connection)
                 yield connection
                 if not connection.in_transaction:
                     raise RuntimeError(
                         "The operation ended its transaction prematurely"
                     )
+                check_study(connection)
                 execute("COMMIT")
             except BaseException:
                 if connection.in_transaction:
@@ -552,6 +688,14 @@ class Database:
                     return operation(connection)
 
             return self._retry(attempt)
+
+    def run_audit_transaction[T](
+        self, operation: Callable[[sqlite3.Connection], T]
+    ) -> T:
+        from src.core.admission import audit_scope
+
+        with audit_scope():
+            return self.run_transaction(operation)
 
     def initialize(self) -> int:
         """Create or upgrade the database to the current schema version."""

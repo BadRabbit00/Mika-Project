@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
 
                 if args.layout is None:
                     raise ValueError("Live run requires --layout")
-                Catalogue.load(args.library)
+                Catalogue.load(args.library, allow_empty=True)
                 if args.world_state is not None:
                     LiveInputs.read(args.world_state)
                 registry = SettingsRegistry.from_file(args.settings)

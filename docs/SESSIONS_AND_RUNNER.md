@@ -12,6 +12,15 @@ request is checked again. After six idle hours, closure is recorded before model
 work; failed summarization/fact extraction can finish after restart. Personal
 facts require direct user evidence and pass the approved conservative filters.
 
+The live runtime persists incoming messages before processing. Unread night
+messages keep a session from expiring; after waking, the context receives the
+actual received/seen times, sleep delay, activity, class subject and life state.
+An expired session can reopen for a new message when chat remains enabled.
+Explicit `/chat off` disables that behavior, including after automatic expiry.
+Validated replies are staged separately and enter dialogue only after their
+outbox receipt commits. Internal errors and unconfirmed output stay out of
+history, compression and extracted facts.
+
 Private unknown questions create dm threads. Public context and scheduler loaders
 select public threads only. Personal-memory deletion is owner-confirmed and expires
 after sixty seconds; listings are delivered privately.
@@ -34,6 +43,12 @@ windows are aware datetimes. Session jitter is stable for a calendar day and slo
 settings changes affect subsequent scheduling. Blackout is checked at admission,
 again before queued generation, and before public delivery. Private threads never
 influence public post selection.
+
+Autonomous life posts use their own busy/rest cadence and remain possible while
+awake, independently of study windows. Learning requires a saved home-study
+activity before queueing, execution and each result transaction commit. Leaving
+home causes a normal deferral. Stale life/chat drafts are cancelled before send;
+their already-recorded events and effects are retained.
 
 The live composition, autonomous world, and temporary overrides are described in
 [LIVE_RUNTIME.md](LIVE_RUNTIME.md). The one-command dry run uses isolated fixtures

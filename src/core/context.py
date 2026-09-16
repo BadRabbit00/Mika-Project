@@ -90,7 +90,14 @@ _DAY_FIELDS = {
 register_value_blocks(
     _DAY_FIELDS
     | set().union(*WRITE_INPUTS.values())
-    | {"mood", "recent_situations", "emoji_max", "output_envelope", "day_context"}
+    | {
+        "mood",
+        "recent_situations",
+        "emoji_max",
+        "output_envelope",
+        "day_context",
+        "recorded_event",
+    }
     | {
         name
         for profile in PROFILES.values()
@@ -279,11 +286,12 @@ class ContextBuilder:
         if not isinstance(day, DayContext) or not isinstance(mood, Mood):
             raise TypeError("Writing requires validated day context and immutable mood")
         optional = (
-            {"validation_feedback"}
+            {"validation_feedback", "recorded_event"}
             if offtop
             else {"study_state", "thesis", "validation_feedback", "topic"}
         )
-        required = WRITE_INPUTS[kind]
+        recorded = offtop and "recorded_event" in payload
+        required = {"recorded_event"} if recorded else WRITE_INPUTS[kind]
         if not required <= payload.keys() or payload.keys() - required - optional:
             raise ValueError(f"Unexpected writing blocks for {kind}")
         if self.mood_model is None:
@@ -336,11 +344,43 @@ class ContextBuilder:
         for name in ("issue", "correct", "wrong_post_gist"):
             if name in values:
                 values[name] = json.dumps(values[name], ensure_ascii=False)
-        raw = (self.prompt_dir / f"write_{kind}.md").read_text(encoding="utf-8")
+        mandatory = recorded and payload["recorded_event"].get("mandatory", False)
+        filename = (
+            "write_transition.md"
+            if mandatory
+            else "write_life.md"
+            if recorded
+            else f"write_{kind}.md"
+        )
+        raw = (self.prompt_dir / filename).read_text(encoding="utf-8")
         temperature = re.search(r"\btemp\s+([0-9.]+)", raw)
-        output = re.search(r"регистр\s+<(\w+)>\s*\|\s*(\d+)[–-](\d+)", raw)
+        output = re.search(r"(?:регистр|register)\s+<(\w+)>\s*\|\s*(\d+)[–-](\d+)", raw)
         if temperature is None or output is None:
             raise ValueError("Missing writing temperature, mode, or length metadata")
+        if recorded:
+            cfg = YAML(typ="safe").load(self.config_dir / "life_simulation.yaml")[
+                "publishing"
+            ]
+            key = (
+                "evening_chars"
+                if "retrospective" in payload["recorded_event"]
+                else "busy_chars"
+                if day.busy
+                else "rest_chars"
+            )
+            limits = (
+                YAML(typ="safe").load(self.config_dir / "activity_transitions.yaml")[
+                    "transition_chars"
+                ]
+                if mandatory
+                else cfg[key]
+            )
+            raw = (
+                raw[: output.start(2)]
+                + f"{limits[0]}–{limits[1]}"
+                + raw[output.end(3) :]
+            )
+            output = re.search(r"register\s+<(\w+)>\s*\|\s*(\d+)[–-](\d+)", raw)
         envelope = _COMMENTS.sub(
             "", (self.prompt_dir / "output_envelope.md").read_text()
         ).strip()
@@ -384,13 +424,31 @@ class ContextBuilder:
             key: value
             for key, value in asdict(day).items()
             if key
-            in {"at", "bedtime", "wake_time", "sleep_debt", "location", "daypart"}
+            in {
+                "at",
+                "bedtime",
+                "wake_time",
+                "sleep_debt",
+                "location",
+                "daypart",
+                "activity_kind",
+                "activity_label",
+                "subject",
+                "activity_until",
+                "busy",
+            }
         }
         supplemental["day_context"] = {
             key: value.isoformat() if hasattr(value, "isoformat") else value
             for key, value in supplemental["day_context"].items()
         }
-        supplemental.update({key: payload[key] for key in optional if key in payload})
+        supplemental.update(
+            {
+                key: payload[key]
+                for key in optional
+                if key in payload and key not in fields
+            }
+        )
         user = (
             render(template[boundary:]).strip()
             + "\n\n"
