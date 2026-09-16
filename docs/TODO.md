@@ -1,7 +1,11 @@
 # Architecture questions and deferred contracts
 
-Find open items with `rg -n 'TODO\(' docs src tests CLAUDE.md`.
-These are specification gaps, not defaults chosen by the implementation.
+Find markers with `rg -n -i '\bTODO\b' src tests scripts grammars docs`.
+This registry covers specification gaps, unfinished integration, runtime guards,
+and maintained test contracts. An existing marker does not necessarily mean that
+its entire subsystem is unimplemented; each entry describes the remaining work.
+The [code marker index](#code-marker-index) maps every code ID to its locations,
+including structured log fields written as `todo="<id>"`.
 
 ## Storage and delivery
 
@@ -10,13 +14,17 @@ These are specification gaps, not defaults chosen by the implementation.
   dies before saving its message ID, SQLite cannot determine whether it was sent.
   Step 8 now commits a durable claim before sending and never automatically
   resends an uncertain claim. A verified message ID can reconcile the row.
-  TODO(OUTBOX-DELIVERY): automated reconciliation remains undefined; a crash
-  before sending can also leave an uncertain claim. This favors duplicate
+  Automated reconciliation remains undefined; a crash before sending can also
+  leave an uncertain claim. This favors duplicate
   prevention over automatic recovery and does not claim exactly-once delivery.
-- TODO(LEARNING-STATE), sections 3 and 13, step 12: the learning-state table is
-  required in prose but has no name, columns, or transition identity specified.
-  Do not substitute life_state for learning state. Define its schema and event
-  identity before implementing the state machine.
+- TODO(LEARNING-STATE), sections 3 and 13: the pure state machine and
+  SQLiteLearningStore are implemented. The architecture omits the durable schema;
+  [learning-storage.sql](learning-storage.sql) is the explicit proposal exercised
+  by tests and dry runs. The store requires these tables to be installed already.
+  The remaining work is the production migration decision and wiring
+  CommandService._state() to this store: /state still returns the marker instead
+  of the learner snapshot. Do not substitute life_state for learning state.
+  See also TODO(LEARNING-STORAGE).
 - Embedding storage in schema version 3 uses the self-describing NumPy NPY format,
   float64 values, and an explicit model identity. Dimensions come from the server;
   cosine similarity normalizes vectors at comparison time. Pickle is disabled.
@@ -27,21 +35,28 @@ These are specification gaps, not defaults chosen by the implementation.
   enforces the explicit UTC rule. A date-only publication value cannot be turned
   into an instant without an agreed timezone/time-of-day policy; reject it or
   leave published_at NULL until that policy is defined. Do not invent midnight.
-- TODO(TRACE-IDENTITY), sections 19.2 and 19.3, step 2: runs.trace_id is a primary
-  key, but one trace is supposed to span multiple model calls. The schema retains
-  the documented key. Decide on a separate run identity before logging multiple
-  model calls in a trace.
+- TODO(TRACE-IDENTITY), sections 19.2 and 19.3: runs.trace_id remains the legacy
+  primary key although a trace spans multiple model calls. Calls already have
+  distinct IDs in JSONL. Writer rows use unique attempt IDs in the legacy column
+  and retain the root trace in params_json. The proposed call_id/trace_id split
+  in [interface-storage.sql](interface-storage.sql) is not an automatic migration.
+  Native SQL indexing of the shared trace awaits TODO(INTERFACE-TRACE-SCHEMA).
 - TODO(CORRECTION-ID), sections 2 and 4.4, step 9: nodes.corrected_by is TEXT,
   while exams.id is INTEGER. Define the intended identity format before adding
   a foreign key; the documented column type is preserved.
-- TODO(INVALIDATION-LINEAGE), section 27, steps 7 and 9: excluded and suspect
-  flags are included. The schema has no origin-post linkage for threads or nodes,
-  and no schema for the curator review queue. Define those relationships before
-  implementing invalidation propagation.
-- TODO(UNSPECIFIED-STORES), sections 5, 20.5, 22.4, 31.4 and 36: persistence for
-  off-topic repeat prevention, diary comments, correction review, cross-subsystem
-  events, and settings overrides is described without table schemas. Define
-  these at their respective delivery stages; do not invent additional tables.
+- TODO(INVALIDATION-LINEAGE), section 27: Defects excludes invalidated posts from
+  narrative. SQLiteLineageStore also marks explicitly linked threads stale and
+  nodes suspect when the proposed post_threads/post_nodes tables are installed
+  and the adapter is supplied. Without it, commands and logs report this marker.
+  The production migration and population of those links remain to be defined;
+  the curator review queue still has no storage contract. See
+  TODO(INTERFACE-LINEAGE) and [interface-storage.sql](interface-storage.sql).
+- TODO(UNSPECIFIED-STORES), sections 5, 20.5, 22.4, 31.4 and 36: the initial
+  document did not define every persistence contract. Off-topic repeat history
+  now uses canonical entities in life_journal; explicit proposals cover settings
+  overrides, post lineage, and learner actions. Diary comments and curator review
+  still lack contracts, and no general cross-subsystem event schema is supplied.
+  The proposed schemas remain separate from automatic production migrations.
 - TODO(MODEL-CONFIG), section 18.1, step 2: config/models.yaml is referenced but
   not supplied. Existing settings and prompts also contain model settings.
   Establish the source of truth for model deployment settings. The implemented
@@ -144,8 +159,9 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(SLEEP-HISTORY): no schema or life_state key contract specifies planned
   and actual sleep intervals, wake reasons, or once-per-night debt application.
   Sleep calculators accept explicit facts; mood snapshots persist the supplied
-  debt. Define durable sleep-history identities before the step 12 scheduler
-  takes ownership of these facts across restarts. The simulation exports them.
+  debt. The implemented scheduler consumes a caller-supplied blackout provider;
+  it does not persist sleep plans or once-per-night debt application. Durable
+  sleep-history identities remain undefined. The simulation exports these facts.
 - TODO(MOOD-DISABLED): the settings describe neutral output when mood is disabled,
   but do not define its numeric state or treatment of queued resolutions. Current
   supplied defaults enable mood. Disabling mutation fails explicitly until those
@@ -247,17 +263,21 @@ These are specification gaps, not defaults chosen by the implementation.
   requested commands in Machine and DM, so owner commands work there in addition
   to Control, while TOPIC_ROLES still prevents reading Machine as model context.
 - TODO(SETTINGS-CONSUMERS): the registry and installed override adapter expose
-  current values; the log mirror reads them on each batch. Future orchestration
-  must supply snapshots to existing mood/study/writing constructors. A successful
-  override write is not a claim that an already-created model instance changed.
-- TODO(JOB-RECOVERY): the background job queue is process-local. Outbox intents
-  survive restarts, but unfinished nonpublication jobs need explicit replay by
-  trace until durable job identity/storage is defined with the scheduler.
+  current values; the log mirror reads them on each batch. Existing mood/study/
+  writing constructors and runtime factories still need a defined refresh path
+  for changed settings. A successful override write does not update an already
+  created model instance automatically.
+- TODO(JOB-RECOVERY): JobQueue is process-local. Publication intents persist in
+  outbox, and learner events/actions persist through SQLiteLearningStore when
+  its proposed schema is installed. Ordinary Telegram command, chat, and library
+  jobs are not automatically journaled there. Recovery of those jobs still needs
+  durable identities and replay rules; uncertain learner effects are tracked
+  separately under TODO(ACTION-RESUME).
 - TODO(OPS-LOG-RECOVERY): full JSONL is authoritative. Event cards are queued
   durably after the mirror drains them; an in-memory mirror event can be lost on
   a crash before that point. Automatic replay checkpoints are not specified.
 
-## Invariants for later delivery stages
+## Dialogue and orchestration contracts
 
 - TODO(CHAT-SUMMARY-PROMPT): section 33 requires dialogue-head compression, but
   no dedicated summary prompt is supplied. `gist.md` describes a single public
@@ -295,10 +315,32 @@ These are specification gaps, not defaults chosen by the implementation.
   attached to the Telegram runtime through its explicit factory interfaces.
 - TODO(POST-EXAM-INPUTS): LearningPipeline binds grading, literal allocation,
   remediation, and topic switching. Grading and selection require an explicit
-  pass rule and a supplied topic/library catalogue. library/topics.yaml is absent.
+  pass rule and a supplied topic/library catalogue. See
+  TODO(CURATOR-GRADING-POLICY) and TODO(TOPIC-CATALOGUE).
+- TODO(TOPIC-CATALOGUE): LearningPipeline.select_articles() requires an explicit
+  topics_map and a supplied Source catalogue. library/topics.yaml is absent.
+  The existing curator validates selections against the supplied library index
+  and literal article allocation; it does not invent the topic map or ingest a
+  production catalogue automatically. Supply these inputs and their loading
+  contract before enabling selection in live composition.
+- TODO(ACTION-HANDLER): ActionRunner fails and records an action when the
+  injected handler mapping has no entry for its kind. LearningPipeline already
+  supplies handlers for every action emitted by the current state machine.
+  This marker guards incomplete custom composition or persisted actions whose
+  handler was removed; keep handler registration and any future action migration
+  policy consistent. It does not identify an unimplemented current transition.
 - TODO(ACTION-RESUME): interrupted running effects are retained as uncertain.
   Pending timers and receipts recover automatically, but replay of an unknown
   model outcome needs a verified receipt or an explicit operator decision.
+
+## Maintained validation contracts
+
+- TODO(STAGE-CONTRACTS): the marker in tests/test_stage_contracts.py labels the
+  requirement that implemented stages have their named behavioral tests.
+  All currently listed contracts have those tests; steps 11 and 12 also have
+  dedicated session, scheduler, and integration suites. Keep the stage gate and
+  behavioral coverage current as modules evolve. This is an enforced regression
+  requirement, not an unimplemented delivery stage.
 
 The step 1 suite tests time, UTC persistence, storage validation, the closed
 relation vocabulary, FTS synchronization, transaction atomicity, retry limits,
@@ -324,3 +366,48 @@ Steps 11 and 12 test channel isolation, exact context compression, recoverable
 expiry, direct-fact validation, pure transitions, action receipts, retry timing,
 activity gates, and the complete offline article-to-exam scenario. All ten tests
 listed in section 38.2 and the section 18.2 boundaries run in the full suite.
+
+## Code marker index
+
+Reconciled against the working tree on 2026-09-16: **33 distinct IDs in 41
+locations**. Scope: tracked source, tests, scripts, grammars, SQL proposals,
+Nix files, and TOML files. Both `TODO(<id>)` annotations/runtime messages and
+`todo="<id>"` log fields are included. IDs are unique below; repeated uses share
+one description above. Other entries in this registry record architecture or
+integration questions that do not yet have an inline marker.
+
+| Marker ID | Locations |
+| --- | --- |
+| ACTION-HANDLER | [src/runner.py:279](../src/runner.py#L279) |
+| CHAT-MOOD-METRIC | [src/chat.py:427](../src/chat.py#L427) |
+| CHAT-SUMMARY-PROMPT | [src/core/chat_memory.py:21](../src/core/chat_memory.py#L21) |
+| CLAIMS-GRAMMAR | [grammars/claims.gbnf:5](../grammars/claims.gbnf#L5) |
+| CURATOR-GRADING-POLICY | [src/pipeline.py:221](../src/pipeline.py#L221) |
+| DAILY-ISOLATION | [src/core/context.py:268](../src/core/context.py#L268) |
+| DECAY-ASSERTION | [tests/test_mood_and_schedule.py:61](../tests/test_mood_and_schedule.py#L61) |
+| FACT-DELETION | [src/chat_gateway.py:65](../src/chat_gateway.py#L65) |
+| INSIGHT-PROMPT | [src/core/context.py:272](../src/core/context.py#L272) |
+| INVALIDATION-LINEAGE | [docs/interface-storage.sql:3](interface-storage.sql#L3), [src/commands.py:413](../src/commands.py#L413), [src/defects.py:70](../src/defects.py#L70) |
+| LEARNING-STATE | [src/commands.py:126](../src/commands.py#L126), [src/runner.py:74](../src/runner.py#L74) |
+| LIVE-RUNNER | [src/cli.py:158](../src/cli.py#L158) |
+| MODEL-CONFIG | [src/core/llm_vendor.py:70](../src/core/llm_vendor.py#L70) |
+| MOOD-DISABLED | [src/core/mood.py:239](../src/core/mood.py#L239) |
+| OFFTOP-BINDINGS | [src/offtop.py:247](../src/offtop.py#L247) |
+| OFFTOP-ENTITY | [src/offtop.py:61](../src/offtop.py#L61), [src/offtop.py:100](../src/offtop.py#L100) |
+| OFFTOP-PERSONA | [src/core/context.py:306](../src/core/context.py#L306) |
+| OUTBOX-DELIVERY | [src/core/db.py:466](../src/core/db.py#L466) |
+| POST-REGENERATION | [src/commands.py:362](../src/commands.py#L362) |
+| PROMPT-ECHO | [src/validator.py:206](../src/validator.py#L206) |
+| QUIZ-CONFIDENCE | [src/selfquiz.py:82](../src/selfquiz.py#L82) |
+| QUIZ-PERSONA | [src/core/context.py:203](../src/core/context.py#L203) |
+| RETRIEVAL-POLICY | [src/retrieve.py:20](../src/retrieve.py#L20) |
+| RHYTHM-CONFIG | [src/scheduler.py:88](../src/scheduler.py#L88) |
+| RUNTIME-CONTEXT | [src/chat_gateway.py:74](../src/chat_gateway.py#L74), [src/commands.py:62](../src/commands.py#L62) |
+| SETTINGS-SCHEMA | [docs/interface-storage.sql:2](interface-storage.sql#L2), [src/core/settings.py:32](../src/core/settings.py#L32), [src/core/settings.py:137](../src/core/settings.py#L137) |
+| SOURCE-DATE | [src/ingest.py:60](../src/ingest.py#L60) |
+| STAGE-CONTRACTS | [tests/test_stage_contracts.py:8](../tests/test_stage_contracts.py#L8) |
+| TOPIC-CATALOGUE | [src/pipeline.py:276](../src/pipeline.py#L276) |
+| TRACE-IDENTITY | [docs/interface-storage.sql:2](interface-storage.sql#L2), [src/core/db.py:96](../src/core/db.py#L96) |
+| TRIGGER-POLICY | [src/core/mood.py:459](../src/core/mood.py#L459) |
+| WAKE-TIMES | [src/core/schedule.py:209](../src/core/schedule.py#L209) |
+| WEATHER-MONTHS | [src/core/weather.py:104](../src/core/weather.py#L104) |
