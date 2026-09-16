@@ -2066,7 +2066,8 @@ Celery, Postgres, Docker. Каждое добавит инфраструктур
 ```sh
 nix develop .#models --command llama-server \
   --model /path/to/gemma-4-12b-it-uncensored-Q4_K_M.gguf \
-  --host 127.0.0.1 --port 8080 --ctx-size 32768 --parallel 1 --reasoning off
+  --host 127.0.0.1 --port 8080 --ctx-size 32768 --parallel 1 \
+  --reasoning on --reasoning-budget 8192 --no-context-shift
 nix build .#embedding-model --out-link result-embedding-model
 nix develop .#models --command llama-server \
   --model "$PWD/result-embedding-model" --host 127.0.0.1 --port 8081 \
@@ -2076,6 +2077,8 @@ nix develop .#models --command llama-server \
 Nix is required for both services. Grammars are sent per request; llama-server
 has no `--grammar-dir` option. See [the startup guide](mika-startup/ЗАПУСК.md)
 for the complete launch sequence and local input checks.
+Bounded Gemma 4 reasoning is enabled per request, separated from the final answer,
+and constrained by the actual slot context. See [reasoning controls](docs/REASONING.md).
 
 Оба под systemd с `DynamicUser`, `ProtectHome`, `PrivateTmp`.
 Контекст 32K, а не 256K: больше нам не нужно ни в одном профиле,

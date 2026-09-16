@@ -1,6 +1,7 @@
 """Async llama-server transport with optional durable call receipts."""
 
 import asyncio
+import math
 import time
 from collections import OrderedDict
 from uuid import uuid4
@@ -11,6 +12,7 @@ import structlog
 
 from src.core.context import ContextBuilder, Request
 from src.core.context import ContextOverflow as ContextOverflow
+from src.core.reasoning import END, START, ReasoningLimits, context_capacity
 from src.core.runs import RunRecorder
 from src.core.vectors import validate_vector
 
@@ -63,7 +65,7 @@ class LocalLLM:
 
     async def _request(self, client, method, path, **kwargs):
         if self.settings is not None:
-            kwargs["timeout"] = self.settings.get("system.llm_timeout_sec")
+            kwargs.setdefault("timeout", self.settings.get("system.llm_timeout_sec"))
         for attempt in range(4):
             try:
                 response = await client.request(method, path, **kwargs)
@@ -119,7 +121,16 @@ class LocalLLM:
             raise ValueError("Invalid detokenizer response")
         return content
 
+    def _reasoning_enabled(self):
+        enabled = self.settings.get("llm.reasoning_enabled") if self.settings else False
+        if type(enabled) is not bool:
+            raise ValueError("Reasoning enablement must be a boolean")
+        return enabled
+
     async def prompt_tokens(self, request: Request) -> list[int]:
+        return await self._prompt_tokens(request, reasoning=self._reasoning_enabled())
+
+    async def _prompt_tokens(self, request, *, reasoning):
         messages = []
         if request.system:
             messages.append({"role": "system", "content": request.system})
@@ -131,12 +142,16 @@ class LocalLLM:
             json={
                 "messages": messages,
                 "add_generation_prompt": True,
-                "chat_template_kwargs": {"enable_thinking": False},
+                "chat_template_kwargs": {"enable_thinking": reasoning},
             },
         )
         prompt = rendered.get("prompt")
         if not isinstance(prompt, str):
             raise ValueError("Invalid chat-template response")
+        if reasoning:
+            # Prime the budget sampler in its counting state, before generation.
+            # A trailing newline would consume the forced delimiter at budget zero.
+            prompt += START
         # /apply-template omits BOS; token-ID completion skips server tokenization.
         tokens = await self.tokenize(prompt, parse_special=True, add_special=True)
         return tokens
@@ -146,7 +161,21 @@ class LocalLLM:
     ) -> str:
         if type(max_tokens) is not int or max_tokens <= 0:
             raise ValueError("A positive generation limit is required")
-        tokens = await self.prompt_tokens(request)
+        reasoning = self._reasoning_enabled()
+        limits = None
+        deadline = None
+        if reasoning:
+            properties = await self._request(self.generation, "GET", "/props")
+            capacity = context_capacity(properties)
+            budget = self.settings.get("llm.reasoning_budget_tokens")
+            deadline = self.settings.get("llm.reasoning_timeout_sec")
+            if (
+                type(deadline) not in (int, float)
+                or not math.isfinite(deadline)
+                or deadline <= 0
+            ):
+                raise ValueError("Reasoning timeout must be finite and positive")
+        tokens = await self._prompt_tokens(request, reasoning=reasoning)
         ContextBuilder._enforce(request, tokens)
         payload = {
             "prompt": tokens,
@@ -155,9 +184,27 @@ class LocalLLM:
             "stream": False,
             "cache_prompt": False,
         }
-        if grammar is not None:
+        if reasoning:
+            limits = ReasoningLimits.create(
+                context=capacity,
+                prompt=len(tokens),
+                requested=budget,
+                answer=max_tokens,
+                end_tokens=await self.tokenize(END, parse_special=True),
+            )
+            payload.update(limits.parameters(grammar))
+            if limits.thinking < budget:
+                log.warning(
+                    "reasoning_budget_reduced",
+                    requested=budget,
+                    effective=limits.thinking,
+                    context_tokens=capacity,
+                    prompt_tokens=len(tokens),
+                    answer_tokens=max_tokens,
+                )
+        elif grammar is not None:
             payload["grammar"] = grammar
-        if request.mode is not None:
+        if request.mode is not None and not reasoning:
             payload["stop"] = [f"</{request.mode}>"]
         call_id = uuid4().hex
         started = time.monotonic()
@@ -180,66 +227,107 @@ class LocalLLM:
                 params=payload,
                 tokens_in=len(tokens),
             )
+        content = thought = tokens_out = None
+        thinking_tokens = answer_tokens = 0
+        response = {}
         try:
-            response = await self._request(
-                self.generation, "POST", "/completion", json=payload
-            )
-        except Exception as error:
-            if self.recorder:
-                await self.recorder.finish(
-                    call_id,
-                    error=str(error),
-                    duration_ms=round((time.monotonic() - started) * 1000),
+            async with asyncio.timeout(deadline):
+                kwargs = {"timeout": deadline} if deadline is not None else {}
+                response = await self._request(
+                    self.generation, "POST", "/completion", json=payload, **kwargs
                 )
-            raise
-        content = response.get("content")
-        if not isinstance(content, str):
-            if self.recorder:
-                await self.recorder.finish(
-                    call_id,
-                    error="Invalid completion response",
-                    duration_ms=round((time.monotonic() - started) * 1000),
-                )
-            raise ValueError("Invalid completion response")
-        if request.mode is not None:
-            closing = f"</{request.mode}>"
+            raw = response.get("content")
+            if not isinstance(raw, str):
+                raise ValueError("Invalid completion response")
             if (
-                response.get("stop_type") == "word"
-                and response.get("stopping_word") == closing
-                and content.lstrip().startswith(f"<{request.mode}>")
-                and closing not in content
+                response.get("stopped_limit")
+                or response.get("stop_type") == "limit"
+                or response.get("truncated")
             ):
-                content += closing
-                log.info("output_stop_restored", call_id=call_id, mode=request.mode)
-        truncated = (
-            response.get("stopped_limit")
-            or response.get("stop_type") == "limit"
-            or response.get("truncated")
-        )
+                raise ValueError(
+                    "Generation or input was truncated; no output may be stored"
+                )
+            if limits is not None:
+                # Native completion metadata omits n_ctx; query /props again.
+                properties = await self._request(self.generation, "GET", "/props")
+                if context_capacity(properties) != limits.context:
+                    raise ContextOverflow(
+                        "The server context changed during generation"
+                    )
+                thought, content, thinking_tokens, tokens_out = limits.separate(
+                    response
+                )
+                answer_tokens = len(await self.tokenize(content))
+                if answer_tokens > max_tokens:
+                    raise ValueError("Final answer exceeds its token budget")
+            else:
+                content = raw
+                thought = response.get("reasoning_content")
+                if START in content or END in content:
+                    raise ValueError("Unexpected reasoning channel in final output")
+                if request.mode is not None:
+                    closing = f"</{request.mode}>"
+                    if (
+                        response.get("stop_type") == "word"
+                        and response.get("stopping_word") == closing
+                        and content.lstrip().startswith(f"<{request.mode}>")
+                        and closing not in content
+                    ):
+                        content += closing
+                        log.info(
+                            "output_stop_restored", call_id=call_id, mode=request.mode
+                        )
+                tokens_out = answer_tokens = len(await self.tokenize(content))
+        except BaseException as error:
+            message = str(error) or type(error).__name__
+            if self.recorder:
+                await self.recorder.finish(
+                    call_id,
+                    output=content,
+                    thought=thought,
+                    error=message,
+                    duration_ms=round((time.monotonic() - started) * 1000),
+                )
+            log.error("local_generation_failed", call_id=call_id, error=message)
+            raise
         if self.recorder:
             await self.recorder.finish(
                 call_id,
                 output=content,
-                thought=response.get("reasoning_content"),
+                thought=thought,
                 model=response.get("model"),
-                tokens_out=len(await self.tokenize(content)),
+                tokens_out=tokens_out,
                 duration_ms=round((time.monotonic() - started) * 1000),
-                error="Truncated generation" if truncated else None,
             )
         log.info(
             "local_generation_finished",
             call_id=call_id,
             profile=request.profile,
             output=content,
-            thought=response.get("reasoning_content"),
-            response=response,
-            tokens_out=len(await self.tokenize(content)),
+            thought=thought,
+            response={
+                key: value
+                for key, value in response.items()
+                if key
+                in {
+                    "model",
+                    "id_slot",
+                    "index",
+                    "stop",
+                    "stop_type",
+                    "stopping_word",
+                    "truncated",
+                    "tokens_predicted",
+                    "tokens_evaluated",
+                    "tokens_cached",
+                    "timings",
+                }
+            },
+            tokens_out=tokens_out,
+            reasoning_tokens=thinking_tokens,
+            answer_tokens=answer_tokens,
             duration_ms=round((time.monotonic() - started) * 1000),
         )
-        if truncated:
-            raise ValueError(
-                "Generation or input was truncated; no output may be stored"
-            )
         return content
 
     async def embedding_model(self) -> str:

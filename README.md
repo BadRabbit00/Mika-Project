@@ -60,6 +60,9 @@ Run separate llama-server services: generation on port 8080 and embeddings on
 Start both servers through `nix develop .#models --command llama-server`; the
 [startup guide](mika-startup/ЗАПУСК.md#3-start-the-model-services) lists the full
 commands. This shell supplies the locked Vulkan build of llama.cpp.
+Gemma 4 reasoning is enabled by default, with an 8,192-token thinking budget and
+a 600-second generation deadline. The client reserves final-answer space and
+validates output separately from thoughts. See [reasoning controls](docs/REASONING.md).
 
 Use the flake's Python directly. `uv run` can select a local `.venv` containing
 wheels that cannot load native libraries on NixOS.
