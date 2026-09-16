@@ -278,6 +278,91 @@ def test_curator_does_not_repeat_timeout_as_json_repair(monkeypatch):
     assert run.call_count == 1
 
 
+@pytest.mark.parametrize(
+    "stderr,category",
+    [
+        ("usage limit reached", "limit"),
+        ("rate limit", "limit"),
+        ("quota exhausted", "limit"),
+        ("Please login", "auth"),
+        ("unauthorized", "auth"),
+        ("unexpected failure", "unknown"),
+    ],
+)
+def test_curator_classifies_cli_failure_without_schema_retry(
+    monkeypatch, stderr, category
+):
+    from unittest.mock import Mock
+
+    from src.core.llm_vendor import CuratorFailure
+
+    run = Mock(side_effect=subprocess.CalledProcessError(1, "claude", stderr=stderr))
+    monkeypatch.setattr(subprocess, "run", run)
+    backend = ClaudeCodeBackend(
+        VendorConfig.from_registry(Path("config/settings.yaml"))
+    )
+    with pytest.raises(CuratorFailure) as error:
+        backend.ask("Fixture system", "Fixture task", VendorFixture, trace_id="failure")
+    assert error.value.category == category
+    assert run.call_count == 1
+
+
+def test_curator_reads_settings_each_call_and_persists_receipts(database, monkeypatch):
+    from src.core.settings import SettingsRegistry, SQLiteSettingsStore
+
+    settings = SettingsRegistry.from_file(
+        Path("config/settings.yaml"), store=SQLiteSettingsStore(database)
+    )
+    seen = []
+
+    def run(command, **kwargs):
+        seen.append(kwargs["timeout"])
+        return SimpleNamespace(
+            stdout=json.dumps({"result": '{"verdict":"pass"}', "total_cost_usd": 0.01}),
+            stderr="",
+            returncode=0,
+        )
+
+    monkeypatch.setattr(subprocess, "run", run)
+    backend = ClaudeCodeBackend(settings, database=database)
+    backend.ask("Fixture system", "Fixture task", VendorFixture, trace_id="chain")
+    settings.set("curator.timeout_sec", "600", trace_id="setting")
+    backend.ask("Fixture system", "Fixture task", VendorFixture, trace_id="chain")
+    assert seen == [300, 600]
+    with database.connection() as c:
+        assert (
+            c.execute(
+                "SELECT count(DISTINCT call_id) FROM runs WHERE trace_id='chain'"
+            ).fetchone()[0]
+            == 2
+        )
+
+
+def test_curator_repairs_malformed_cli_envelope_once(monkeypatch):
+    from unittest.mock import Mock
+
+    run = Mock(
+        side_effect=[
+            SimpleNamespace(stdout="{broken", stderr="", returncode=0),
+            SimpleNamespace(
+                stdout='{"result":"{\\"verdict\\":\\"pass\\"}","total_cost_usd":0.01}',
+                stderr="",
+                returncode=0,
+            ),
+        ]
+    )
+    monkeypatch.setattr(subprocess, "run", run)
+    backend = ClaudeCodeBackend(
+        VendorConfig.from_registry(Path("config/settings.yaml"))
+    )
+    assert (
+        backend.ask(
+            "Fixture system", "Fixture task", VendorFixture, trace_id="schema"
+        ).attempts
+        == 2
+    )
+
+
 def telegram_layout():
     return TelegramLayout(
         owner_id=123,

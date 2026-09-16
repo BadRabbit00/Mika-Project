@@ -29,8 +29,20 @@ from src.telegram_runtime import run_telegram
 async def _curator(args):
     database = Database(args.database)
     await asyncio.to_thread(database.initialize)
-    config = VendorConfig.from_registry(args.settings, timeout_sec=args.timeout)
-    curator = Curator(database, ClaudeCodeBackend(config), args.prompt_dir)
+    settings = SettingsRegistry.from_file(
+        args.settings, store=SQLiteSettingsStore(database)
+    )
+    config = (
+        VendorConfig.from_registry(args.settings, timeout_sec=args.timeout)
+        if args.timeout is not None
+        else settings
+    )
+    curator = Curator(
+        database,
+        ClaudeCodeBackend(config, database=database),
+        args.prompt_dir,
+        settings=settings,
+    )
     data = json.loads(args.context.read_text(encoding="utf-8"))
     if args.action == "grade":
         data["answers"] = {int(key): value for key, value in data["answers"].items()}
@@ -128,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
     curator.add_argument("--log-file", type=Path, required=True)
     curator.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
     curator.add_argument("--prompt-dir", type=Path, default=Path("prompts"))
-    curator.add_argument("--timeout", type=int, required=True)
+    curator.add_argument("--timeout", type=int)
     curator.add_argument("--trace-id", required=True)
     bot = commands.add_parser("bot", help="Run three Telegram bots and background jobs")
     bot.add_argument("--layout", type=Path, required=True)
