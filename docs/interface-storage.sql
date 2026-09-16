@@ -1,6 +1,5 @@
--- Proposed interface storage contract. Not applied automatically.
--- Review this with TODO(SETTINGS-SCHEMA), TODO(TRACE-IDENTITY), and
--- TODO(INVALIDATION-LINEAGE) before turning it into a numbered migration.
+-- Approved reference schema. Installed automatically by src/core/db.py.
+-- Preserve deployed migration versions; do not run this file on an upgraded database.
 
 CREATE TABLE settings_overrides (
     key TEXT PRIMARY KEY NOT NULL,
@@ -22,7 +21,7 @@ CREATE TABLE post_threads (
     PRIMARY KEY (post_id, thread_id)
 );
 
--- Proposed runs migration: keep legacy attempt IDs and separate the chain ID.
+-- Runs migration: retain call identity separately from the shared trace.
 ALTER TABLE runs RENAME COLUMN trace_id TO call_id;
 ALTER TABLE runs ADD COLUMN trace_id TEXT;
 UPDATE runs SET trace_id = CASE

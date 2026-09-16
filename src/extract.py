@@ -254,8 +254,8 @@ class Extractor:
         connection.execute(
             """INSERT INTO sources(id, path, title, topic, origin_key, url, kind,
                publisher, given_by, trust_prior, published_at,
-               ingested_at, content_hash)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               ingested_at, content_hash, peer_reviewed)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 source.id,
                 str(source.path),
@@ -270,6 +270,7 @@ class Extractor:
                 source.published_at,
                 now(),
                 source.content_hash,
+                int(source.peer_reviewed),
             ),
         )
         connection.execute(

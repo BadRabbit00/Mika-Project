@@ -1,5 +1,6 @@
--- Proposed learner and scheduler storage, not a production migration.
--- Dry runs and tests install this contract only in isolated databases.
+-- Approved reference schema. Installed automatically by src/core/db.py.
+-- Preserve deployed migration versions; do not run this file on an upgraded database.
+
 CREATE TABLE learner_state (
     id TEXT PRIMARY KEY CHECK (id='learner'),
     state_json TEXT NOT NULL CHECK (json_valid(state_json)),

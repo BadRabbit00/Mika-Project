@@ -2,6 +2,8 @@
 
 import hashlib
 import json
+import math
+from datetime import date
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -232,8 +234,54 @@ def test_source_frontmatter_date_is_not_invented(tmp_path):
     )
     result = read_source(path)
     assert result.id == "article"
-    assert result.published_at is None
+    assert result.published_at == date(2026, 9, 16)
     assert result.text == "seccomp\n"
+
+
+async def test_trust_uses_independent_origins_and_first_source_is_unknown(database):
+    from src.trust import Trust
+
+    llm = fake_llm([json.dumps(claim())] * 3)
+    extractor = Extractor(database, llm, ContextBuilder(Path("prompts")))
+    trust = Trust.from_config(database, Path("config/reliability.yaml"))
+    await extractor.extract(source())
+    with database.connection() as c:
+        digest = c.execute("SELECT norm_hash FROM claims").fetchone()[0]
+    assert trust.claim(digest, source_id="one", at=date(2026, 9, 16)).score is None
+    await extractor.extract(source(source_id="two", origin="one"))
+    await extractor.extract(source(source_id="three", origin="independent"))
+    database.run_transaction(
+        lambda c: c.execute(
+            "UPDATE sources SET kind='paper', peer_reviewed=1, publisher='ACM', "
+            "published_at='2025-09-16'"
+        )
+    )
+    result = trust.claim(digest, source_id="one", at=date(2026, 9, 16))
+    assert result.independent == 2
+    assert result.reliability == pytest.approx(0.95)
+    assert result.consensus == pytest.approx(1 - math.exp(-0.7 * 2))
+    assert result.score == pytest.approx(0.6 * 0.95 + 0.4 * result.consensus)
+
+
+async def test_reindex_replaces_all_model_labels_atomically(database):
+    from src.core.vectors import reindex
+
+    llm = fake_llm()
+    await Extractor(database, llm, ContextBuilder(Path("prompts"))).extract(source())
+    llm.embedding_model.return_value = "new-model"
+    llm.embed.side_effect = [np.array([1.0, 0.0, 0.0]), ValueError("offline")]
+    with pytest.raises(ValueError, match="offline"):
+        await reindex(database, llm)
+    with database.connection() as c:
+        assert {r[0] for r in c.execute("SELECT model FROM node_embeddings")} == {
+            "fixture-embedding"
+        }
+    llm.embed.side_effect = lambda text: np.array([1.0, 0.0, 0.0])
+    assert await reindex(database, llm) == 2
+    with database.connection() as c:
+        assert {r[0] for r in c.execute("SELECT model FROM node_embeddings")} == {
+            "new-model"
+        }
 
 
 async def test_tokens_counted_with_tokenize():
@@ -295,6 +343,32 @@ async def test_model_tools_cannot_write():
     completion = next(payload for payload in sent if "grammar" in payload)
     assert completion["grammar"] == Path("grammars/claims.gbnf").read_text()
     assert completion["prompt"] == [0, 1, 2]
+
+
+async def test_generation_calls_share_trace_but_keep_distinct_receipts(database):
+    import structlog
+
+    def handle(request):
+        if request.url.path == "/apply-template":
+            return httpx.Response(200, json={"prompt": "fixture"})
+        if request.url.path == "/tokenize":
+            return httpx.Response(200, json={"tokens": [1, 2]})
+        return httpx.Response(200, json={"content": "{}", "model": "fixture"})
+
+    request = ContextBuilder(Path("prompts")).build(
+        "extract", existing_node_names=[], article_chunk="Body"
+    )
+    async with LocalLLM(
+        database=database, transport=httpx.MockTransport(handle)
+    ) as llm:
+        with structlog.contextvars.bound_contextvars(trace_id="shared"):
+            await llm.generate(request)
+            await llm.generate(request)
+    with database.connection() as c:
+        rows = c.execute("SELECT call_id, trace_id, status FROM runs").fetchall()
+    assert len(rows) == 2 and rows[0][0] != rows[1][0]
+    assert {r[1] for r in rows} == {"shared"}
+    assert {r[2] for r in rows} == {"completed"}
 
 
 async def test_embedding_endpoint_is_separate():

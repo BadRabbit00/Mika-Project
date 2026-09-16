@@ -1,0 +1,8 @@
+# Source reliability policy supplied in docs/DECISIONS.md.
+base_by_kind: {paper: 0.75, preprint: 0.50, docs: 0.70, blog: 0.40, news: 0.30}
+peer_reviewed_bonus: 0.15
+known_publisher_bonus: 0.10
+age_penalty_per_year: -0.03
+age_floor: 0.2
+clamp: [0.15, 0.95]
+known_publishers: [arXiv, USENIX, IEEE, ACM, NDSS, Cloudflare, Google, Anthropic, OpenAI, NIST, OWASP]
