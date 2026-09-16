@@ -40,6 +40,11 @@ CONTRACTS = {
         "test_outbox_crash_after_remote_acceptance_is_not_retried",
         "test_publication_trace_survives_enqueue_and_worker_restart",
     },
+    "src/core/llm_vendor.py": {
+        "test_claude_cli_uses_temporary_files_and_validates_json",
+        "test_extract_json_rejects_ambiguous_or_invalid_results",
+        "test_curator_validates_references_before_writing",
+    },
     "src/core/schedule.py": {
         "test_sleep_plan_preserves_literal_complexity_and_mood_formula",
         "test_sleep_debt_uses_actual_hours_and_literal_clamp",

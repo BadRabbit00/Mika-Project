@@ -71,7 +71,10 @@
       devShells = forAllSystems (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfreePredicate = pkg: lib.getName pkg == "claude-code";
+          };
           pythonSet = pythonSets.${system}.overrideScope editableOverlay;
           virtualenv = pythonSet.mkVirtualEnv "blogai-dev-env" workspace.deps.all;
         in
@@ -92,6 +95,7 @@
               pkgs.git
               pkgs.nixfmt
               pkgs.graphify
+              pkgs.claude-code
             ];
             env = {
               UV_NO_SYNC = "1";

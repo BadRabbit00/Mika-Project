@@ -12,11 +12,31 @@ import structlog
 from src.core.context import ContextBuilder
 from src.core.db import Database
 from src.core.llm_local import LocalLLM
+from src.core.llm_vendor import ClaudeCodeBackend, VendorConfig
 from src.core.logging import configure_logging
+from src.curator import Curator
 from src.extract import Extractor
 from src.ingest import read_source
 from src.retrieve import RetrievalPolicy, Retriever
 from src.selfquiz import QuizSettings, SelfQuiz
+
+
+async def _curator(args):
+    database = Database(args.database)
+    await asyncio.to_thread(database.initialize)
+    config = VendorConfig.from_registry(args.settings, timeout_sec=args.timeout)
+    curator = Curator(database, ClaudeCodeBackend(config), args.prompt_dir)
+    data = json.loads(args.context.read_text(encoding="utf-8"))
+    if args.action == "grade":
+        data["answers"] = {int(key): value for key, value in data["answers"].items()}
+    method = {
+        "exam": curator.prepare_exam,
+        "grade": curator.grade,
+        "select": curator.select_articles,
+    }[args.action]
+    with structlog.contextvars.bound_contextvars(trace_id=args.trace_id):
+        result = await method(trace_id=args.trace_id, **data)
+    print(json.dumps(result, ensure_ascii=False))
 
 
 async def _extract(args):
@@ -77,6 +97,15 @@ def main(argv: list[str] | None = None) -> int:
     quiz.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
     quiz.add_argument("--min-similarity", type=float, required=True)
     quiz.add_argument("--rrf-k", type=float, required=True)
+    curator = commands.add_parser("curator", help="Run a file-backed curator workflow")
+    curator.add_argument("action", choices=("exam", "grade", "select"))
+    curator.add_argument("--context", type=Path, required=True)
+    curator.add_argument("--database", type=Path, required=True)
+    curator.add_argument("--log-file", type=Path, required=True)
+    curator.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
+    curator.add_argument("--prompt-dir", type=Path, default=Path("prompts"))
+    curator.add_argument("--timeout", type=int, required=True)
+    curator.add_argument("--trace-id", required=True)
     for command in (extract, quiz):
         command.add_argument("--database", type=Path, required=True)
         command.add_argument("--log-file", type=Path, required=True)
@@ -93,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
             Database(args.database).initialize()
         elif args.command == "extract":
             asyncio.run(_extract(args))
+        elif args.command == "curator":
+            asyncio.run(_curator(args))
         else:
             asyncio.run(_quiz(args))
     except Exception:
