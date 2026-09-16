@@ -146,6 +146,28 @@ These are specification gaps, not defaults chosen by the implementation.
 
 ## Invariants for later delivery stages
 
+## Output and writing contracts
+
+- TODO(OFFTOP-PERSONA): the shared prompts/_base.md names AI agents, while
+  sections 12 and 16 prohibit technical terms anywhere in off-topic context.
+  Prompt files remain read-only. The persona-selection policy needs an explicit
+  decision; an isolation failure must not be silently bypassed.
+- TODO(VALIDATOR-SEMANTICS): no finite list can recognize every euphemism or
+  semantic contradiction. Deterministic rules cover explicit physiological
+  terminology, known euphemisms, current-time claims, and the five-hour debt
+  example. A broader semantic judge has no supplied prompt or grading contract.
+- TODO(PROMPT-ECHO): section 34 specifies a threshold but no similarity metric.
+  The validator requires an explicit scoring function. Lexical sequence
+  similarity is available as an opt-in implementation, not an inferred default.
+- TODO(OUTPUT-TRUNCATION): arbitrary mid-word termination cannot be inferred
+  reliably from punctuation. Reject a server truncation signal and trailing
+  commas; do not require sentence-final punctuation for casual messages.
+- TODO(KAOMOJI): the architecture does not define kaomoji syntax. Bracketed
+  expressions with recognizable face punctuation are exempted from the kana
+  rule; parentheses around Japanese prose are not an exemption.
+
+## Invariants for later delivery stages (continued)
+
 The step 1 suite tests time, UTC persistence, storage validation, the closed
 relation vocabulary, FTS synchronization, transaction atomicity, retry limits,
 outbox keys, PAD storage precision, and absence of copied prompt strings.
