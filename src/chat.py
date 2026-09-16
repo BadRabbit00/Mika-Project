@@ -144,11 +144,25 @@ class ChatService:
             raise ValueError("Unknown session channel")
         return self._locks[channel]
 
+    async def set_enabled(self, channel, enabled, *, at):
+        if channel not in {"dm", "topic"} or type(enabled) is not bool:
+            raise ValueError("A dialogue channel and boolean availability are required")
+        at = require_aware(at)
+        await asyncio.to_thread(
+            self.database.run_transaction,
+            lambda c: c.execute(
+                "INSERT INTO life_state VALUES (?, ?, ?) ON CONFLICT(key) DO "
+                "UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+                ("chat.enabled:" + channel, json.dumps(enabled), at),
+            ),
+        )
+
     async def open(self, channel, *, at, mood=None):
         at = require_aware(at)
         if mood is None and self.mood_provider is not None:
             mood = await self.mood_provider(at)
         async with self._lock(channel):
+            await self.set_enabled(channel, True, at=at)
             current = await asyncio.to_thread(self.store.active, channel)
             if current and await self._expired(current, at):
                 await self._close(current, at=at, mood=mood)
@@ -160,6 +174,19 @@ class ChatService:
             )
 
     async def _expired(self, session, at):
+        def unread():
+            with self.database.connection(readonly=True) as c:
+                return (
+                    c.execute(
+                        "SELECT 1 FROM chat_inbox WHERE session_id=? AND status IN "
+                        "('pending','generating','ready') LIMIT 1",
+                        (session["id"],),
+                    ).fetchone()
+                    is not None
+                )
+
+        if await asyncio.to_thread(unread):
+            return False
         turns = await asyncio.to_thread(self.store.turns, session["id"])
         last = turns[-1]["at"] if turns else session["opened_at"]
         return elapsed_hours(from_utc_iso(last), at) >= self.settings.ttl_hours
@@ -192,7 +219,18 @@ class ChatService:
         return facts, terms, narrative, existing
 
     async def reply(
-        self, channel, question, *, trace_id, day, mood, wake_reason, topic
+        self,
+        channel,
+        question,
+        *,
+        trace_id,
+        day,
+        mood,
+        wake_reason,
+        topic,
+        incoming_trace_id=None,
+        delivery_context=None,
+        life_state=None,
     ):
         async with self._lock(channel):
             session = await asyncio.to_thread(self.store.active, channel)
@@ -208,7 +246,7 @@ class ChatService:
                     self.store.add_user,
                     session["id"],
                     question,
-                    trace_id=trace_id,
+                    trace_id=incoming_trace_id or trace_id,
                     at=day.at,
                 )
                 turns = await asyncio.to_thread(self.store.turns, session["id"])
@@ -255,6 +293,10 @@ class ChatService:
                     budget=self.settings.budget,
                     narrative=narrative,
                 )
+                if life_state is not None or delivery_context is not None:
+                    kwargs.update(
+                        life_state=life_state, delivery_context=delivery_context
+                    )
                 request = self.context.build(
                     mode, history=history, summary=state["text"], **kwargs
                 )
@@ -390,6 +432,7 @@ class ChatService:
     async def close(self, session_id, *, at, mood=None):
         session = await asyncio.to_thread(self.store.get, session_id)
         async with self._lock(session["channel"]):
+            await self.set_enabled(session["channel"], False, at=at)
             await self._close(
                 await asyncio.to_thread(self.store.get, session_id),
                 at=require_aware(at),

@@ -13,8 +13,17 @@ class ChatGateway:
     def __init__(self, service, publisher, layout, context_provider):
         self.service, self.publisher, self.layout = service, publisher, layout
         self.context_provider = context_provider
+        self.inbox = None
 
     async def handle(self, message, *, channel, trace_id):
+        if self.inbox is not None and not message.text.startswith("/"):
+            await self.inbox.accept(
+                channel,
+                message.text,
+                trace_id,
+                received_at=getattr(message, "date", None),
+            )
+            return
         with structlog.contextvars.bound_contextvars(
             trace_id=trace_id, chat_channel=channel
         ):
@@ -37,6 +46,8 @@ class ChatGateway:
                     elif argument == "off":
                         if current:
                             await self.service.close(current["id"], at=now())
+                        else:
+                            await self.service.set_enabled(channel, False, at=now())
                         text = {"status": "closed"}
                     elif argument == "status":
                         text = current or {"status": "closed"}

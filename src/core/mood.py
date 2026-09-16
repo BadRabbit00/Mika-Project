@@ -213,6 +213,9 @@ class MoodModel:
             **data["events"],
             **Schedule.from_config(directory).event_catalog(),
         }
+        chains = Path(directory) / "life_chains.yaml"
+        if chains.exists():
+            data["events"].update(read("life_chains.yaml")["mood_events"])
         life = read("life.yaml")
         if epoch is None:
             epoch = datetime.combine(
@@ -461,6 +464,7 @@ class MoodService:
         at: datetime,
         context: BaselineContext,
         queue_id: int | None = None,
+        connection=None,
     ) -> MoodSnapshot:
         at = require_aware(at)
         disabled = event_id == "settings_disabled" and not self.model.enabled
@@ -498,7 +502,11 @@ class MoodService:
                 connection.execute("DELETE FROM mood_queue WHERE id=?", (queue_id,))
             return state
 
-        return self.database.run_transaction(save)
+        return (
+            save(connection)
+            if connection is not None
+            else self.database.run_transaction(save)
+        )
 
     def fire_trigger(
         self,

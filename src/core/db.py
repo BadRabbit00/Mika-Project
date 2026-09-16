@@ -621,11 +621,15 @@ class Database:
             execute("BEGIN IMMEDIATE")
             log.debug("db_transaction_started")
             try:
+                from src.core.admission import check_study
+
+                check_study(connection)
                 yield connection
                 if not connection.in_transaction:
                     raise RuntimeError(
                         "The operation ended its transaction prematurely"
                     )
+                check_study(connection)
                 execute("COMMIT")
             except BaseException:
                 if connection.in_transaction:
@@ -656,6 +660,14 @@ class Database:
                     return operation(connection)
 
             return self._retry(attempt)
+
+    def run_audit_transaction[T](
+        self, operation: Callable[[sqlite3.Connection], T]
+    ) -> T:
+        from src.core.admission import audit_scope
+
+        with audit_scope():
+            return self.run_transaction(operation)
 
     def initialize(self) -> int:
         """Create or upgrade the database to the current schema version."""

@@ -1,5 +1,6 @@
 """Choose configured life events and commit their continuity after publication."""
 
+import asyncio
 import itertools
 import json
 import re
@@ -81,6 +82,26 @@ class OfftopPlanner:
     @property
     def max_slot_uses(self):
         return self._limit_override or self.settings.get("offtop.max_slot_uses")
+
+    def recorded(self, event):
+        """Use the committed outcome and its causes, with no category cooldown."""
+        with self.database.connection(readonly=True) as c:
+            row = c.execute(
+                "SELECT * FROM life_events WHERE id=?", (event["id"],)
+            ).fetchone()
+            if row is None or row["payload"] != event["payload"]:
+                raise ValueError("Recorded event does not match its stored outcome")
+            facts, causes = json.loads(row["payload"]), []
+            cause = row["cause_id"]
+            while cause and len(causes) < 3:
+                parent = c.execute(
+                    "SELECT cause_id,payload FROM life_events WHERE id=?", (cause,)
+                ).fetchone()
+                if parent is None:
+                    break
+                causes.append(json.loads(parent["payload"])["facts"])
+                cause = parent["cause_id"]
+        return facts | {"preceding_events": causes}
 
     def slot_weight(self, slot, count):
         if self._weight_override is not None:
@@ -381,6 +402,22 @@ class OfftopGenerator:
     def __init__(self, planner, world, writer, weather_client):
         self.planner, self.world = planner, world
         self.writer, self.weather_client = writer, weather_client
+
+    async def recorded(self, event, *, day, mood, wake_reason, retrospective=None):
+        """Render a committed simulation event without choosing consequences."""
+        kind = (
+            "daily"
+            if retrospective is not None or event["kind"] == "daily"
+            else "situation"
+            if event["kind"] == "situation"
+            else "offtop"
+        )
+        facts = await asyncio.to_thread(self.planner.recorded, event)
+        if retrospective is not None:
+            facts = {"retrospective": retrospective}
+        return await self.writer.generate(
+            kind, day=day, mood=mood, wake_reason=wake_reason, recorded_event=facts
+        )
 
     async def generate(
         self,

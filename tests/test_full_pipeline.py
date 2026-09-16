@@ -560,13 +560,10 @@ async def test_live_composition_builds_all_providers_without_external_calls(
     tmp_path, monkeypatch
 ):
     from src.catalogue import Catalogue
-    from src.core.mood import MoodModel
-    from src.core.schedule import Blackout
     from src.core.settings import SettingsRegistry, SQLiteSettingsStore
     from src.core.tasks import JobQueue
     from src.core.telegram import TelegramLayout
     from src.live import assemble_live
-    from src.providers import RuntimeProviders
     from src.publish import Publisher
 
     db = Database(tmp_path / "live.sqlite3")
@@ -586,19 +583,7 @@ async def test_live_composition_builds_all_providers_without_external_calls(
         },
         {},
     )
-    providers = SimpleNamespace(
-        model=MoodModel.from_config(Path("config")),
-        context=AsyncMock(return_value={}),
-        blackout=AsyncMock(return_value=Blackout(False)),
-        mood=SimpleNamespace(current=AsyncMock(), settings_changed=AsyncMock()),
-        close=AsyncMock(),
-    )
-    monkeypatch.setattr(Catalogue, "load", lambda _: catalogue)
-    monkeypatch.setattr(
-        RuntimeProviders,
-        "__init__",
-        lambda self, *args: self.__dict__.update(providers.__dict__),
-    )
+    monkeypatch.setattr(Catalogue, "load", lambda _, **kwargs: catalogue)
     service = SimpleNamespace(
         database=db,
         llm=AsyncMock(),
@@ -623,7 +608,7 @@ async def test_live_composition_builds_all_providers_without_external_calls(
         config_dir=Path("config"),
         prompt_dir=Path("prompts"),
         grammar_dir=Path("grammars"),
-        world_state=tmp_path / "world.json",
+        world_state=None,
     )
     app = await assemble_live(args, service, JobQueue())
     assert service.chat_gateway.service is not None
@@ -637,6 +622,24 @@ async def test_live_composition_builds_all_providers_without_external_calls(
         "select_articles",
     }
     service.llm.generate.assert_not_awaited()
+    assert app.life.weather_enabled
+    from src.writer import WriteResult
+
+    db.run_transaction(
+        lambda c: c.execute(
+            "INSERT INTO posts(id,kind,state,text) VALUES "
+            "('composition-draft','found','draft','Validated draft')"
+        )
+    )
+    pipeline = app.runner.handlers["found"].__self__
+    await pipeline.on_draft(
+        WriteResult("composition-draft", "draft", "Validated draft", 1),
+        trace_id="composition-draft",
+    )
+    with db.connection(readonly=True) as c:
+        assert c.execute("SELECT count(*) FROM outbox").fetchone()[0] == len(
+            service.layout.publication_destinations()
+        )
     await app.close()
 
 

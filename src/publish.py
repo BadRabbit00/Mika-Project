@@ -189,6 +189,10 @@ class Publisher:
             return self.database.run_transaction(save)
 
 
+class DeliveryExpired(Exception):
+    """The text describes an activity that ended before delivery."""
+
+
 class OutboxWorker:
     def __init__(self, database, transport, *, allowed=None, clock=now):
         self.database, self.transport = database, transport
@@ -270,7 +274,8 @@ class OutboxWorker:
                 dict(row)
                 for row in connection.execute(
                     "SELECT * FROM outbox WHERE sent_at IS NULL "
-                    "AND next_try_at IS NULL AND attempts>0 ORDER BY id"
+                    "AND next_try_at IS NULL AND attempts>0 "
+                    "AND json_extract(payload,'$.cancelled_reason') IS NULL ORDER BY id"
                 )
             ]
 
@@ -306,6 +311,53 @@ class OutboxWorker:
                     "tg_message_id=? WHERE id=?",
                     (at, message_id, payload["post_id"]),
                 )
+                connection.execute(
+                    "UPDATE life_events SET publication_status='published' WHERE "
+                    "post_id=?",
+                    (payload["post_id"],),
+                )
+                event = connection.execute(
+                    "SELECT * FROM life_events WHERE post_id=?", (payload["post_id"],)
+                ).fetchone()
+                if event is not None and event["journal_id"] is None:
+                    parent = connection.execute(
+                        "SELECT journal_id FROM life_events WHERE id=?",
+                        (event["cause_id"],),
+                    ).fetchone()
+                    entity = json.dumps(
+                        {"slot": event["kind"], "values": {"event_id": event["id"]}},
+                        sort_keys=True,
+                    )
+                    journal_id = connection.execute(
+                        "INSERT INTO life_journal(at,slot,entity,text,continues) "
+                        "VALUES (?,?,?,?,?)",
+                        (
+                            at,
+                            event["kind"],
+                            entity,
+                            payload["text"],
+                            parent[0] if parent else None,
+                        ),
+                    ).lastrowid
+                    connection.execute(
+                        "UPDATE life_events SET journal_id=? WHERE id=?",
+                        (journal_id, event["id"]),
+                    )
+                    connection.execute(
+                        "INSERT INTO narrative(at,kind,gist,trace_id,post_id) VALUES "
+                        "(?,?,?,?,?)",
+                        (
+                            at,
+                            "daily"
+                            if event["kind"] == "daily"
+                            else "situation"
+                            if event["kind"] == "situation"
+                            else "offtop",
+                            json.loads(event["payload"])["facts"],
+                            event["id"],
+                            payload["post_id"],
+                        ),
+                    )
             if payload["method"] == "pin" and payload.get("defect_post_id"):
                 connection.execute(
                     "UPDATE invalidated SET pinned_id=? WHERE post_id=?",
@@ -342,9 +394,22 @@ class OutboxWorker:
             return "idle"
         payload = json.loads(row["payload"])
         with structlog.contextvars.bound_contextvars(trace_id=payload["trace_id"]):
-            if self.allowed is not None and payload.get("post_id"):
+            if self.allowed is not None and (
+                payload.get("post_id") or payload.get("chat_reply")
+            ):
                 try:
                     admitted = await self.allowed(payload, at)
+                except DeliveryExpired:
+                    payload["cancelled_reason"] = "activity_changed"
+                    await asyncio.to_thread(
+                        self.database.run_transaction,
+                        lambda c: c.execute(
+                            "UPDATE outbox SET payload=?,next_try_at=NULL WHERE id=?",
+                            (json.dumps(payload), row["id"]),
+                        ),
+                    )
+                    log.info("publication_expired", outbox_id=row["id"])
+                    return "expired"
                 except ValueError:
                     log.exception("publication_observations_unavailable")
                     admitted = False

@@ -11,8 +11,9 @@ rg -n 'TODO\(' src tests scripts docs
 - TODO(FIRST-TOPIC-ARTICLES) — [src/catalogue.py](../src/catalogue.py), Catalogue.load.
   Supply the six manually authored first-topic files `library/ab-01.md` through
   `ab-06.md`, with the IDs, topics, and origin keys required by topics.yaml.
-  Startup fails with the exact missing IDs. Later-topic shortages are reported
-  by the curator without inventing articles.
+  Strict catalogue validation reports the exact missing IDs. Live startup allows
+  an empty library so everyday life and chat can run independently. Later-topic
+  shortages are reported by the curator without inventing articles.
 - TODO(TELEGRAM-DEPLOYMENT) — [src/telegram_runtime.py](../src/telegram_runtime.py),
   run_telegram. Supply the actual owner, group/channel and seven topic IDs, plus
   the three named token environment variables. Then verify a post in the test
@@ -22,8 +23,9 @@ rg -n 'TODO\(' src tests scripts docs
 
 Uncertain Telegram sends and interrupted learner effects require manual receipt
 review; they are never automatically replayed. This is an approved policy, not
-an unfinished implementation. JSONL is authoritative, while command/chat/library
-jobs and unflushed mirror cards are ephemeral. Deterministic semantic filters
+an unfinished implementation. JSONL is authoritative. Ordinary incoming chat and
+its delivery binding are durable; command/library jobs and unflushed mirror cards
+remain ephemeral. Deterministic semantic filters
 are the approved first version and do not prove arbitrary factual correctness.
 
 ## Evidence
@@ -35,8 +37,8 @@ and documentation.
 
 ## Autonomous-life expansion
 
-The new life requirements have a separate, still-active implementation plan in
-[AUTONOMOUS_LIFE_WORK.md](AUTONOMOUS_LIFE_WORK.md). Missing scenario decisions are
+The connected life runtime and its verification commands are documented in
+[AUTONOMOUS_LIFE_WORK.md](AUTONOMOUS_LIFE_WORK.md). Remaining authoring scope is
 listed in [LIFE_GAPS.md](LIFE_GAPS.md), and the owner-approved financial parameters
 are recorded in [LIFE_CALIBRATION.md](LIFE_CALIBRATION.md). These documents
-distinguish completed chat/storage changes from runtime work still required.
+distinguish tested runtime behavior from authoring extensions and deployment.

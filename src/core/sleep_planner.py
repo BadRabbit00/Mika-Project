@@ -201,6 +201,57 @@ class ScheduledSleepProvider:
             origin="scheduled",
         )
 
+    def plan(self, day: date, *, at):
+        """Persist a sleep interval without advancing the observation clock."""
+        at = require_aware(at)
+        if type(day) is not date:
+            raise TypeError("A wake date is required")
+        with self.lock:
+            self._ensure(day, at)
+            row = self._row(day)
+            return SleepWindow(
+                from_utc_iso(row["actual_bedtime"]), from_utc_iso(row["wake_at"])
+            )
+
+    def disturb_future_night(self, at, *, minutes, cause_id):
+        """A saved illness may shorten an unstarted night, once per cause/night."""
+        at = require_aware(at)
+        if type(minutes) is not int or not 0 < minutes < 120:
+            raise ValueError("A bounded whole-minute sleep interruption is required")
+        with self.lock:
+
+            def save(c):
+                rows = c.execute(
+                    "SELECT * FROM sleep_log WHERE actual_bedtime>? AND "
+                    "debt_applied=0 AND origin='scheduled' ORDER BY night LIMIT 1",
+                    (at,),
+                ).fetchall()
+                for row in rows:
+                    key = f"sleep-effect:{cause_id}:{row['night']}"
+                    if c.execute(
+                        "SELECT 1 FROM life_state WHERE key=?", (key,)
+                    ).fetchone():
+                        continue
+                    bedtime = from_utc_iso(row["actual_bedtime"])
+                    wake = from_utc_iso(row["wake_at"]) - timedelta(minutes=minutes)
+                    if wake <= bedtime:
+                        continue
+                    c.execute(
+                        "UPDATE sleep_log SET wake_at=?,wake_reason='illness',hours=? "
+                        "WHERE night=?",
+                        (
+                            wake,
+                            round(SleepWindow(bedtime, wake).hours, 4),
+                            row["night"],
+                        ),
+                    )
+                    c.execute(
+                        "INSERT INTO life_state VALUES (?,?,?)",
+                        (key, json.dumps({"minutes": minutes}), at),
+                    )
+
+            self.database.run_transaction(save)
+
     def current(self, at):
         at = require_aware(at)
         with self.lock:

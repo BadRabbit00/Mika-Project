@@ -80,13 +80,35 @@ Both `run` and `bot` load this file automatically. Use `--env-file /path/to/bots
 to select another file. Exported environment variables take precedence.
 
 Keep your catalogue and source articles in the private `library/` directory.
-The first topic requires its six real articles and a filled Telegram layout.
+Live mode can start with an empty library: everyday life and chat remain active.
+The learning curriculum requires real source articles; strict catalogue validation
+checks the six initial files. A filled Telegram layout is required for live mode.
 Use `channel_id: 0` to publish only to the diary topic; a public channel is optional.
 World and sleep are autonomous by default; --world-state optionally supplies an
 initial snapshot and expiring
 overrides. Without it, startup logs neutral PAD and zero initial sleep debt.
 Their contracts and startup checks are in [docs/LIVE_RUNTIME.md](docs/LIVE_RUNTIME.md).
 The deployment gaps are listed in [docs/TODO.md](docs/TODO.md).
+
+## Autonomous everyday life
+
+The saved itinerary is shared by world queries, posts, chat and study admission.
+Resources, conversations and household tasks create persistent consequences and
+mood events. The life loop runs independently of the learner. Study requires an
+awake home-study interval; night messages remain unread until waking. Delivery
+checks reject stale drafts, and only confirmed replies enter dialogue history.
+
+See the [implementation checklist](docs/LIFE_IMPLEMENTATION.md),
+[runtime guide](docs/AUTONOMOUS_LIFE_WORK.md),
+[simulation report](docs/LIFE_SIMULATION.md) and
+[remaining authoring scope](docs/LIFE_GAPS.md). Configuration lives in
+`config/life_simulation.yaml` and `config/life_chains.yaml`.
+
+Run the offline simulation on temporary storage:
+
+```sh
+nix develop --command python -m scripts.simulate_life --days 5 --output docs/LIFE_SIMULATION.md
+```
 
 ## Boundaries
 

@@ -93,6 +93,132 @@ async def test_closed_chat_does_not_call_model(service, day):
     service.retriever.search.assert_not_awaited()
 
 
+@pytest.mark.parametrize("status_write_fails", [False, True])
+async def test_overnight_inbox_reads_at_wake_and_recovers_bound_delivery(
+    service, day, monkeypatch, status_write_fails
+):
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    from src.chat_gateway import ChatGateway
+    from src.core.chat_inbox import ChatInbox
+    from src.core.schedule import Blackout
+    from src.publish import OutboxWorker, Publisher
+
+    asleep = AT.replace(hour=3)
+    awake = AT.replace(hour=8)
+    clock = [asleep]
+    session = await service.open("dm", at=asleep - timedelta(hours=1))
+
+    async def context(at=None):
+        sleeping = clock[0] == asleep
+        return dict(
+            day=replace(
+                day,
+                at=clock[0],
+                daypart="morning" if not sleeping else "deep_night",
+                activity_id="sleep" if sleeping else "breakfast",
+                activity_until=clock[0] + timedelta(hours=1),
+                chat_allowed=not sleeping,
+                blackout=Blackout(sleeping, "sleep" if sleeping else None),
+            ),
+            mood=Mood(0, 0, 0),
+            wake_reason="alarm",
+        )
+
+    async def chat_context():
+        return (await context()) | {"topic": "security", "life_state": {"pantry": 8}}
+
+    gateway = ChatGateway(
+        service,
+        Publisher(service.database),
+        SimpleNamespace(owner_id=123),
+        chat_context,
+    )
+    inbox = ChatInbox(gateway, SimpleNamespace(context=context), clock=lambda: clock[0])
+    await inbox.accept("dm", "Are you awake?", "overnight", received_at=asleep)
+    await inbox.tick()
+    service.llm.generate.assert_not_awaited()
+    assert not await service._expired(session, awake + timedelta(hours=3))
+    clock[0] = awake
+    from src.core.itinerary import Activity, Itinerary
+
+    def breakfast(c):
+        c.execute(
+            "INSERT INTO life_days VALUES (?,?,?,?)",
+            (str(awake.date()), "test", "{}", awake),
+        )
+        Itinerary._insert(
+            c,
+            Activity(
+                "breakfast",
+                str(awake.date()),
+                awake,
+                awake + timedelta(hours=1),
+                "дом",
+                "breakfast",
+                "Breakfast",
+            ),
+        )
+
+    service.database.run_transaction(breakfast)
+    service.llm.generate.return_value = json.dumps(
+        dict(answer="Доброе утро! Я спала.", cited=[], confident=True)
+    )
+    if status_write_fails:
+        original_status = inbox._status
+
+        async def failed_status(identity, status):
+            if status == "ready":
+                raise RuntimeError("Simulated failure after the durable outbox bind")
+            await original_status(identity, status)
+
+        monkeypatch.setattr(inbox, "_status", failed_status)
+    await inbox.tick()
+    await inbox.close()
+    with service.database.connection(readonly=True) as c:
+        assert c.execute("SELECT status FROM chat_inbox").fetchone()[0] == "ready"
+    request = service.llm.generate.call_args.args[0]
+    assert '"deferred_reason": "sleep"' in request.user
+    assert '"pantry": 8' in request.user
+    assert all(turn["role"] == "user" for turn in service.store.turns(session["id"]))
+    service.database.run_transaction(
+        lambda c: c.execute(
+            "UPDATE chat_inbox SET status='generating' WHERE id='overnight'"
+        )
+    )
+    inbox.recover()
+    with service.database.connection(readonly=True) as c:
+        assert c.execute("SELECT status FROM chat_inbox").fetchone()[0] == "ready"
+    worker = OutboxWorker(
+        service.database, SimpleNamespace(send=AsyncMock(return_value=42))
+    )
+    assert await worker.run_once(at=AT + timedelta(days=1)) == "sent"
+    await inbox.tick()
+    assert service.llm.generate.await_count == 1
+    assert (
+        len([t for t in service.store.turns(session["id"]) if t["role"] == "mika"]) == 1
+    )
+
+
+async def test_explicit_off_after_session_expiry_disables_automatic_reopening(service):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from src.chat_gateway import ChatGateway
+    from src.core.chat_inbox import ChatInbox
+
+    await service.open("dm", at=AT)
+    assert await service.expire(at=AT + timedelta(hours=7))
+    gateway = ChatGateway(service, Mock(), SimpleNamespace(owner_id=123), None)
+    await gateway.handle(
+        SimpleNamespace(text="/chat off"), channel="dm", trace_id="off"
+    )
+    inbox = ChatInbox(gateway, None, clock=lambda: AT + timedelta(hours=8))
+    assert not await inbox.accept("dm", "Hello", "after-off")
+    assert service.store.active("dm") is None
+
+
 @pytest.mark.parametrize(
     "answer", ["Hi! I am Mika.", "Yes.", "No", "Okay", "Приветик! Я Мика."]
 )

@@ -123,7 +123,7 @@ class ClaudeCodeBackend:
 
     def _begin(self, call_id, trace_id, config, system, user):
         if self.database is not None:
-            self.database.run_transaction(
+            self.database.run_audit_transaction(
                 lambda c: c.execute(
                     "INSERT INTO "
                     "runs(call_id,trace_id,at,actor,profile,model,"
@@ -149,7 +149,7 @@ class ClaudeCodeBackend:
         if output is not None and not isinstance(output, str):
             output = json.dumps(output, ensure_ascii=False)
         if self.database is not None:
-            self.database.run_transaction(
+            self.database.run_audit_transaction(
                 lambda c: c.execute(
                     "UPDATE runs SET "
                     "output=?,duration_ms=?,cost_usd=?,status=?,error=? WHERE "

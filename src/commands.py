@@ -624,9 +624,12 @@ class CommandService:
                 "topic": source.topic,
                 "trust_prior": source.trust_prior,
             }
-            if self.extractor is not None:
-                await self.extractor.extract(source)
-                result["extracted"] = True
+            # Receiving a file is not evidence of reading it. The learner admits
+            # extraction only during a persisted home-study activity.
+            result["extracted"] = False
+            received = getattr(self, "source_received", None)
+            if received is not None:
+                received(source)
             await self.reply(message, result, trace_id)
         except (ValueError, UnicodeError) as error:
             await self.reply(message, {"rejected": str(error)}, trace_id)

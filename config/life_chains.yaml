@@ -1,0 +1,278 @@
+# Fictional causal rules. Outcomes are selected and committed before prose.
+initial:
+  coffee_stage: working
+  episode: 1
+  coursework: 0
+  coursework_due_days: 12
+  gym_visits: 0
+  gym_active: false
+  cat_home: false
+  ill_until: null
+  mother_tension: 0
+  dasha_trust: 1
+  timur_tension: 0
+  brother_helped: false
+facts:
+  low_money: До следующего поступления денег не хватает на необходимые расходы; ищу решение.
+  help: Мама спокойно помогла деньгами. Перевод уже получен.
+  lecture: Мама перевела деньги, но разговор сопровождался нотациями. Есть и облегчение, и обида.
+  delay: Мама сейчас занята. Разговор и возможный перевод отложены, денег пока не получила.
+  refusal: Мама отказала в дополнительной помощи. Нужно пересмотреть расходы и поискать другое решение.
+  loan: Даша одолжила деньги без процентов. Сумма и срок возврата сохранены; это долг, а не подарок.
+  no_loan: Нового займа не получилось; необязательные расходы отменены.
+  groceries: Купила продукты и принесла их в корзине; готовить буду после возвращения домой.
+  income: Получено плановое поступление; обязательные расходы и доступный возврат долга учтены.
+  meal: Приготовила и съела домашнюю еду из имеющихся продуктов.
+  hunger: Дома не осталось еды; нужно купить продукты, еду пока не приготовила.
+  journey: Еду по сохранённому маршруту; пункт отправления и назначения указаны в событии.
+  walking_journey: Иду пешком; пункт отправления и назначения указаны в событии.
+  class: Сейчас пара по предмету из расписания.
+  wake: Проснулась; начинается новый день.
+  rest: Сейчас отдыхаю дома.
+  walk: Вышла на прогулку по запланированному маршруту.
+  cafe: Зашла в кофейню и купила кофе.
+  dinner: Ужин приготовлен из имеющихся продуктов.
+  deadline: Курсовая приближается к сроку сдачи; ей нужно выделить домашнее учебное время.
+mood_events:
+  life_relief: {delta: [0.18, -0.04, 0.15]}
+  life_mixed_help: {delta: [-0.08, 0.08, 0.06]}
+  life_uncertainty: {delta: [-0.12, 0.06, -0.12]}
+  life_refusal: {delta: [-0.22, 0.1, -0.18]}
+  life_warmth: {delta: [0.2, -0.03, 0.08]}
+  life_achievement: {delta: [0.16, 0.08, 0.18]}
+  life_frustration: {delta: [-0.16, 0.08, -0.08]}
+  life_illness: {delta: [-0.12, -0.28, -0.1]}
+  life_recovery: {delta: [0.13, 0.16, 0.1]}
+  life_meal: {delta: [0.08, 0.08, 0.03]}
+  life_hunger: {delta: [-0.12, -0.12, -0.05]}
+  life_rest: {delta: [0.1, -0.05, 0.06]}
+  life_debt: {delta: [0.08, 0.02, -0.08]}
+tasks:
+  mother_contact: {places: [дом], hours: [10, 21], priority: 90, reason: insufficient_money}
+  mother_followup: {places: [дом], hours: [10, 21], priority: 90, reason: waiting_for_mother}
+  dasha_loan: {places: [дом], hours: [9, 23], priority: 85, reason: refused_parent_help}
+  groceries: {places: [магазин], hours: [8, 22], priority: 100, reason: pantry_low}
+  coffee_repair:
+    places: [дом]
+    hours: [10, 22]
+    priority: 45
+    reason: leaking_coffee_machine
+    cost: repair
+    effects: {coffee_stage: repaired}
+    mood: life_achievement
+    facts: Временно починила кофеварку; замена пока не куплена.
+    followup: {kind: coffee_break_again, hours: 48}
+  coffee_break_again:
+    places: [дом]
+    hours: [7, 23]
+    priority: 50
+    reason: temporary_repair_wore_out
+    effects: {coffee_stage: broken}
+    mood: life_frustration
+    facts: Кофеварка снова потекла после временной починки. Нужна замена.
+    followup: {kind: coffee_replace, hours: 24}
+  coffee_replace:
+    places: [дом]
+    hours: [10, 21]
+    priority: 30
+    reason: save_for_replacement
+    cost: coffee_machine
+    effects: {coffee_stage: replaced}
+    mood: life_relief
+    facts: Накопила и заказала новую кофеварку; она ещё не доставлена.
+    followup: {kind: coffee_delivery, hours: 48}
+  coffee_delivery:
+    places: [дом]
+    hours: [10, 21]
+    priority: 65
+    reason: ordered_appliance
+    effects: {coffee_stage: working}
+    mood: life_achievement
+    facts: Новую кофеварку доставили; теперь можно снова делать кофе дома.
+  roommate_talk:
+    places: [дом]
+    hours: [18, 23]
+    priority: 70
+    reason: dasha_ate_saved_food
+    person: dasha
+    outcomes:
+      calm:
+        effects: {pantry: {add: 2}, dasha_trust: {add: 1}}
+        mood: life_warmth
+        facts: Даша извинилась за съеденный ужин и принесла продукты на двоих.
+      tired:
+        effects: {dasha_trust: {add: -1}}
+        mood: life_frustration
+        facts: Даша устала и отмахнулась; разговор о съеденном ужине остался незавершённым.
+        followup: {kind: roommate_talk, hours: 24}
+      strained:
+        effects: {dasha_trust: {add: -1}}
+        mood: life_uncertainty
+        facts: С Дашей поспорили о еде. Завтра нужно вернуться к разговору спокойнее.
+        followup: {kind: roommate_talk, hours: 30}
+  timur_reply:
+    places: [дом, кофейня, парк]
+    hours: [10, 23]
+    priority: 60
+    reason: unanswered_message
+    person: timur
+    outcomes:
+      calm:
+        effects: {timur_tension: {add: -1}}
+        mood: life_relief
+        facts: Тимур объяснил, что был занят, и извинился за молчание. Мы договорились предупреждать друг друга.
+      tired:
+        effects: {timur_tension: {add: 1}}
+        mood: life_uncertainty
+        facts: Тимур ответил коротко и попросил поговорить завтра; разговор не закончен.
+        followup: {kind: timur_reply, hours: 24}
+      strained:
+        effects: {timur_tension: {add: 2}}
+        mood: life_frustration
+        facts: Обсуждение молчания Тимура перешло в ссору. Решили сделать паузу и вернуться к разговору.
+        followup: {kind: timur_reply, hours: 36}
+  brother_help:
+    places: [дом]
+    hours: [18, 22]
+    priority: 75
+    reason: promised_help
+    person: brother
+    outcomes:
+      calm:
+        effects: {brother_helped: true}
+        mood: life_warmth
+        facts: Позвонила брату и разобрала с ним задание; он смог объяснить решение сам.
+      tired:
+        effects: {brother_helped: false}
+        mood: life_uncertainty
+        facts: Брат устал и пока путается в задании. Договорились продолжить завтра.
+        followup: {kind: brother_help, hours: 24}
+      strained:
+        effects: {brother_helped: false}
+        mood: life_frustration
+        facts: Во время объяснения брат раздражался; остановились и договорились попробовать ещё раз завтра.
+        followup: {kind: brother_help, hours: 24}
+  submit_coursework:
+    places: [дом]
+    activities: [study]
+    hours: [16, 23]
+    priority: 95
+    reason: completed_coursework
+    effects: {coursework_submitted: true}
+    mood: life_relief
+    facts: Отправила готовую курсовую; оценка ещё неизвестна, но работа сдана.
+  coursework:
+    places: [дом]
+    activities: [study]
+    hours: [16, 23]
+    priority: 80
+    reason: approaching_deadline
+    effects: {coursework: {add: 1}}
+    mood: life_achievement
+    facts: Завершила очередную часть курсовой; оставшиеся части ещё предстоит сделать.
+  series:
+    places: [дом]
+    activities: [rest]
+    hours: [20, 24]
+    priority: 20
+    reason: evening_rest
+    effects: {episode: {add: 1}}
+    mood: life_rest
+    facts: Посмотрела следующую серию; номер просмотренной серии записан в событии.
+    followup: {kind: aika_discussion, hours: 12}
+  aika_discussion:
+    places: [универ, дом, кофейня]
+    hours: [10, 22]
+    priority: 25
+    reason: shared_series
+    mood: life_warmth
+    facts: Обсудила с Айкой уже просмотренную серию, без новых выдуманных эпизодов.
+  recover:
+    places: [дом]
+    hours: [8, 23]
+    priority: 95
+    reason: recovery_time_elapsed
+    effects: {ill_until: null}
+    mood: life_recovery
+    facts: После нескольких дней отдыха самочувствие улучшилось; возвращаюсь к обычным делам постепенно.
+    followup: {kind: aika_notes, hours: 3}
+  aika_notes:
+    places: [дом, универ]
+    hours: [10, 22]
+    priority: 75
+    reason: missed_classes
+    mood: life_relief
+    facts: Айка поделилась записями пропущенных пар; теперь нужно самой разобрать материал дома.
+  cat_care:
+    when: {cat_home: true}
+    places: [дом]
+    hours: [7, 23]
+    priority: 90
+    reason: foster_cat
+    mood: life_warmth
+    facts: Покормила кота на передержке и убрала за ним; домашние дела заняли часть свободного времени.
+  cat_departure:
+    places: [дом]
+    hours: [10, 22]
+    priority: 70
+    reason: foster_period_ended
+    effects: {cat_home: false}
+    mood: life_mixed_help
+    facts: Хозяйка забрала кота. Забот стало меньше, но дома непривычно тихо.
+  gym:
+    when: {gym_active: true}
+    places: [зал]
+    hours: [10, 22]
+    priority: 25
+    reason: use_paid_subscription
+    effects: {gym_visits: {add: 1}}
+    mood: life_achievement
+    facts: Сходила на тренировку по действующему абонементу.
+  gym_renew:
+    places: [дом]
+    hours: [10, 22]
+    priority: 15
+    reason: subscription_expired_after_regular_visits
+    cost: gym
+    effects: {gym_active: true, gym_expires: {after_hours: 720}, gym_visits: 0}
+    mood: life_achievement
+    facts: Продлила абонемент после регулярных посещений; деньги списаны, новые посещения ещё впереди.
+seeds:
+  coffee_fault:
+    chance: 0.12
+    when: {coffee_stage: working}
+    effects: {coffee_stage: leaking}
+    mood: life_frustration
+    facts: Кофеварка начала подтекать; пока пользуюсь осторожно и собираюсь починить.
+    followup: {kind: coffee_repair, hours: 2}
+  roommate_food:
+    chance: 0.12
+    when: {pantry: {gte: 2}}
+    effects: {pantry: {add: -1}}
+    mood: life_frustration
+    facts: Даша съела оставленную порцию; нужно обсудить, как делим продукты.
+    followup: {kind: roommate_talk, hours: 1}
+  timur_wait:
+    chance: 0.2
+    mood: life_uncertainty
+    facts: Написала Тимуру и пока не получила ответа; причина молчания неизвестна.
+    followup: {kind: timur_reply, hours: 6}
+  brother_request:
+    chance: 0.12
+    effects: {brother_helped: false}
+    facts: Брат попросил помочь с заданием; договорились созвониться вечером.
+    followup: {kind: brother_help, hours: 2}
+  illness:
+    chance: 0.025
+    when: {ill_until: null}
+    effects: {ill_until: {after_hours: 72}}
+    mood: life_illness
+    facts: Появились слабость и насморк; отменяю необязательные выходы и отдыхаю дома.
+    followup: {kind: recover, hours: 72}
+  cat_arrival:
+    chance: 0.025
+    when: {cat_home: false}
+    effects: {cat_home: true}
+    mood: life_warmth
+    facts: Приняла знакомого кота на передержку на четыре дня; теперь нужен ежедневный уход.
+    followup: {kind: cat_departure, hours: 96}

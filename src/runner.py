@@ -3,12 +3,14 @@
 import asyncio
 import json
 import subprocess
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta
 
 import httpx
 import structlog
 
+from src.core.admission import StudyDeferred
 from src.core.llm_vendor import CuratorFailure
 from src.core.time_utils import add_elapsed, from_utc_iso, require_aware, to_utc_iso
 from src.orchestrator import Action, Event, Phase, State, transition
@@ -263,9 +265,12 @@ class SQLiteLearningStore:
 
 
 class ActionRunner:
-    def __init__(self, store, handlers, *, alert=None, generation_delay=None):
+    def __init__(
+        self, store, handlers, *, alert=None, generation_delay=None, study_gate=None
+    ):
         self.store, self.handlers, self.alert = store, handlers, alert
         self.generation_delay = generation_delay
+        self.study_gate = study_gate
 
     async def dispatch(self, event):
         with structlog.contextvars.bound_contextvars(trace_id=event.trace_id):
@@ -283,26 +288,44 @@ class ActionRunner:
             trace_id=action.trace_id, action_id=row["id"]
         ):
             try:
-                if row["status"] == "waiting":
-                    result = decode_event(row["result_event"])
-                else:
-                    if action.kind not in self.handlers:
-                        raise ValueError(f"Missing action handler: {action.kind}")
-                    result = await self.handlers[action.kind](action, at)
-                after = (
-                    self.generation_delay(at)
-                    if self.generation_delay and action.kind in GENERATION_ACTIONS
-                    else None
-                )
-                await asyncio.to_thread(
-                    self.store.complete,
-                    row["id"],
-                    result,
-                    at=at,
-                    generation_after=after,
-                )
+                with self.study_gate.session() if self.study_gate else nullcontext():
+                    if row["status"] == "waiting":
+                        result = replace(decode_event(row["result_event"]), at=at)
+                    else:
+                        if action.kind not in self.handlers:
+                            raise ValueError(f"Missing action handler: {action.kind}")
+                        result = await self.handlers[action.kind](action, at)
+                    after = (
+                        self.generation_delay(at)
+                        if self.generation_delay and action.kind in GENERATION_ACTIONS
+                        else None
+                    )
+                    await asyncio.to_thread(
+                        self.store.complete,
+                        row["id"],
+                        result,
+                        at=at,
+                        generation_after=after,
+                    )
                 log.info("action_completed", kind=action.kind)
                 return "completed"
+            except StudyDeferred as error:
+                reason = str(error)
+                await asyncio.to_thread(
+                    self.store.database.run_transaction,
+                    lambda c: c.execute(
+                        "UPDATE learning_actions SET status=?,due_at=?,error=? WHERE "
+                        "id=?",
+                        (
+                            row["status"],
+                            add_elapsed(at, minutes=5),
+                            reason,
+                            row["id"],
+                        ),
+                    ),
+                )
+                log.info("study_deferred", kind=action.kind)
+                return "deferred"
             except (httpx.TransportError, httpx.HTTPStatusError) as error:
                 retryable = not isinstance(
                     error, httpx.HTTPStatusError

@@ -40,8 +40,8 @@ class JobQueue:
         if self._worker is None:
             log.info(
                 "ephemeral_job_recovery_policy",
-                recovery="publication_and_learning_only",
-                discarded="previous_process_commands_chat_and_library_jobs",
+                recovery="publication_learning_and_durable_chat_inbox",
+                discarded="previous_process_commands_and_library_jobs",
             )
             self._worker = asyncio.create_task(self._run())
 

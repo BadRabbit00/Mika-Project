@@ -39,6 +39,8 @@ class ChatContext:
         wake_reason,
         budget=16000,
         narrative=(),
+        life_state=None,
+        delivery_context=None,
     ):
         if mode not in {"topical", "unknown", "personal"}:
             raise ValueError("Unknown conversation mode")
@@ -66,6 +68,10 @@ class ChatContext:
         session_rules = session.split("{mode_block}", 1)[0].replace(
             "{persona}", persona
         )
+        if life_state is not None or delivery_context is not None:
+            session_rules += "\n\n" + (
+                self.prompt_dir / "chat_availability.md"
+            ).read_text(encoding="utf-8")
         template = (
             _COMMENTS.sub("", (self.prompt_dir / f"chat_{mode}.md").read_text())
             .replace("{persona}", "")
@@ -83,6 +89,12 @@ class ChatContext:
                 "when": day.at.isoformat(),
                 "daypart": day.daypart,
                 "location": day.location,
+                "activity": day.activity_label,
+                "subject": day.subject,
+                "busy": day.busy,
+                "activity_until": day.activity_until.isoformat()
+                if day.activity_until
+                else None,
                 "bedtime": day.bedtime.isoformat(),
                 "wake_time": day.wake_time.isoformat(),
                 "wake_reason": wake_reason,
@@ -100,6 +112,10 @@ class ChatContext:
             )
         else:
             data["nearest_nodes"] = []
+        if life_state is not None:
+            data["life_state"] = life_state
+        if delivery_context is not None:
+            data["delivery_context"] = delivery_context
         return Request(
             f"chat_{mode}",
             session_rules + "\n\n" + template[:boundary].strip(),

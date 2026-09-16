@@ -2,8 +2,8 @@
 
 Status: the owner approved the complete table in the conversation following
 commit 226e057. The amounts, opening state, payment dates, spending rules and
-loan terms below are authorized for implementation. They have not yet been
-connected to the live simulation. All amounts are integer tenge. Prices are
+loan terms below are implemented in the autonomous life engine. Deployment to
+the running installation is separate. All amounts are integer tenge. Prices are
 simulation parameters, not live quotes.
 
 ## Evidence reviewed on 2026-09-16
@@ -85,9 +85,11 @@ authoring decisions. Refunds and compensation require explicit ledger events.
 | Repeat loan | No new loan while an earlier loan is overdue |
 | Failed repayment | Pending obligation and relationship consequences; no invented payment or punitive fees |
 
-Outcome probabilities and NPC financial capacity are not approved by this table.
-They must be calibrated separately and tested through explicit deterministic
-fixtures for help, delay, lecture, and refusal.
+This table did not originally specify outcome probabilities or NPC financial
+capacity. The subsequent instruction authorized fictional scenario authoring;
+persisted daily availability and help/delay/lecture/refusal rules now live in
+`life_chains.yaml` and the life engine, with deterministic branch fixtures.
+Independent NPC financial ledgers remain an extension described in LIFE_GAPS.md.
 
 ## Monthly sanity check
 

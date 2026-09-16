@@ -157,6 +157,8 @@ class Writer:
             )
             return WriteResult(post_id, "blocked", None, 0, (day.blackout.reason,))
         offtop = kind in OFFTOP_KINDS
+        if day.activity_id is not None and not offtop and not day.study_allowed:
+            return WriteResult(post_id, "blocked", None, 0, ("home_study_required",))
         profile = "write_offtop" if offtop else "write_tech"
         posts, terms = await asyncio.to_thread(self._history, day.at)
         feedback = {}

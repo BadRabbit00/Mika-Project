@@ -47,10 +47,11 @@ negative. The filled `config/telegram.yaml` stays local; public templates live
 under `mika-startup/startup/config/`.
 
 `library/topics.yaml` is your local catalogue; the entire library is excluded
-from Git. CI supplies its own synthetic data. The first topic requires
+from Git. CI supplies its own synthetic data. Strict curriculum validation requires
 `ab-01.md` through `ab-06.md`, with matching IDs/topics and nonempty origin keys.
 Missing later-topic articles remain absent from curator selection; shortage is
-reported explicitly. Startup never generates replacement source articles.
+reported explicitly. Live mode allows an absent or empty library so everyday life
+and chat can run. Startup never generates replacement source articles.
 
 ## Autonomous world and optional initial snapshot
 
@@ -78,12 +79,13 @@ An existing valid stored snapshot takes precedence over the file's initial field
 Correcting a future timestamp saved by an older release requires a database
 backup and an explicit repair; editing the input file alone does not reset it.
 
-`DerivedWorldProvider` implements where(now) from section 26.1: sleep means home;
-class days from 09:00 to 14:00 select university/transport with probabilities
-0.85/0.15; 14:00–19:00 selects home/cafe/street with probabilities 0.6/0.25/0.15;
-other times mean home. Each draw uses the Almaty date as its seed, so request order
-and process restarts do not move the character. No operator file is read in the
-default mode. Road admission and weather sampling use separate date-based seeds.
+`DerivedWorldProvider` reads the persisted itinerary introduced by the autonomous
+life expansion. Actual class subjects, home activities, sleep and journeys have
+start/end times. Seeded choices are saved once; restart cannot choose a new place
+for each post. Need-driven changes revise future intervals without rewriting the
+past. `where(now)`, chat and publication context share this source. No operator
+file is required. The old standalone World's hour-band rule remains a legacy
+helper, not the live application's location source.
 
 `ScheduledSleepProvider` calls the existing plan_bedtime and resolve_wake formulas.
 It supplies the latest stored article complexity, or no article contribution when
@@ -122,14 +124,18 @@ Settings are read at the next operation. Disabling mood records the configured
 neutral state and removes queued resolutions through the mood mutation API.
 
 Learner events/actions and publication intents are durable. Interrupted running
-actions and uncertain sends require operator reconciliation. Ordinary command,
-chat, and library jobs are ephemeral; this policy is logged at startup. JSONL is
+actions and uncertain sends require operator reconciliation. Ordinary incoming
+chat is durable and sleeps in the inbox until Mika wakes. Command and library
+jobs remain ephemeral; this policy is logged at startup. JSONL is
 the full record; the Telegram log mirror is a convenience view.
 
 Quota failures pause curator actions until the next Almaty midnight. Authentication
 failures stop curator actions until `/exam`. Transport and unknown failures retry
 after six hours up to three times. Unrelated actions are not globally paused.
-`/pause` stops learner scheduling while preserving the outbox.
+`/pause` stops learner, life and inbox scheduling while preserving the outbox.
+
+See [AUTONOMOUS_LIFE_WORK.md](AUTONOMOUS_LIFE_WORK.md) for the independent life
+loop, resource/task consequences, home-study commit guards and delivery freshness.
 
 Live Telegram publication has not been verified without real deployment IDs and
 tokens. The offline scenario and mocked live-composition test exercise wiring;
