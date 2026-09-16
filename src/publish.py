@@ -13,6 +13,7 @@ from datetime import datetime
 
 import structlog
 
+from src.core.chat_store import SessionStore
 from src.core.db import enqueue_outbox
 from src.core.time_utils import add_elapsed, now, require_aware, to_utc_iso
 
@@ -174,6 +175,10 @@ class Publisher:
                             next_try_at=at,
                         )
                     )
+                    if payload.get("chat_reply"):
+                        SessionStore.bind_delivery(
+                            connection, payload["chat_reply"], payload, ids[-1]
+                        )
             return ids
 
         if not prepared:
@@ -286,6 +291,10 @@ class OutboxWorker:
                     raise ValueError("Receipt conflicts with an existing delivery")
                 return
             payload = json.loads(row["payload"])
+            if payload.get("chat_reply"):
+                SessionStore(self.database).confirm_reply(
+                    connection, payload["chat_reply"], outbox_id=outbox_id, at=at
+                )
             connection.execute(
                 "UPDATE outbox SET tg_message_id=?, sent_at=?, next_try_at=NULL "
                 "WHERE id=?",

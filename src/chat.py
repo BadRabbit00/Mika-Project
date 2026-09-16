@@ -222,6 +222,11 @@ class ChatService:
                 )
                 if previous:
                     return self._reply(previous)
+                staged = await asyncio.to_thread(self.store.staged_reply, trace_id)
+                if staged:
+                    if staged["session_id"] != session["id"]:
+                        raise ValueError("A reply trace belongs to another session")
+                    return self._reply(staged)
                 _, terms, _, _ = await asyncio.to_thread(self._memory, None)
                 nodes = await self.retriever.search(question, topic=topic)
                 mode = (
@@ -238,7 +243,7 @@ class ChatService:
                 facts, _, narrative, existing = await asyncio.to_thread(
                     self._memory, mode
                 )
-                state = summary_state(session)
+                state = await asyncio.to_thread(self.store.confirmed_summary, session)
                 history = [turn for turn in turns if turn["idx"] > state["through_idx"]]
                 kwargs = dict(
                     question=question,
@@ -306,13 +311,14 @@ class ChatService:
                         prompt=request.system + "\n" + request.user,
                         min_chars=request.min_chars,
                         max_chars=request.max_chars,
+                        dialogue=True,
                     ),
                 )
                 if not validation.accepted:
                     raise ValueError(f"Chat output rejected: {validation.reasons}")
                 output_tokens = await self.llm.tokenize(raw)
                 row = await asyncio.to_thread(
-                    self.store.save_reply,
+                    self.store.stage_reply,
                     session["id"],
                     user_id=user["id"],
                     text=validation.text,
@@ -325,7 +331,7 @@ class ChatService:
                     mood=encode_mood(mood, self.context.mood_model),
                 )
                 log.info(
-                    "chat_reply_saved",
+                    "chat_reply_staged",
                     mode=mode,
                     tokens_in=len(tokens),
                     tokens_out=len(output_tokens),

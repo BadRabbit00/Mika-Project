@@ -106,6 +106,6 @@ class ChatContext:
             json.dumps(data, ensure_ascii=False),
             budget,
             float(temperature[1]),
-            min_chars=int(length[1]),
+            min_chars=1,
             max_chars=int(length[2]),
         )

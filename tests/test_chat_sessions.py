@@ -93,6 +93,285 @@ async def test_closed_chat_does_not_call_model(service, day):
     service.retriever.search.assert_not_awaited()
 
 
+@pytest.mark.parametrize(
+    "answer", ["Hi! I am Mika.", "Yes.", "No", "Okay", "Приветик! Я Мика."]
+)
+async def test_short_meaningful_chat_reply_is_not_an_empty_post(service, day, answer):
+    await service.open("dm", at=AT)
+    service.llm.generate.return_value = json.dumps(
+        dict(answer=answer, cited=[], confident=True)
+    )
+    reply = await service.reply(
+        "dm",
+        "Hello",
+        trace_id="short",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert reply.text == answer
+
+
+@pytest.mark.parametrize(
+    "answer", ["", "   ", "...", "\u200b\u200b", "<think>hidden</think>"]
+)
+async def test_empty_chat_output_never_becomes_memory(service, day, answer):
+    session = await service.open("dm", at=AT)
+    service.llm.generate.return_value = json.dumps(
+        dict(answer=answer, cited=[], confident=True)
+    )
+    with pytest.raises(ValueError):
+        await service.reply(
+            "dm",
+            "Hello",
+            trace_id="empty",
+            day=day,
+            mood=Mood(0, 0, 0),
+            wake_reason="alarm",
+            topic="security",
+        )
+    assert all(turn["role"] == "user" for turn in service.store.turns(session["id"]))
+
+
+async def test_chat_errors_are_not_published_as_mika_replies(service, day):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from src.chat_gateway import ChatGateway
+    from src.publish import Destination
+
+    await service.open("dm", at=AT)
+    service.llm.generate.return_value = "malformed output"
+    publisher, layout = Mock(), Mock(owner_id=123)
+    layout.destination.return_value = Destination("chat", "mika", -100123, 4)
+    gateway = ChatGateway(
+        service,
+        publisher,
+        layout,
+        AsyncMock(
+            return_value=dict(
+                day=day, mood=Mood(0, 0, 0), wake_reason="alarm", topic="security"
+            )
+        ),
+    )
+    await gateway.handle(SimpleNamespace(text="Hello"), channel="dm", trace_id="bad")
+    assert not any(
+        call.args[1].bot == "mika"
+        for call in publisher.enqueue_operation.call_args_list
+    )
+
+
+async def test_validated_chat_draft_is_hidden_until_telegram_receipt(
+    service, database, day
+):
+    from src.publish import Destination, OutboxWorker, Publisher
+
+    session = await service.open("dm", at=AT)
+    reply = await service.reply(
+        "dm",
+        "Hello",
+        trace_id="delivery",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    assert all(turn["role"] == "user" for turn in service.store.turns(session["id"]))
+    publisher = Publisher(database)
+    publisher.enqueue_operation(
+        "reply:delivery",
+        Destination("chat-dm", "mika", 123),
+        trace_id="delivery",
+        method="message",
+        text=reply.text,
+        at=AT,
+        chat_reply="delivery",
+    )
+    transport = AsyncMock()
+    transport.send.return_value = 42
+    worker = OutboxWorker(database, transport)
+    assert await worker.run_once(at=AT) == "sent"
+    turns = service.store.turns(session["id"])
+    assert [turn["role"] for turn in turns] == ["user", "mika"]
+    assert turns[-1]["text"] == reply.text
+    assert await worker.run_once(at=AT + timedelta(seconds=2)) == "idle"
+    assert len(service.store.turns(session["id"])) == 2
+
+
+async def test_unknown_delivery_never_enters_chat_memory(service, database, day):
+    from src.publish import Destination, OutboxWorker, Publisher
+
+    session = await service.open("dm", at=AT)
+    reply = await service.reply(
+        "dm",
+        "Hello",
+        trace_id="uncertain",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    Publisher(database).enqueue_operation(
+        "reply:uncertain",
+        Destination("chat-dm", "mika", 123),
+        trace_id="uncertain",
+        method="message",
+        text=reply.text,
+        at=AT,
+        chat_reply="uncertain",
+    )
+    transport = AsyncMock()
+    transport.send.side_effect = TimeoutError("Unknown acceptance")
+    worker = OutboxWorker(database, transport)
+    assert await worker.run_once(at=AT) == "uncertain"
+    assert all(turn["role"] == "user" for turn in service.store.turns(session["id"]))
+    uncertain = worker.uncertain()[0]
+    worker.reconcile(uncertain["id"], message_id=123, at=AT + timedelta(minutes=2))
+    assert len(service.store.turns(session["id"])) == 2
+
+
+@pytest.mark.parametrize("change", ["text", "channel", "method", "key"])
+async def test_chat_delivery_cannot_change_validated_reply(
+    service, database, day, change
+):
+    from src.publish import Destination, Publisher
+
+    await service.open("dm", at=AT)
+    reply = await service.reply(
+        "dm",
+        "Hello",
+        trace_id="bound",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    options = dict(
+        key="reply:bound",
+        destination=Destination("chat-dm", "mika", 123),
+        trace_id="bound",
+        method="message",
+        text=reply.text,
+        at=AT,
+        chat_reply="bound",
+    )
+    publisher = Publisher(database)
+    if change == "text":
+        options["text"] = "An unvalidated replacement"
+    elif change == "channel":
+        options["destination"] = Destination("chat", "mika", -100123, 4)
+    elif change == "method":
+        options["method"] = "edit"
+    else:
+        publisher.enqueue_operation(**options)
+        options["key"] = "another:bound"
+    with pytest.raises(ValueError):
+        publisher.enqueue_operation(**options)
+
+
+async def test_unsent_reply_is_not_used_by_later_generation(service, day):
+    await service.open("dm", at=AT)
+    common = dict(day=day, mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    draft = await service.reply("dm", "First", trace_id="first", **common)
+    await service.reply("dm", "Second", trace_id="second", **common)
+    request = service.llm.generate.call_args.args[0]
+    assert draft.text not in request.user
+
+
+async def test_staged_reply_trace_cannot_cross_dialogue_channels(service, day):
+    await service.open("dm", at=AT)
+    await service.open("topic", at=AT)
+    common = dict(day=day, mood=Mood(0, 0, 0), wake_reason="alarm", topic="security")
+    await service.reply("dm", "Private question", trace_id="collision", **common)
+    with pytest.raises(ValueError, match="another session"):
+        await service.reply("topic", "Public question", trace_id="collision", **common)
+    assert service.llm.generate.await_count == 1
+
+
+async def test_upgrade_hides_legacy_unsent_turns_and_their_summary(service, day):
+    from src.publish import Destination, OutboxWorker, Publisher
+
+    session = await service.open("dm", at=AT)
+    user = service.store.add_user(
+        session["id"], "Earlier question", trace_id="legacy", at=AT
+    )
+    service.store.save_reply(
+        session["id"],
+        user_id=user["id"],
+        text="Unconfirmed legacy draft",
+        mode="personal",
+        cited=[],
+        at=AT,
+        trace_id="legacy",
+        tokens=100,
+        topic="security",
+    )
+    service.store.checkpoint(
+        session["id"],
+        {
+            "text": "Unconfirmed legacy draft",
+            "through_idx": 1,
+            "finalized": False,
+        },
+    )
+    assert [turn["role"] for turn in service.store.turns(session["id"])] == ["user"]
+    await service.reply(
+        "dm",
+        "Next question",
+        trace_id="after-upgrade",
+        day=day,
+        mood=Mood(0, 0, 0),
+        wake_reason="alarm",
+        topic="security",
+    )
+    request = service.llm.generate.call_args.args[0]
+    assert "Unconfirmed legacy draft" not in request.user
+    assert "Earlier question" in request.user
+    Publisher(service.database).enqueue_operation(
+        "legacy:chat",
+        Destination("chat-dm", "mika", 123),
+        trace_id="legacy",
+        method="message",
+        text="Unconfirmed legacy draft",
+        at=AT,
+    )
+    transport = AsyncMock()
+    transport.send.return_value = 123
+    assert await OutboxWorker(service.database, transport).run_once(at=AT) == "sent"
+    assert any(
+        turn["text"] == "Unconfirmed legacy draft"
+        for turn in service.store.turns(session["id"])
+    )
+
+
+async def deliver_reply(service, trace_id, *, channel="dm"):
+    """Exercise the real receipt path using a transport with no network access."""
+    from src.publish import Destination, OutboxWorker, Publisher
+
+    reply = service.store.staged_reply(trace_id)
+    with service.database.connection(readonly=True) as connection:
+        sent = connection.execute(
+            "SELECT count(*) FROM outbox WHERE sent_at IS NOT NULL"
+        ).fetchone()[0]
+    delivered_at = AT + timedelta(seconds=sent * 5)
+    Publisher(service.database).enqueue_operation(
+        "reply:" + trace_id,
+        Destination("chat-dm" if channel == "dm" else "chat", "mika", 123),
+        trace_id=trace_id,
+        method="message",
+        text=reply["text"],
+        at=AT,
+        chat_reply=trace_id,
+    )
+    transport = AsyncMock()
+    transport.send.return_value = 42
+    assert (
+        await OutboxWorker(service.database, transport).run_once(at=delivered_at)
+        == "sent"
+    )
+
+
 async def test_dialogue_channels_and_replays_are_isolated(service, day):
     dm = await service.open("dm", at=AT)
     topic = await service.open("topic", at=AT)
@@ -109,6 +388,7 @@ async def test_dialogue_channels_and_replays_are_isolated(service, day):
     assert service.llm.generate.await_count == 2
     request = service.llm.generate.call_args.args[0]
     assert "Private tea preference" not in request.user
+    await deliver_reply(service, "dm-1")
     reopened = SessionStore(service.database)
     assert len(reopened.turns(dm["id"])) == 2
     assert reopened.active("topic")["id"] == topic["id"]
@@ -137,6 +417,7 @@ async def test_chat_routes_unknown_and_opens_one_question(
         topic="security",
     )
     assert result.mode == "unknown" and not result.cited
+    await deliver_reply(service, "unknown", channel=channel)
     service.retriever.search.assert_awaited_once_with(
         "What is seccomp?", topic="security"
     )
@@ -225,6 +506,7 @@ async def test_chat_compresses_only_head_and_preserves_last_twelve(service, day)
     request = service.llm.generate.call_args.args[0]
     assert all(f'"turn-{idx}"' in request.user for idx in range(3, 14))
     assert "Newest question" in request.user
+    await deliver_reply(service, "newest")
     assert len(service.store.turns(session["id"])) == 16
 
 
@@ -297,6 +579,7 @@ async def test_session_export_measures_first_to_last_reply_similarity(
             wake_reason="alarm",
             topic="security",
         )
+        await deliver_reply(service, f"voice-{index}")
     service.llm.embed.side_effect = (
         httpx.ConnectError("offline") if unavailable else [[1.0, 0.0], [0.6, 0.8]]
     )
@@ -331,6 +614,7 @@ async def test_session_mood_export_uses_normalized_deltas_and_all_band_changes(
             wake_reason="alarm",
             topic="security",
         )
+        await deliver_reply(service, f"mood-{index}")
     await service.close(session["id"], at=AT + timedelta(minutes=5), mood=Mood(1, 1, 1))
     # Reopening the store must preserve intermediate transitions.
     service.store = SessionStore(service.database)

@@ -23,7 +23,7 @@ class ChatGateway:
                 if channel == "dm"
                 else self.layout.destination("chat")
             )
-            text, document = None, False
+            text, document, reply_trace = None, False, None
             current = await asyncio.to_thread(self.service.store.active, channel)
             try:
                 command, _, argument = message.text.partition(" ")
@@ -77,8 +77,12 @@ class ChatGateway:
                     )
                     if result:
                         text = result.text
+                        reply_trace = result.trace_id
             except ValueError as error:
-                text = {"error": str(error)}
+                structlog.get_logger("blogai.chat_gateway").warning(
+                    "chat_output_withheld", error_type=type(error).__name__
+                )
+                return
             if text is None:
                 return
             content = (
@@ -90,6 +94,8 @@ class ChatGateway:
                 )
             else:
                 data = dict(method="message", text=content)
+            if reply_trace is not None:
+                data["chat_reply"] = reply_trace
             await asyncio.to_thread(
                 self.publisher.enqueue_operation,
                 trace_id + ":chat",

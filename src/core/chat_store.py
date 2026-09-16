@@ -3,7 +3,17 @@
 import json
 from uuid import uuid4
 
-from src.core.time_utils import require_aware
+from src.core.time_utils import require_aware, to_utc_iso
+
+_CONFIRMED = """EXISTS (
+    SELECT 1 FROM outbox o WHERE o.sent_at IS NOT NULL
+    AND o.tg_message_id IS NOT NULL
+    AND o.channel=CASE s.channel WHEN 'dm' THEN 'chat-dm' ELSE 'chat' END
+    AND json_extract(o.payload,'$.trace_id')=t.trace_id
+    AND json_extract(o.payload,'$.method')='message'
+    AND json_extract(o.payload,'$.destination.bot')='mika'
+    AND json_extract(o.payload,'$.text')=t.text
+)"""
 
 
 def summary_state(session):
@@ -74,10 +84,28 @@ class SessionStore:
             return [
                 {key: row[key] for key in row.keys() if include_mood or key != "mood"}
                 for row in c.execute(
-                    "SELECT * FROM session_turns WHERE session_id=? ORDER BY idx,id",
+                    "SELECT t.* FROM session_turns t "
+                    "JOIN sessions s ON s.id=t.session_id WHERE t.session_id=? "
+                    f"AND (t.role='user' OR {_CONFIRMED}) ORDER BY t.idx,t.id",
                     (session_id,),
                 )
             ]
+
+    def confirmed_summary(self, session):
+        """Ignore legacy compression that may include undelivered output."""
+        state = summary_state(session)
+        if state["through_idx"] < 0:
+            return state
+        with self.database.connection(readonly=True) as connection:
+            hidden = connection.execute(
+                "SELECT 1 FROM session_turns t JOIN sessions s ON s.id=t.session_id "
+                "WHERE t.session_id=? AND t.idx<=? AND t.role='mika' "
+                f"AND NOT ({_CONFIRMED}) LIMIT 1",
+                (session["id"], state["through_idx"]),
+            ).fetchone()
+        if hidden:
+            state.update(text="", through_idx=-1)
+        return state
 
     def mood_events(self, session, turns):
         until = session["closed_at"] or (
@@ -132,6 +160,100 @@ class SessionStore:
 
         return self.database.run_transaction(save)
 
+    def staged_reply(self, trace_id):
+        with self.database.connection(readonly=True) as connection:
+            row = connection.execute(
+                "SELECT * FROM chat_replies WHERE trace_id=?", (trace_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            payload = json.loads(row["payload"])
+            return dict(
+                payload,
+                session_id=row["session_id"],
+                trace_id=trace_id,
+                cited=json.dumps(payload["cited"]),
+            )
+
+    def stage_reply(self, session_id, *, trace_id, at, **payload):
+        """Persist validated output separately from the visible dialogue."""
+        at = require_aware(at)
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+        def save(connection):
+            session = connection.execute(
+                "SELECT closed_at FROM sessions WHERE id=?", (session_id,)
+            ).fetchone()
+            if session is None or session[0] is not None:
+                raise ValueError("The session closed during generation")
+            existing = {
+                row[0]
+                for row in connection.execute("SELECT id FROM nodes WHERE suspect=0")
+            }
+            if not set(payload["cited"]) <= existing:
+                raise ValueError("A cited node changed during generation")
+            previous = connection.execute(
+                "SELECT session_id,payload FROM chat_replies WHERE trace_id=?",
+                (trace_id,),
+            ).fetchone()
+            if previous and tuple(previous) != (session_id, serialized):
+                raise ValueError("A reply trace cannot identify changed output")
+            connection.execute(
+                "INSERT OR IGNORE INTO chat_replies"
+                "(trace_id,session_id,user_id,payload,created_at) VALUES (?,?,?,?,?)",
+                (trace_id, session_id, payload["user_id"], serialized, at),
+            )
+
+        self.database.run_transaction(save)
+        return self.staged_reply(trace_id)
+
+    @staticmethod
+    def bind_delivery(connection, trace_id, payload, outbox_id):
+        row = connection.execute(
+            "SELECT r.*,s.channel FROM chat_replies r "
+            "JOIN sessions s ON s.id=r.session_id WHERE r.trace_id=?",
+            (trace_id,),
+        ).fetchone()
+        if row is None:
+            raise ValueError("Chat delivery requires a validated draft")
+        channel = "chat-dm" if row["channel"] == "dm" else "chat"
+        if (
+            payload["method"] != "message"
+            or payload.get("text") != json.loads(row["payload"])["text"]
+            or payload["trace_id"] != trace_id
+            or payload["destination"]["bot"] != "mika"
+            or payload["destination"]["channel"] != channel
+            or row["outbox_id"] not in (None, outbox_id)
+        ):
+            raise ValueError("Chat delivery differs from its validated draft")
+        connection.execute(
+            "UPDATE chat_replies SET outbox_id=? WHERE trace_id=?",
+            (outbox_id, trace_id),
+        )
+
+    def confirm_reply(self, connection, trace_id, *, outbox_id, at):
+        """Commit a delivered turn inside the same transaction as its receipt."""
+        row = connection.execute(
+            "SELECT * FROM chat_replies WHERE trace_id=?", (trace_id,)
+        ).fetchone()
+        if row is None:
+            raise ValueError("No validated reply exists for this receipt")
+        if row["outbox_id"] != outbox_id:
+            raise ValueError("Receipt does not match the bound reply delivery")
+        if row["sent_at"] is not None:
+            return
+        self.save_reply(
+            row["session_id"],
+            trace_id=trace_id,
+            at=at,
+            **json.loads(row["payload"]),
+            _connection=connection,
+        )
+        connection.execute(
+            "UPDATE chat_replies SET sent_at=?,outbox_id=? WHERE trace_id=?",
+            (to_utc_iso(at), outbox_id, trace_id),
+        )
+
     def save_reply(
         self,
         session_id,
@@ -145,6 +267,7 @@ class SessionStore:
         tokens,
         topic,
         mood=None,
+        _connection=None,
     ):
         at = require_aware(at)
 
@@ -152,7 +275,7 @@ class SessionStore:
             session = c.execute(
                 "SELECT * FROM sessions WHERE id=?", (session_id,)
             ).fetchone()
-            if session is None or session["closed_at"]:
+            if session is None or (session["closed_at"] and _connection is None):
                 raise ValueError("The session closed during generation")
             previous = c.execute(
                 "SELECT * FROM session_turns WHERE session_id=? "
@@ -164,7 +287,7 @@ class SessionStore:
             existing = {
                 row[0] for row in c.execute("SELECT id FROM nodes WHERE suspect=0")
             }
-            if not set(cited) <= existing:
+            if _connection is None and not set(cited) <= existing:
                 raise ValueError("A cited node changed during generation")
             idx = c.execute(
                 "SELECT COALESCE(max(idx),-1)+1 FROM session_turns WHERE session_id=?",
@@ -204,7 +327,11 @@ class SessionStore:
                 ).fetchone()
             )
 
-        return self.database.run_transaction(save)
+        return (
+            save(_connection)
+            if _connection is not None
+            else self.database.run_transaction(save)
+        )
 
     def checkpoint(self, session_id, state):
         self.database.run_transaction(

@@ -32,3 +32,11 @@ are the approved first version and do not prove arbitrary factual correctness.
 and regression gates. [DECISIONS.md](DECISIONS.md) preserves the supplied decisions
 and their later corrections. Resolved markers are removed from maintained code
 and documentation.
+
+## Autonomous-life expansion
+
+The new life requirements have a separate, still-active implementation plan in
+[AUTONOMOUS_LIFE_WORK.md](AUTONOMOUS_LIFE_WORK.md). Missing scenario decisions are
+listed in [LIFE_GAPS.md](LIFE_GAPS.md), and concrete proposed financial parameters
+await owner approval in [LIFE_CALIBRATION.md](LIFE_CALIBRATION.md). These documents
+distinguish completed chat/storage changes from runtime work still required.
