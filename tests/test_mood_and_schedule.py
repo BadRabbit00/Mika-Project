@@ -25,8 +25,8 @@ from src.core.mood import (
     apply,
     decay,
 )
-from src.core.time_utils import ALMATY, add_elapsed, elapsed_hours
 from src.core.schedule import Schedule, ScheduleGap, SleepWindow
+from src.core.time_utils import ALMATY, add_elapsed, elapsed_hours
 from src.core.world import World
 
 START = datetime(2026, 9, 14, tzinfo=ALMATY)
@@ -186,6 +186,63 @@ def test_sleep_debt_storage_rejects_unrounded_direct_writes(service):
                 sleep_debt=math.inf,
             )
         )
+
+
+def test_stored_octant_matches_rounded_pad(service):
+    service = MoodService(
+        service.database,
+        service.model,
+        initial=Mood(-0.25004 / 0.91, 0, 0),
+        initial_at=START,
+    )
+    state = service.record_event(
+        "article_received", at=START, context=BaselineContext()
+    )
+    assert state.mood.P == -0.15
+    with service.database.connection() as connection:
+        octant = connection.execute("SELECT octant FROM mood").fetchone()[0]
+    assert octant == service.model.octant(state.mood)
+
+
+def test_trigger_queue_failure_rolls_back_mood_snapshot(service):
+    with service.database.connection() as connection:
+        connection.execute(
+            "CREATE TRIGGER reject_queue BEFORE INSERT ON mood_queue "
+            "BEGIN SELECT RAISE(ABORT, 'Injected queue failure'); END"
+        )
+    with pytest.raises(sqlite3.IntegrityError, match="Injected queue failure"):
+        service.fire_trigger(
+            "fight_with_boyfriend",
+            at=START,
+            context=BaselineContext(),
+            week_start=START,
+            next_exam_at=None,
+            rng=Random(1),
+        )
+    with service.database.connection() as connection:
+        assert connection.execute("SELECT count(*) FROM mood").fetchone()[0] == 0
+
+
+def test_mood_and_resolution_survive_service_restart(service):
+    service.fire_trigger(
+        "fight_with_boyfriend",
+        at=START,
+        context=BaselineContext(),
+        week_start=START,
+        next_exam_at=None,
+        rng=Random(1),
+    )
+    restarted = MoodService(
+        service.database,
+        service.model,
+        initial=Mood(1, 1, 1),
+        initial_at=START,
+    )
+    at = add_elapsed(START, hours=1)
+    assert restarted.view(at, BaselineContext()) == service.view(at, BaselineContext())
+    assert restarted.pending_resolutions(add_elapsed(START, hours=24)) == (
+        service.pending_resolutions(add_elapsed(START, hours=24))
+    )
 
 
 def test_trigger_resolution_is_atomic_and_consumed_once(service):
@@ -426,9 +483,14 @@ def test_sleep_debt_uses_actual_hours_and_literal_clamp(schedule, model):
 
 def test_sleep_and_class_blackouts_include_boundaries_but_allow_breaks(schedule):
     sleep = SleepWindow(START.replace(hour=1), START.replace(hour=7, minute=50))
-    for hour, minute, reason in ((1, 0, "sleep"), (7, 49, "sleep"),
-                                 (9, 0, "class"), (10, 19, "class"),
-                                 (10, 30, "class"), (12, 0, "class")):
+    for hour, minute, reason in (
+        (1, 0, "sleep"),
+        (7, 49, "sleep"),
+        (9, 0, "class"),
+        (10, 19, "class"),
+        (10, 30, "class"),
+        (12, 0, "class"),
+    ):
         result = schedule.blackout(
             START.replace(hour=hour, minute=minute), sleep=sleep, road_roll=0
         )
@@ -452,7 +514,9 @@ def test_schedule_rejects_naive_times_and_measures_repeated_hour(schedule):
     naive = START.replace(tzinfo=None)
     for call in (
         lambda: schedule.classes(naive),
-        lambda: schedule.plan_sleep(naive, last_complexity=5, mood="neutral", rng=Random(1)),
+        lambda: schedule.plan_sleep(
+            naive, last_complexity=5, mood="neutral", rng=Random(1)
+        ),
         lambda: SleepWindow(naive, START),
     ):
         with pytest.raises(ValueError, match="aware"):
@@ -482,30 +546,48 @@ def test_world_context_preserves_sleep_facts_and_known_objects(schedule):
     location = next(iter(world.locations))
     sleep = SleepWindow(START.replace(hour=1), START.replace(hour=7))
     context = world.day_context(
-        START.replace(hour=2), sleep=sleep, sleep_debt=2,
-        location=location, road_roll=0.5
+        START.replace(hour=2),
+        sleep=sleep,
+        sleep_debt=2,
+        location=location,
+        road_roll=0.5,
     )
     assert context.bedtime == sleep.bedtime and context.wake_time == sleep.wake
     assert context.sleep_debt == 2 and context.daypart == "deep_night"
     assert context.location == location and context.available_objects
     assert context.blackout.blocked and context.blackout.reason == "sleep"
     with pytest.raises(ValueError, match="location"):
-        world.day_context(START, sleep=sleep, sleep_debt=2,
-                          location="unknown", road_roll=0.5)
+        world.day_context(
+            START, sleep=sleep, sleep_debt=2, location="unknown", road_roll=0.5
+        )
 
 
 def test_two_week_schedule_simulation(tmp_path):
     output = tmp_path / "scheduled"
     result = subprocess.run(
-        [sys.executable, "scripts/simulate_mood.py", "--start", "2026-09-14",
-         "--days", "14", "--seed", "1", "--output", str(output), "--with-schedule"],
-        capture_output=True, text=True, check=False,
+        [
+            sys.executable,
+            "scripts/simulate_mood.py",
+            "--start",
+            "2026-09-14",
+            "--days",
+            "14",
+            "--seed",
+            "1",
+            "--output",
+            str(output),
+            "--with-schedule",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     report = json.loads((output / "report.json").read_text())
     assert report["samples"] == 336 and report["sleep_nights"] == 14
     assert report["blackout_samples"]["sleep"] > 0
     assert report["blackout_samples"]["class"] > 0
+    assert report["blackout_samples"]["commute"] > 0
     assert all(value == 0 for value in report["longest_extreme_run"].values())
     assert (output / "sleep.csv").is_file() and (output / "world.csv").is_file()
     assert "Wake reason" in result.stdout

@@ -134,6 +134,15 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(WORLD-LOCATION): no deterministic movement policy is specified. Day
   context requires the caller's known location, validated against life.yaml.
   It does not randomly invent a location or infer one from a publication chance.
+- TODO(SLEEP-HISTORY): no schema or life_state key contract specifies planned
+  and actual sleep intervals, wake reasons, or once-per-night debt application.
+  Sleep calculators accept explicit facts; mood snapshots persist the supplied
+  debt. Define durable sleep-history identities before the step 12 scheduler
+  takes ownership of these facts across restarts. The simulation exports them.
+- TODO(MOOD-DISABLED): the settings describe neutral output when mood is disabled,
+  but do not define its numeric state or treatment of queued resolutions. Current
+  supplied defaults enable mood. Disabling mutation fails explicitly until those
+  semantics are specified; no replacement neutral state is invented.
 
 ## Invariants for later delivery stages
 

@@ -57,3 +57,31 @@ def add_elapsed(value: datetime, *, hours: float = 0, minutes: float = 0) -> dat
     return datetime.fromtimestamp(
         value.timestamp() + hours * 3600 + minutes * 60, ALMATY
     )
+
+
+def clock_minute(value: str) -> int:
+    hour, minute = map(int, value.split(":"))
+    if not 0 <= hour < 24 or not 0 <= minute < 60:
+        raise ValueError("Invalid local clock time")
+    return hour * 60 + minute
+
+
+def local_clock(day: datetime, clock: str) -> datetime:
+    day = require_aware(day)
+    hour, minute = divmod(clock_minute(clock), 60)
+    return day.replace(hour=hour, minute=minute, second=0, microsecond=0, fold=0)
+
+
+def in_clock_window(at: datetime, start: str, end: str) -> bool:
+    at = require_aware(at)
+    minute = at.hour * 60 + at.minute
+    lo, hi = clock_minute(start), clock_minute(end)
+    return lo <= minute < hi if lo < hi else minute >= lo or minute < hi
+
+
+def daypart_at(at: datetime, windows: dict) -> str:
+    at = require_aware(at)
+    for name, window in windows.items():
+        if in_clock_window(at, window["from"], window["to"]):
+            return name
+    raise ValueError("No configured daypart covers this instant")

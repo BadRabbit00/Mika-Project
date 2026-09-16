@@ -4,7 +4,7 @@ import argparse
 import csv
 import json
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -17,17 +17,54 @@ from src.core.db import Database
 from src.core.logging import configure_logging
 from src.core.mood import BaselineContext, MoodModel, MoodService
 from src.core.pad import AXES
-from src.core.time_utils import ALMATY, add_elapsed, require_aware, to_utc_iso
+from src.core.schedule import Schedule, SleepWindow
+from src.core.time_utils import (
+    ALMATY,
+    add_elapsed,
+    local_clock,
+    require_aware,
+    to_utc_iso,
+)
+from src.core.world import World
 
 
-def local_clock(day: datetime, text: str) -> datetime:
-    day = require_aware(day)
-    hour, minute = map(int, text.split(":"))
-    return day.replace(hour=hour, minute=minute, second=0, microsecond=0)
+def simulate_nights(start, days, schedule, scenario, rng):
+    """Use explicit fixture facts where the production specification is incomplete."""
+    nights = []
+    debt = scenario["initial_debt"]
+    for index in range(days):
+        day = start + timedelta(days=index)
+        complexities, labels = scenario["complexity_rotation"], scenario["sleep_labels"]
+        plan = schedule.plan_sleep(
+            day - timedelta(days=1),
+            last_complexity=complexities[index % len(complexities)],
+            mood=labels[index % len(labels)],
+            rng=rng,
+        )
+        wake = schedule.wake_up(
+            day,
+            rng=rng,
+            trigger_states=scenario["trigger_states"],
+            interruption_times={
+                key: local_clock(day, value)
+                for key, value in scenario["interruption_times"].items()
+            },
+        )
+        sleep = SleepWindow(plan.bedtime, wake.at)
+        debt = schedule.sleep_debt(debt, sleep)
+        nights.append((plan, wake, sleep, debt))
+    return nights
 
 
 def simulate(
-    *, start: datetime, days: int, seed: int, output: Path, config: Path, scenario: dict
+    *,
+    start: datetime,
+    days: int,
+    seed: int,
+    output: Path,
+    config: Path,
+    scenario: dict,
+    with_schedule: bool = False,
 ) -> dict:
     start = require_aware(start)
     if days <= 0:
@@ -43,8 +80,24 @@ def simulate(
     database = Database(database_path)
     database.initialize()
     rng = Random(seed)
+    schedule = Schedule.from_config(config) if with_schedule else None
+    world = World.from_config(config) if with_schedule else None
+    calendar_rng = Random(seed)
+    nights = (
+        simulate_nights(start, days, schedule, scenario["schedule"], calendar_rng)
+        if with_schedule
+        else []
+    )
 
     def context_at(at):
+        if with_schedule:
+            completed = [
+                night for night in nights if night[2].wake.timestamp() <= at.timestamp()
+            ]
+            debt = (
+                completed[-1][3] if completed else scenario["schedule"]["initial_debt"]
+            )
+            return BaselineContext(sleep_debt=debt)
         index = (at.date() - start.date()).days
         debts = scenario["sleep_debt_rotation"]
         return BaselineContext(sleep_debt=debts[index % len(debts)])
@@ -58,9 +111,16 @@ def simulate(
     while at.timestamp() < end.timestamp():
         samples_at.add(at)
         at = add_elapsed(at, hours=1)
+    world_at = set(samples_at)
     for index in range(days):
         day = start + timedelta(days=index)
-        for event in scenario["daily"]:
+        if with_schedule:
+            world_at.update(
+                local_clock(day, clock)
+                for clock in scenario["schedule"]["blackout_checks"]
+            )
+        daily = scenario["schedule"]["daily"] if with_schedule else scenario["daily"]
+        for event in daily:
             actions[local_clock(day, event["time"])].append(("event", event["event"]))
         rotation = scenario["study_rotation"]
         actions[local_clock(day, scenario["study_time"])].append(
@@ -70,9 +130,12 @@ def simulate(
         if trigger["day"] < days:
             at = local_clock(start + timedelta(days=trigger["day"]), trigger["time"])
             actions[at].append(("trigger", trigger["id"]))
+    for _, wake, _, _ in nights:
+        if wake.event_id is not None:
+            actions[wake.at].append(("event", wake.event_id))
 
-    samples, transitions = [], []
-    for at in sorted(samples_at | actions.keys(), key=lambda item: item.timestamp()):
+    samples, transitions, world_rows = [], [], []
+    for at in sorted(world_at | actions.keys(), key=lambda item: item.timestamp()):
         for resolution in service.pending_resolutions(at):
             state = service.record_event(
                 resolution.event_id,
@@ -97,6 +160,40 @@ def simulate(
             transitions.append(state)
         if at in samples_at:
             samples.append(service.view(at, context_at(at)))
+        if with_schedule and at in world_at:
+            sleeping = [night for night in nights if night[2].contains(at)]
+            completed = [
+                night for night in nights if night[2].wake.timestamp() <= at.timestamp()
+            ]
+            night = (sleeping or completed or nights[:1])[-1]
+            sleep = night[2]
+            activity = (
+                "sleep"
+                if sleep.contains(at)
+                else "class"
+                if any(lesson.contains(at) for lesson in schedule.classes(at))
+                else "commute"
+                if schedule.in_commute(at)
+                else "free"
+            )
+            day_context = world.day_context(
+                at,
+                sleep=sleep,
+                sleep_debt=context_at(at).sleep_debt,
+                location=scenario["schedule"]["locations"][activity],
+                road_roll=calendar_rng.random(),
+            )
+            world_rows.append(
+                {
+                    "at": to_utc_iso(at),
+                    "bedtime": to_utc_iso(day_context.bedtime),
+                    "wake_time": to_utc_iso(day_context.wake_time),
+                    "sleep_debt": round(day_context.sleep_debt, 4),
+                    "location": day_context.location,
+                    "daypart": day_context.daypart,
+                    "blackout": day_context.blackout.reason or "allowed",
+                }
+            )
 
     longest, extreme_counts = {}, {}
     for axis in AXES:
@@ -128,6 +225,31 @@ def simulate(
         "longest_extreme_run": longest,
         "scenario": scenario["description"],
     }
+    if with_schedule:
+        report["sleep_nights"] = len(nights)
+        report["blackout_checks"] = len(world_rows)
+        report["blackout_samples"] = dict(
+            Counter(row["blackout"] for row in world_rows)
+        )
+        report["final_sleep_debt"] = round(nights[-1][3], 4)
+        sleep_rows = [
+            {
+                "bedtime": to_utc_iso(sleep.bedtime),
+                "planned_wake": to_utc_iso(plan.wake),
+                "actual_wake": to_utc_iso(sleep.wake),
+                "reason": wake.reason,
+                "hours": round(sleep.hours, 4),
+                "debt": round(debt, 4),
+            }
+            for plan, wake, sleep, debt in nights
+        ]
+        for name, rows in (("sleep", sleep_rows), ("world", world_rows)):
+            with (output / f"{name}.csv").open(
+                "w", encoding="utf-8", newline=""
+            ) as stream:
+                writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+                writer.writeheader()
+                writer.writerows(rows)
     (output / "report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
@@ -156,6 +278,19 @@ def simulate(
             f"{day.isoformat()}  {means[0]:7.4f}  {means[1]:7.4f} "
             f" {means[2]:7.4f}  {count:7d}"
         )
+    if with_schedule:
+        print("Date         Bedtime   Wake      Hours   Debt   Wake reason")
+        for _, wake, sleep, debt in nights:
+            print(
+                f"{wake.at.date()}   {sleep.bedtime:%H:%M}     {wake.at:%H:%M}"
+                f"    {sleep.hours:5.2f}  {debt:5.2f}   {wake.reason}"
+            )
+    print("Local event time           P        A        D  Event")
+    for state in transitions:
+        print(
+            f"{state.at:%Y-%m-%d %H:%M:%S}  {state.mood.P:7.4f}"
+            f"  {state.mood.A:7.4f}  {state.mood.D:7.4f}  {state.last_event}"
+        )
     print(json.dumps(report, sort_keys=True))
     structlog.get_logger("blogai.simulation").info(
         "simulation_completed", report=report
@@ -170,6 +305,7 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--config", type=Path, default=Path("config"))
+    parser.add_argument("--with-schedule", action="store_true")
     parser.add_argument(
         "--scenario",
         type=Path,
@@ -186,6 +322,7 @@ def main() -> int:
             output=args.output,
             config=args.config,
             scenario=json.loads(args.scenario.read_text(encoding="utf-8")),
+            with_schedule=args.with_schedule,
         )
     except Exception:
         structlog.get_logger("blogai.simulation").exception("simulation_failed")

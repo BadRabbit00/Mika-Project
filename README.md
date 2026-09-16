@@ -1,7 +1,7 @@
 # BlogAI
 
-Steps 1–4 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
-storage, extraction, self-quiz, and the immutable PAD mood model.
+Steps 1–5 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+storage, extraction, self-quiz, immutable PAD mood, biological time, and day context.
 
 ## Development
 
@@ -11,8 +11,8 @@ commands run inside the devShell. Python downloads by uv are disabled.
 ```sh
 nix develop
 pytest -q
-ruff check src tests
-ruff format --check src tests
+ruff check src tests scripts
+ruff format --check src tests scripts
 nixfmt --check flake.nix
 ```
 
