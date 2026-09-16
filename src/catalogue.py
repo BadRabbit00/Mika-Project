@@ -18,7 +18,17 @@ class Catalogue:
     @classmethod
     def load(cls, directory):
         directory = Path(directory)
-        data = YAML(typ="safe").load((directory / "topics.yaml").read_text())
+        catalogue_path = directory / "topics.yaml"
+        try:
+            contents = catalogue_path.read_text(encoding="utf-8")
+        except FileNotFoundError as exc:
+            raise ValueError(
+                f"Missing topic catalogue: {catalogue_path}. "
+                "Restore your private library or use --library <directory> "
+                "to select the directory containing topics.yaml and its articles. "
+                "See mika-startup/ЗАПУСК.md."
+            ) from exc
+        data = YAML(typ="safe").load(contents)
         topics = {row["name"]: row for row in data["topics"]}
         if len(topics) != len(data["topics"]) or data["start"] not in topics:
             raise ValueError("Topic names and the starting topic must be unambiguous")

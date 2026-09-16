@@ -1118,6 +1118,15 @@ embeddings:
 
 ### 19.2 Как это ложится в Telegram
 
+Implementation update (2026-09-16, owner-requested batching): Telegram cards now
+group up to ten events, with a five-second flush window and earlier splitting
+at the message-size limit. Full attachments contain an `events` array. Event
+trace IDs and the complete local JSONL record are preserved. The card and its
+attachment are committed atomically. Shared, durable bot/chat pacing and
+`retry_after` handling apply to every outbox operation. See
+[docs/INTERFACES.md](docs/INTERFACES.md#machine-log-batches) for the current contract;
+the single-event example below illustrates the contents of one batch entry.
+
 Ограничение: 4096 символов на сообщение. Полный промпт туда
 не влезает, а резать его — потерять смысл лога.
 
@@ -2063,11 +2072,22 @@ Celery, Postgres, Docker. Каждое добавит инфраструктур
 
 ### 30.1 Два сервиса
 
+```sh
+nix develop .#models --command llama-server \
+  --model /path/to/gemma-4-12b-it-uncensored-Q4_K_M.gguf \
+  --host 127.0.0.1 --port 8080 --ctx-size 32768 --parallel 1 \
+  --reasoning on --reasoning-budget 8192 --no-context-shift
+nix build .#embedding-model --out-link result-embedding-model
+nix develop .#models --command llama-server \
+  --model "$PWD/result-embedding-model" --host 127.0.0.1 --port 8081 \
+  --ctx-size 2048 --parallel 1 --batch-size 2048 --ubatch-size 2048 --embedding
 ```
-llama-server --model gemma-4-12B-it-Q4_K_M.gguf --port 8080 \
-             --ctx-size 32768 --grammar-dir grammars/
-llama-server --model embeddinggemma-308m.gguf  --port 8081 --embedding
-```
+
+Nix is required for both services. Grammars are sent per request; llama-server
+has no `--grammar-dir` option. See [the startup guide](mika-startup/ЗАПУСК.md)
+for the complete launch sequence and local input checks.
+Bounded Gemma 4 reasoning is enabled per request, separated from the final answer,
+and constrained by the actual slot context. See [reasoning controls](docs/REASONING.md).
 
 Оба под systemd с `DynamicUser`, `ProtectHome`, `PrivateTmp`.
 Контекст 32K, а не 256K: больше нам не нужно ни в одном профиле,

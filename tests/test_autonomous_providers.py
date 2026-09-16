@@ -173,6 +173,53 @@ def test_initial_snapshot_and_override_validation():
     assert not override.active(AT + timedelta(hours=1))
 
 
+@pytest.mark.parametrize("source", ["file", "stored", "history"])
+def test_future_initial_state_rejected_before_bootstrap(db, tmp_path, source):
+    future = AT + timedelta(days=5)
+    value = snapshot(initial_mood_at=to_utc_iso(future))
+    path = None
+    if source == "file":
+        path = tmp_path / "world.json"
+        path.write_text(json.dumps(value))
+    elif source == "stored":
+        db.run_transaction(
+            lambda c: c.execute(
+                "INSERT INTO life_state(key,value,updated_at) VALUES "
+                "('runtime.initial',?,?)",
+                (json.dumps(value), future),
+            )
+        )
+    else:
+        db.run_transaction(
+            lambda c: c.execute(
+                "INSERT INTO mood(at,p,a,d,baseline_p,baseline_a,baseline_d) "
+                "VALUES (?,0,0,0,0,0,0)",
+                (future,),
+            )
+        )
+    with db.connection() as c:
+        before = [tuple(row) for row in c.execute("SELECT * FROM life_state")]
+    with pytest.raises(ValueError, match="later than startup"):
+        providers(db, path)
+    with db.connection() as c:
+        assert [tuple(row) for row in c.execute("SELECT * FROM life_state")] == before
+        assert c.execute("SELECT count(*) FROM sleep_log").fetchone()[0] == 0
+
+
+async def test_restart_uses_valid_stored_snapshot_before_changed_file(db, tmp_path):
+    runtime = providers(db)
+    await runtime.close()
+    path = tmp_path / "world.json"
+    path.write_text(
+        json.dumps(snapshot(initial_mood_at=to_utc_iso(AT + timedelta(days=5))))
+    )
+    restarted = providers(db, path)
+    try:
+        assert (await restarted.context(AT))["mood"] == Mood(0, 0, 0)
+    finally:
+        await restarted.close()
+
+
 @pytest.mark.parametrize("hour", [3, 10, 14, 18, 20])
 def test_where_uses_architecture_probabilities_and_local_calendar(hour):
     world = World.from_config(Path("config"))

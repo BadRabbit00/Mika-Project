@@ -477,6 +477,14 @@ async def test_curator_error_policy_persists_without_global_pause(
     alert.assert_awaited_once()
 
 
+def test_topic_catalogue_reports_missing_local_catalogue(tmp_path):
+    from src.catalogue import Catalogue
+
+    with pytest.raises(ValueError, match="Missing topic catalogue.*--library"):
+        Catalogue.load(tmp_path)
+    assert not (tmp_path / "topics.yaml").exists()
+
+
 def test_topic_catalogue_requires_real_first_topic_articles(tmp_path):
     from src.catalogue import Catalogue
 
@@ -528,7 +536,7 @@ async def test_runtime_providers_use_explicit_state_and_persist_sleep_once(tmp_p
     settings = SettingsRegistry.from_file(
         Path("config/settings.yaml"), store=SQLiteSettingsStore(db)
     )
-    providers = RuntimeProviders(db, Path("config"), inputs, settings)
+    providers = RuntimeProviders(db, Path("config"), inputs, settings, clock=lambda: AT)
     try:
         first = await providers.context(AT)
         second = await providers.context(AT)

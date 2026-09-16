@@ -338,6 +338,32 @@ settings:
 
 # ── Система ──────────────────────────────────────────────────────
 
+- key: llm.reasoning_enabled
+  group: system
+  title: Local reasoning
+  type: bool
+  default: true
+  desc: Enable bounded Gemma 4 reasoning before the final answer.
+  effect: Applies to the next local generation; final output still requires validation.
+
+- key: llm.reasoning_budget_tokens
+  group: system
+  title: Reasoning token budget
+  type: int
+  range: [0, 16384]
+  default: 8192
+  desc: Maximum thinking tokens, reduced when necessary to reserve answer space.
+  effect: Larger budgets allow longer thinking but increase latency; zero skips thinking.
+
+- key: llm.reasoning_timeout_sec
+  group: system
+  title: Reasoning generation deadline
+  type: int
+  range: [30, 1800]
+  default: 600
+  desc: Wall-clock limit for one reasoning generation, including transport retries.
+  effect: An incomplete or timed-out answer is rejected and never used as a draft.
+
 - key: system.llm_timeout_sec
   group: system
   title: Таймаут локальной модели

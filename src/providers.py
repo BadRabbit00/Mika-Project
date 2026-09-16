@@ -139,7 +139,7 @@ class DatabaseMoodProvider:
             if period
             else Mood(0, 0, 0)
         )
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             events = [
                 dict(row)
                 for row in c.execute(
@@ -193,7 +193,7 @@ class DatabaseMoodProvider:
         )
 
     def planning_p(self, at, debt):
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             row = c.execute(
                 "SELECT * FROM mood WHERE at<=? ORDER BY at DESC LIMIT 1", (at,)
             ).fetchone()
@@ -281,14 +281,31 @@ class RuntimeProviders:
     def __init__(
         self, database, config_dir, inputs_path=None, settings=None, *, clock=now
     ):
-        requested = LiveInputs.read(inputs_path, at=clock())
+        started_at = require_aware(clock())
+        requested = LiveInputs.read(inputs_path, at=started_at)
+
+        def validate_time(at, source):
+            if at > started_at:
+                raise ValueError(
+                    f"{source}: {to_utc_iso(at)} is later than startup "
+                    f"{to_utc_iso(started_at)}. Check the clock and initial_mood_at; "
+                    "stored state is not reset by editing --world-state. "
+                    "See mika-startup/ЗАПУСК.md."
+                )
 
         def bootstrap(c):
+            latest = c.execute(
+                "SELECT at FROM mood ORDER BY at DESC LIMIT 1"
+            ).fetchone()
+            if latest:
+                validate_time(from_utc_iso(latest["at"]), "Stored mood history")
             previous = c.execute(
                 "SELECT value FROM life_state WHERE key='runtime.initial'"
             ).fetchone()
             if previous:
-                return LiveInputs.model_validate_json(previous[0])
+                initial = LiveInputs.model_validate_json(previous[0])
+                validate_time(initial.initial_mood_at, "Stored runtime.initial")
+                return initial
             initial = requested.snapshot()
             # Adopt an existing mood history instead of resetting an upgraded database.
             oldest = c.execute("SELECT * FROM mood ORDER BY at LIMIT 1").fetchone()
@@ -298,6 +315,7 @@ class RuntimeProviders:
                     initial_mood_at=oldest["at"],
                     initial_sleep_debt=oldest["sleep_debt"] or 0,
                 )
+            validate_time(from_utc_iso(initial["initial_mood_at"]), "Initial snapshot")
             c.execute(
                 "INSERT INTO life_state(key,value,updated_at) "
                 "VALUES ('runtime.initial',?,?)",

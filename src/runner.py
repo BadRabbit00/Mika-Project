@@ -67,7 +67,7 @@ class Deferred:
 class SQLiteLearningStore:
     def __init__(self, database, initial, *, settings=None):
         self.database, self.settings = database, settings
-        with database.connection() as c:
+        with database.connection(readonly=True) as c:
             tables = {
                 row[0]
                 for row in c.execute(
@@ -87,7 +87,7 @@ class SQLiteLearningStore:
         )
 
     def state(self):
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             return decode_state(
                 c.execute(
                     "SELECT state_json FROM learner_state WHERE id='learner'"
@@ -154,7 +154,7 @@ class SQLiteLearningStore:
         return self.database.run_transaction(lambda c: self._dispatch(c, event))
 
     def actions(self):
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             return [
                 dict(row)
                 for row in c.execute(
@@ -164,7 +164,7 @@ class SQLiteLearningStore:
 
     def peek(self, at):
         at = require_aware(at)
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             row = c.execute(
                 _DUE + "ORDER BY a.due_at,a.id LIMIT 1",
                 (at, at, at, at),

@@ -12,6 +12,7 @@ from src.core.llm_local import LocalLLM
 from src.core.logging import configure_logging
 from src.core.mood import BaselineContext, MoodModel
 from src.core.schedule import SleepWindow
+from src.core.settings import SettingsRegistry, SQLiteSettingsStore
 from src.core.time_utils import now
 from src.core.world import World
 from src.ingest import read_source
@@ -35,7 +36,10 @@ async def run(args):
     )
     context = ContextBuilder(Path("prompts"), database=database, mood_model=model)
     reports = []
-    async with LocalLLM(database=database) as llm:
+    settings = SettingsRegistry.from_file(
+        args.settings, store=SQLiteSettingsStore(database)
+    )
+    async with LocalLLM(database=database, settings=settings) as llm:
         writer = Writer(database, llm, context, OutputValidator(llm))
         for path in args.articles:
             source = read_source(path)
@@ -63,6 +67,7 @@ def main():
     parser.add_argument("--log-file", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--location", required=True)
+    parser.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
     args = parser.parse_args()
     configure_logging(args.log_file)
     return asyncio.run(run(args))

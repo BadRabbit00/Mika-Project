@@ -79,6 +79,12 @@
           virtualenv = pythonSet.mkVirtualEnv "blogai-dev-env" workspace.deps.all;
         in
         {
+          models = pkgs.mkShell {
+            packages = [
+              pkgs.llama-cpp-vulkan
+              pkgs.curl
+            ];
+          };
           audit = pkgs.mkShell {
             packages = [
               pkgs.git
