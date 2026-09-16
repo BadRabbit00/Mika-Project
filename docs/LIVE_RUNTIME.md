@@ -18,9 +18,29 @@ topics: {diary: 1, author: 2, curator: 3, chat: 4,
 bots: {mika: MIKA_BOT_TOKEN, curator: CURATOR_BOT_TOKEN, ops: OPS_BOT_TOKEN}
 ```
 
-Put tokens in the named environment variables. Layout validation rejects token
-strings in `bots`; all seven distinct topic IDs are required. `group_id` remains
-an accepted legacy spelling for `supergroup_id`.
+Put the three tokens in `.env` in the working directory, using the variable names
+from `bots`. [The example file](../config/.env.example) lists the default names:
+
+```dotenv
+MIKA_BOT_TOKEN=<mika token>
+CURATOR_BOT_TOKEN=<curator token>
+OPS_BOT_TOKEN=<ops token>
+```
+
+Both `run` and `bot` read `.env` automatically. Select another file with
+`--env-file /path/to/bots.env`. Files accept quoted values, comments, and optional
+`export` prefixes; shell commands and variable expansion are never evaluated.
+The loader only reads credentials and does not modify the process environment.
+Already exported variables take precedence, including empty values, which fail
+validation. All three tokens must be nonempty and distinct. Logs omit their values.
+
+A missing default `.env` is allowed when all tokens are exported. An explicit
+`--env-file` must exist and be readable. The dry run never reads bot credentials.
+Keep the local credentials file private (`chmod 600 .env`); `.env`, `.env.*`, and
+`*.env` files are excluded from Git and Graphify, with `.env.example` allowed in Git.
+
+Layout validation rejects token strings in `bots`; all seven distinct topic IDs
+are required. `group_id` remains an accepted legacy spelling for `supergroup_id`.
 
 `library/topics.yaml` is the supplied catalogue. The first topic requires
 `ab-01.md` through `ab-06.md`, with matching IDs/topics and nonempty origin keys.

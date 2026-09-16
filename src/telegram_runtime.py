@@ -2,8 +2,8 @@
 
 import asyncio
 import logging
-import os
 
+import structlog
 from aiogram import Bot, Dispatcher
 
 from src.bot import BotIngress
@@ -15,7 +15,7 @@ from src.core.logging import configure_logging
 from src.core.ops_log import OpsMirror
 from src.core.settings import SettingsRegistry, SQLiteSettingsStore
 from src.core.tasks import JobQueue
-from src.core.telegram import TelegramLayout, TelegramTransport
+from src.core.telegram import TelegramLayout, TelegramTransport, load_bot_tokens
 from src.core.time_utils import now, to_utc_iso
 from src.defects import SQLiteLineageStore
 from src.extract import Extractor
@@ -28,10 +28,11 @@ async def run_telegram(
 ):
     # TODO(TELEGRAM-DEPLOYMENT): supply real layout IDs and verify test-group delivery.
     layout = TelegramLayout.from_file(args.layout)
-    tokens = {role: os.environ[name] for role, name in layout.bots.items()}
-    if len(set(tokens.values())) != 3:
-        raise ValueError("Three distinct Telegram bot tokens are required")
+    tokens = load_bot_tokens(layout, args.env_file)
     configure_logging(args.log_file, secret_values=tuple(tokens.values()))
+    structlog.get_logger("blogai.telegram").info(
+        "telegram_credentials_loaded", roles=sorted(tokens)
+    )
     bots = {role: Bot(token) for role, token in tokens.items()}
     database = Database(args.database)
     await asyncio.to_thread(database.initialize)

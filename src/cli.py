@@ -167,6 +167,12 @@ def main(argv: list[str] | None = None) -> int:
     bot.add_argument("--grammar-dir", type=Path, default=Path("grammars"))
     bot.add_argument("--generation-url", default="http://127.0.0.1:8080")
     bot.add_argument("--embedding-url", default="http://127.0.0.1:8081")
+    for command in (run, bot):
+        command.add_argument(
+            "--env-file",
+            type=Path,
+            help="Bot token file (default: .env in the working directory; exports win)",
+        )
     for command in (extract, quiz):
         command.add_argument("--database", type=Path, required=True)
         command.add_argument("--log-file", type=Path, required=True)

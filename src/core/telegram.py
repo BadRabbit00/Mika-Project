@@ -1,5 +1,6 @@
 """Explicit deployment layout and asynchronous aiogram outbox transport."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from aiogram.exceptions import (
     TelegramRetryAfter,
 )
 from aiogram.types import BufferedInputFile
+from dotenv import dotenv_values
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 from ruamel.yaml import YAML
 
@@ -94,6 +96,42 @@ class TelegramLayout(BaseModel):
         if self.channel_id is not None:
             destinations.append(Destination("channel", "mika", self.channel_id))
         return destinations
+
+
+def load_bot_tokens(
+    layout: TelegramLayout, env_file: Path | None = None
+) -> dict[str, str]:
+    """Read credentials without mutating the process environment.
+
+    Exported variables take precedence. Only an absent default .env is optional;
+    an explicitly selected file must exist and be readable.
+    """
+    values = {}
+    path = Path(env_file) if env_file is not None else Path(".env")
+    try:
+        with path.open(encoding="utf-8-sig") as stream:
+            values = dotenv_values(stream=stream, interpolate=False)
+    except FileNotFoundError:
+        if env_file is not None:
+            raise
+    except UnicodeError:
+        raise ValueError("Bot env file must contain UTF-8 text") from None
+    tokens = {
+        role: os.environ.get(name, values.get(name))
+        for role, name in layout.bots.items()
+    }
+    missing = [
+        layout.bots[role]
+        for role, value in tokens.items()
+        if value is None or not value.strip()
+    ]
+    if missing:
+        raise ValueError(
+            "Missing or empty Telegram bot token variables: " + ", ".join(missing)
+        )
+    if len(set(tokens.values())) != 3:
+        raise ValueError("Three distinct Telegram bot tokens are required")
+    return tokens
 
 
 class TelegramTransport:

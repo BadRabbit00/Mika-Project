@@ -16,6 +16,7 @@ result
 result-*
 .env
 .env.*
+*.env
 !.env.example
 
 # Runtime files; intentional SQLite snapshots may be committed separately.

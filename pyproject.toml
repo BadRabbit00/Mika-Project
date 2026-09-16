@@ -14,6 +14,7 @@ dependencies = [
     "pydantic>=2.10,<3",
     "aiogram>=3.26,<4",
     "apscheduler>=3.11,<4",
+    "python-dotenv>=1.1,<2",
 ]
 
 [project.scripts]
