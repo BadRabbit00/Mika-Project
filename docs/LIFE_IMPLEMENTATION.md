@@ -33,7 +33,7 @@ boundaries remain mandatory. Work stays in BlogAI-life with temporary databases.
 - [x] Run multi-day simulations, including help, delay and refusal branches.
 - [x] Check restart, departure during learning, stale output and migration safety.
 - [x] Run all Nix checks, refresh Graphify and review repository privacy.
-- [ ] Integrate the verified code into local develop; leave the running checkout alone.
+- [x] Integrate the verified code into local develop; leave the running checkout alone.
 - [ ] Publish a PR for deployment review.
 - [ ] Deploy separately with graceful shutdown, backup and pending-action review.
 
