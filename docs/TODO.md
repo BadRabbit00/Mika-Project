@@ -124,6 +124,16 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(CLASS-GRACE): grace_min does not specify which side of a lesson boundary
   it affects. Class interiors remain blocked, with the explicit timetable gaps
   available for posts; no grace interval is invented inside a lesson.
+- TODO(COMMUTE-WINDOW): the fixed 08:20–09:00 blackout differs from the
+  35-minute commute and Friday's later classes. No weekday restriction or return
+  route is supplied. Use the explicit blackout window; do not infer extra routes.
+- TODO(SLEEP-MOOD): no rule maps PAD to the sleep formula's stuck/down labels.
+  Callers must supply the label as an explicit fact.
+- TODO(SEMESTER-EPOCH): schedule.yaml references a semester start in life.yaml,
+  but only a week number is supplied. Semester pressure requires a start date.
+- TODO(WORLD-LOCATION): no deterministic movement policy is specified. Day
+  context requires the caller's known location, validated against life.yaml.
+  It does not randomly invent a location or infer one from a publication chance.
 
 ## Invariants for later delivery stages
 
