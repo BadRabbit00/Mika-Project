@@ -17,7 +17,7 @@ Implementation remains in the isolated life worktree; tests use temporary databa
 - [x] Validate activity claims against the saved plan and recorded event evidence.
 - [x] Announce sleep during a real preparation interval; send nothing during sleep.
 - [x] Run the complete Nix suite, offline simulation and refresh Graphify.
-- [ ] Commit and integrate into local develop; preserve the running installation.
+- [x] Commit and integrate into local develop; preserve the running installation.
 
 ## Boundaries
 
