@@ -2,15 +2,20 @@
 
 import asyncio
 import json
+import subprocess
 from datetime import datetime, timedelta
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 import structlog
+from pydantic import BaseModel, ConfigDict
 
 from src.core.db import Database
 from src.core.time_utils import ALMATY
 from src.publish import DeliveryRejected, Destination, OutboxWorker, Publisher
+from src.core.llm_vendor import ClaudeCodeBackend, VendorConfig, extract_json
 
 AT = datetime(2026, 9, 16, 19, tzinfo=ALMATY)
 DIARY = Destination("diary", "mika", -100123, 11, primary=True)
@@ -151,3 +156,80 @@ def test_publication_rejects_naive_time_before_mutation(database):
             "p", [DIARY], trace_id="trace", at=AT.replace(tzinfo=None)
         )
     assert rows(database) == []
+
+
+class VendorFixture(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    verdict: str
+
+
+def test_claude_cli_uses_temporary_files_and_validates_json(monkeypatch):
+    seen = []
+    user = "Article material. " * 100_000
+    system = Path("prompts/curator_system.md").read_text()
+
+    def run(command, **kwargs):
+        assert kwargs["stdin"] == subprocess.DEVNULL
+        assert kwargs["check"] and kwargs["timeout"] == 300
+        assert "input" not in kwargs and "shell" not in kwargs
+        assert command[command.index("--model") + 1] == "sonnet"
+        assert command[command.index("--effort") + 1] == "medium"
+        request_file = Path(command[command.index("-p") + 1].removeprefix("@"))
+        system_file = Path(command[command.index("--append-system-prompt-file") + 1])
+        assert request_file.read_text() == user and system_file.read_text() == system
+        assert request_file.stat().st_mode & 0o777 == 0o600
+        assert max(map(len, command)) < 1000
+        tools = command[command.index("--tools") + 1]
+        assert all(name not in tools.split(",") for name in ("Bash", "Edit", "Write"))
+        assert "--strict-mcp-config" in command and "--no-session-persistence" in command
+        seen.extend((request_file, system_file))
+        return SimpleNamespace(stdout=json.dumps({
+            "result": 'A result follows.\n```json\n{"verdict":"pass"}\n```',
+            "total_cost_usd": 0.0123,
+        }), stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    backend = ClaudeCodeBackend(VendorConfig.from_registry(Path("config/settings.yaml"), timeout_sec=300))
+    result = backend.ask(system, user, VendorFixture, trace_id="exam-chain")
+    assert result.value.verdict == "pass" and result.cost_usd == 0.0123
+    assert all(not path.exists() for path in seen)
+
+
+@pytest.mark.parametrize("raw", [
+    '{"verdict":"pass","verdict":"fail"}',
+    '{"verdict":"pass"} {"verdict":"fail"}',
+    '{"verdict":12}', '{"verdict":"pass","extra":true}',
+    '{"verdict":NaN}', 'not JSON',
+])
+def test_extract_json_rejects_ambiguous_or_invalid_results(raw):
+    with pytest.raises(ValueError):
+        extract_json(raw, VendorFixture)
+
+
+def test_claude_retries_invalid_output_once_and_accounts_for_both_calls(monkeypatch):
+    requests = []
+
+    def run(command, **kwargs):
+        request = Path(command[command.index("-p") + 1][1:]).read_text()
+        requests.append(request)
+        return SimpleNamespace(stdout=json.dumps({
+            "result": 'invalid' if len(requests) == 1 else '{"verdict":"pass"}',
+            "total_cost_usd": 0.01,
+        }), stderr="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    backend = ClaudeCodeBackend(VendorConfig.from_registry(Path("config/settings.yaml"), timeout_sec=300))
+    result = backend.ask("Fixture system", "Fixture task", VendorFixture, trace_id="retry-chain")
+    assert result.cost_usd == 0.02 and result.attempts == 2
+    assert "validation_error" in requests[1]
+
+
+def test_curator_does_not_repeat_timeout_as_json_repair(monkeypatch):
+    run = __import__("unittest.mock", fromlist=["Mock"]).Mock(
+        side_effect=subprocess.TimeoutExpired("claude", 300)
+    )
+    monkeypatch.setattr(subprocess, "run", run)
+    backend = ClaudeCodeBackend(VendorConfig.from_registry(Path("config/settings.yaml"), timeout_sec=300))
+    with pytest.raises(subprocess.TimeoutExpired):
+        backend.ask("Fixture system", "Fixture task", VendorFixture, trace_id="timeout-chain")
+    assert run.call_count == 1
