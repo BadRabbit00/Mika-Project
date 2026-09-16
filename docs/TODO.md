@@ -8,8 +8,11 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(OUTBOX-DELIVERY), section 37.2, delivery step 8: a unique local key
   deduplicates enqueue operations. If Telegram accepts a message and the process
   dies before saving its message ID, SQLite cannot determine whether it was sent.
-  Define reconciliation or an explicit policy for uncertain deliveries before
-  implementing the sender. This step does not claim exactly-once remote delivery.
+  Step 8 now commits a durable claim before sending and never automatically
+  resends an uncertain claim. A verified message ID can reconcile the row.
+  TODO(OUTBOX-DELIVERY): automated reconciliation remains undefined; a crash
+  before sending can also leave an uncertain claim. This favors duplicate
+  prevention over automatic recovery and does not claim exactly-once delivery.
 - TODO(LEARNING-STATE), sections 3 and 13, step 12: the learning-state table is
   required in prose but has no name, columns, or transition identity specified.
   Do not substitute life_state for learning state. Define its schema and event

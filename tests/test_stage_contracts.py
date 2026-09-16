@@ -35,6 +35,11 @@ CONTRACTS = {
         "test_people_facts_excluded_from_posts",
     },
     "src/core/llm_local.py": {"test_tokens_counted_with_tokenize"},
+    "src/publish.py": {
+        "test_outbox_worker_restart_does_not_duplicate_telegram",
+        "test_outbox_crash_after_remote_acceptance_is_not_retried",
+        "test_publication_trace_survives_enqueue_and_worker_restart",
+    },
     "src/core/schedule.py": {
         "test_sleep_plan_preserves_literal_complexity_and_mood_formula",
         "test_sleep_debt_uses_actual_hours_and_literal_clamp",

@@ -21,22 +21,30 @@ CHANNEL = Destination("channel", "mika", -100124)
 def database(tmp_path):
     database = Database(tmp_path / "interfaces.sqlite3")
     database.initialize()
-    database.run_transaction(lambda c: c.execute(
-        "INSERT INTO posts(id, kind, state, text) VALUES ('p', 'summary', 'draft', ?)",
-        ("A validated draft for the publication transport contract.",),
-    ))
+    database.run_transaction(
+        lambda c: c.execute(
+            "INSERT INTO posts(id, kind, state, text) "
+            "VALUES ('p', 'summary', 'draft', ?)",
+            ("A validated draft for the publication transport contract.",),
+        )
+    )
     return database
 
 
 def rows(database):
     with database.connection() as connection:
-        return [dict(row) for row in connection.execute("SELECT * FROM outbox ORDER BY id")]
+        return [
+            dict(row) for row in connection.execute("SELECT * FROM outbox ORDER BY id")
+        ]
 
 
 async def test_outbox_worker_restart_does_not_duplicate_telegram(database):
     publisher = Publisher(database)
     first = publisher.enqueue_post("p", [DIARY, CHANNEL], trace_id="trace-1", at=AT)
-    assert publisher.enqueue_post("p", [DIARY, CHANNEL], trace_id="trace-1", at=AT) == first
+    assert (
+        publisher.enqueue_post("p", [DIARY, CHANNEL], trace_id="trace-1", at=AT)
+        == first
+    )
     transport = AsyncMock()
     transport.send.side_effect = [100, 101]
     worker = OutboxWorker(database, transport)
@@ -69,13 +77,29 @@ async def test_outbox_crash_after_remote_acceptance_is_not_retried(database):
     assert rows(database)[0]["tg_message_id"] == 900
 
 
+async def test_outbox_receipt_commit_failure_does_not_resend(database, monkeypatch):
+    Publisher(database).enqueue_post("p", [DIARY], trace_id="trace-1", at=AT)
+    transport = AsyncMock()
+    transport.send.return_value = 99
+    worker = OutboxWorker(database, transport)
+
+    def crash(*args, **kwargs):
+        raise RuntimeError("Process stopped before receipt commit")
+
+    monkeypatch.setattr(worker, "reconcile", crash)
+    with pytest.raises(RuntimeError):
+        await worker.run_once(at=AT)
+    assert await OutboxWorker(database, transport).run_once(at=AT) == "idle"
+    transport.send.assert_awaited_once()
+
+
 async def test_outbox_concurrent_workers_claim_once(database):
     Publisher(database).enqueue_post("p", [DIARY], trace_id="trace-1", at=AT)
     transport = AsyncMock()
     transport.send.return_value = 20
-    results = await asyncio.gather(*(
-        OutboxWorker(database, transport).run_once(at=AT) for _ in range(4)
-    ))
+    results = await asyncio.gather(
+        *(OutboxWorker(database, transport).run_once(at=AT) for _ in range(4))
+    )
     assert sorted(results) == ["idle", "idle", "idle", "sent"]
     transport.send.assert_awaited_once()
 
@@ -108,12 +132,16 @@ async def test_publication_trace_survives_enqueue_and_worker_restart(database):
 def test_publication_refuses_killed_or_changed_drafts(database):
     publisher = Publisher(database)
     publisher.enqueue_post("p", [DIARY], trace_id="chain-123", at=AT)
-    database.run_transaction(lambda c: c.execute("UPDATE posts SET text='Changed' WHERE id='p'"))
+    database.run_transaction(
+        lambda c: c.execute("UPDATE posts SET text='Changed' WHERE id='p'")
+    )
     with pytest.raises(ValueError, match="different payload"):
         publisher.enqueue_post("p", [DIARY], trace_id="chain-123", at=AT)
-    database.run_transaction(lambda c: c.execute("UPDATE posts SET state='killed' WHERE id='p'"))
+    database.run_transaction(
+        lambda c: c.execute("UPDATE posts SET state='killed' WHERE id='p'")
+    )
     with pytest.raises(ValueError, match="publishable"):
-        publisher.enqueue_post("p", [CHANNEL], trace_id="chain-123", at=AT)
+        publisher.enqueue_post("p", [DIARY], trace_id="chain-123", at=AT)
     assert len(rows(database)) == 1
 
 
