@@ -1,8 +1,9 @@
 # Implementation rules
 
 Read ARCHITECTURE.md before making changes. Follow the delivery order in
-section 38.3. Steps 1–7 include mood, sleep, validation, contexts, and draft writing.
+section 38.3. Steps 1–10 include publication, curator CLI, and Telegram interfaces.
 Live-model compatibility limits and deferred requirements are in docs/TODO.md.
+The proposed interface-storage schema is not installed automatically.
 
 - Keep main limited to the initial architecture. Work on feature branches and
   merge completed, verified changes into develop.

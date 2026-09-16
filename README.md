@@ -1,8 +1,9 @@
 # BlogAI
 
-Steps 1–7 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+Steps 1–10 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
 storage, extraction, self-quiz, immutable PAD mood, biological time, isolated
-contexts, draft writing, world events, and three-layer output validation.
+contexts, draft writing, world events, three-layer output validation, durable
+publication, a headless curator, and Telegram interfaces.
 Live generation and prompt-contract limitations are recorded below.
 
 ## Development
@@ -149,6 +150,13 @@ fails explicitly. A live Gemma writing smoke test also omitted the required mode
 tags in all three attempts and was correctly killed. These prompt contracts need
 resolution before successful live draft generation can be claimed. Supplied
 configurations and prompts remain unchanged; see the writing TODOs.
+
+## Interaction interfaces
+
+[docs/INTERFACES.md](docs/INTERFACES.md) covers publication recovery, the curator
+CLI, three-bot deployment, commands, trace logs, and pending storage contracts.
+Telegram tests use mocks; real bot tokens and chat/topic IDs must be supplied
+before a live transport check. No live message has been sent by this work.
 
 ## Storage
 

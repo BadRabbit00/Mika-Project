@@ -276,7 +276,9 @@ class SelfQuiz:
         return result
 
     async def run(self, topic: str) -> QuizRound:
-        trace_id = uuid4().hex
+        trace_id = (
+            structlog.contextvars.get_contextvars().get("trace_id") or uuid4().hex
+        )
         with structlog.contextvars.bound_contextvars(trace_id=trace_id):
             questions = await self.ask(topic)
             results = tuple(

@@ -74,8 +74,11 @@ uses a fresh request. The validator checks closed mode tags, length, artifacts,
 semantic rules, and similarity against the latest 30 valid published posts.
 Duplicate feedback contains the similar post as user data. Each attempt records
 its inputs, raw output, exact token counts, duration, status, and reason codes in
-`runs`. Attempts have separate trace IDs linked by `params_json.post_id` because
-the supplied schema makes `trace_id` the primary key.
+`runs`. Each attempt has a distinct call ID under the shared operation trace.
+The legacy `runs.trace_id` primary key stores the attempt ID, while
+`params_json.trace_id` and `params_json.post_id` preserve the operation and post
+identities. Full JSONL uses the shared trace directly; the proposed SQL migration
+is documented in [INTERFACES.md](INTERFACES.md).
 
 Accepted output becomes a `draft`; three rejected attempts become `killed` with
 NULL publishable text. Draft creation never sends a message, enqueues delivery,

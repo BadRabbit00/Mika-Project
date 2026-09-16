@@ -100,6 +100,21 @@ def test_blob_row_changes_can_be_logged(tmp_path, log_path):
     assert change["after"]["embedding"] == {"blob_hex": "00FF"}
 
 
+def test_logging_redacts_secret_values_and_keys(log_path):
+    configure_logging(
+        log_path, level=logging.CRITICAL, secret_values=("fixture-secret",)
+    )
+    structlog.get_logger("blogai.fixture").error(
+        "secret_test",
+        api_key="hidden-value",
+        detail="failed fixture-secret",
+        tokens_in=123,
+    )
+    text = log_path.read_text()
+    assert "fixture-secret" not in text and "hidden-value" not in text
+    assert json.loads(text.splitlines()[-1])["tokens_in"] == 123
+
+
 def test_init_db_cli_is_repeatable(tmp_path):
     path = tmp_path / "cli.sqlite3"
     log_file = tmp_path / "cli.jsonl"

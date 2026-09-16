@@ -83,9 +83,9 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(RUNS-PERSISTENCE): multiple calls in one trace are logged in full JSONL with
   distinct call IDs. The contradictory runs primary key is unchanged; multi-call
   learning traces are not squeezed into that table or silently overwritten.
-  Writer attempts each receive a separate trace ID and runs row; params_json
-  links those attempts by post_id. A shared trace across attempts remains blocked
-  by TODO(TRACE-IDENTITY).
+  Writer rows retain unique attempt IDs in the legacy primary-key column;
+  params_json links them by post_id and shared trace_id. JSONL carries the shared
+  trace directly. Native SQL trace indexing awaits TODO(INTERFACE-TRACE-SCHEMA).
 - TODO(QUIZ-CONFIDENCE): the answer prompt includes confident, but section 4.2
   supplies no grading rule for it. The field is type-validated and logged. Verdicts
   follow the documented citation checks; the model's confidence does not replace
@@ -221,6 +221,41 @@ These are specification gaps, not defaults chosen by the implementation.
   but no aggregate grading formula is supplied. Callers provide its text; code
   validates the verdict vocabulary and complete question-index coverage rather
   than inventing an overall pass threshold.
+- TODO(SETTINGS-SCHEMA): section 36 requires persistent overrides but supplies no
+  schema. The concrete proposal is docs/interface-storage.sql. SQLiteSettingsStore
+  implements that contract and restart persistence is tested against explicitly
+  installed tables. Default startup leaves it disabled; /set mutations report
+  this gap. The user was asked whether to add these migrations; no answer has
+  been received. The existing config files are not used as writable storage.
+- TODO(INTERFACE-TRACE-SCHEMA): the proposed runs migration separates call_id
+  from trace_id. Until approved, full JSONL carries shared trace IDs and call IDs.
+  Writer rows keep their legacy unique attempt key and store the chain trace in
+  params_json.trace_id; publication resolves that chain identity. No run is
+  overwritten to accommodate another call.
+- TODO(INTERFACE-LINEAGE): explicit post_nodes/post_threads tables are proposed
+  and tested through SQLiteLineageStore. Without an installed lineage contract,
+  invalidation excludes narrative and preserves public evidence, but reports
+  unavailable propagation. Do not guess derived nodes from a post's topic.
+  A durable curator-review queue is still unspecified.
+- TODO(POST-REGENERATION): the runtime accepts an async regeneration provider,
+  but persisted writing attempts do not contain the typed, current world/mood
+  inputs needed to rebuild ContextBuilder safely. The standalone bot reports
+  this missing provider. It does not replay stale prompt text as a fresh context.
+- TODO(TELEGRAM-DEPLOYMENT): no bot tokens or chat/topic/owner IDs are supplied.
+  The runtime requires an explicit layout file and three environment variables.
+  Tests mock Telegram; live publication is not claimed. The user explicitly
+  requested commands in Machine and DM, so owner commands work there in addition
+  to Control, while TOPIC_ROLES still prevents reading Machine as model context.
+- TODO(SETTINGS-CONSUMERS): the registry and installed override adapter expose
+  current values; the log mirror reads them on each batch. Future orchestration
+  must supply snapshots to existing mood/study/writing constructors. A successful
+  override write is not a claim that an already-created model instance changed.
+- TODO(JOB-RECOVERY): the background job queue is process-local. Outbox intents
+  survive restarts, but unfinished nonpublication jobs need explicit replay by
+  trace until durable job identity/storage is defined with the scheduler.
+- TODO(OPS-LOG-RECOVERY): full JSONL is authoritative. Event cards are queued
+  durably after the mirror drains them; an in-memory mirror event can be lost on
+  a crash before that point. Automatic replay checkpoints are not specified.
 
 ## Invariants for later delivery stages
 

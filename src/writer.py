@@ -66,6 +66,7 @@ class Writer:
         started_at,
         duration_ms,
         tokens_out,
+        trace_id,
     ):
         final = validation.accepted or attempt == 3
         status = (
@@ -85,6 +86,7 @@ class Writer:
                     json.dumps(
                         {
                             "post_id": post_id,
+                            "trace_id": trace_id,
                             "attempt": attempt,
                             "temperature": request.temperature,
                             "max_tokens": self.max_output_tokens,
@@ -115,6 +117,9 @@ class Writer:
 
     async def generate(self, kind: str, **blocks) -> WriteResult:
         post_id = uuid4().hex
+        trace_id = (
+            structlog.contextvars.get_contextvars().get("trace_id") or uuid4().hex
+        )
         if kind not in WRITE_INPUTS:
             raise ValueError(f"No isolated writing template for {kind}")
         day = blocks["day"]
@@ -134,7 +139,7 @@ class Writer:
             run_id, started_at, started = uuid4().hex, now(), time.monotonic()
             raw, tokens_out = "", 0
             with structlog.contextvars.bound_contextvars(
-                trace_id=run_id, post_id=post_id
+                trace_id=trace_id, call_id=run_id, post_id=post_id
             ):
                 try:
                     raw = await self.llm.generate(
@@ -176,6 +181,7 @@ class Writer:
                     started_at=started_at,
                     duration_ms=round((time.monotonic() - started) * 1000),
                     tokens_out=tokens_out,
+                    trace_id=trace_id,
                 )
                 log.info(
                     "writing_attempt_completed",
