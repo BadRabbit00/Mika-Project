@@ -71,6 +71,13 @@ The snapshot is initialization data, not an instruction to reset a running
 character. All instants must be aware; stored timestamps use UTC. The cycle epoch
 still comes from life.yaml. An existing mood history takes precedence on upgrade.
 
+The effective initial timestamp and latest mood history must not be later than
+the startup clock. Validation runs before storing the initial snapshot or planning
+sleep. Example snapshot dates must be replaced with an actual observation time.
+An existing valid stored snapshot takes precedence over the file's initial fields.
+Correcting a future timestamp saved by an older release requires a database
+backup and an explicit repair; editing the input file alone does not reset it.
+
 `DerivedWorldProvider` implements where(now) from section 26.1: sleep means home;
 class days from 09:00 to 14:00 select university/transport with probabilities
 0.85/0.15; 14:00–19:00 selects home/cafe/street with probabilities 0.6/0.25/0.15;
