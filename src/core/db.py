@@ -585,7 +585,7 @@ def enqueue_outbox(
 
     Reusing a key with a changed payload is an error. Duplicate enqueues leave
     retry and delivery metadata untouched. No remote delivery occurs here.
-    TODO(OUTBOX-DELIVERY): resolve uncertain remote sends in delivery step 8.
+    Uncertain remote sends require manual receipt reconciliation by OutboxWorker.
     """
     _require_transaction(connection)
     key = make_idem_key(post_id, channel)

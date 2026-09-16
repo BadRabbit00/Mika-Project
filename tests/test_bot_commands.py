@@ -152,6 +152,91 @@ def layout():
     )
 
 
+def test_approved_telegram_layout_accepts_named_token_variables(tmp_path):
+    path = tmp_path / "telegram.yaml"
+    path.write_text(
+        "owner_id: 123\nsupergroup_id: -100123\nchannel_id: -100124\n"
+        "topics: {diary: 1, author: 2, curator: 3, chat: 4, "
+        "library: 5, machine: 6, control: 7}\n"
+        "bots: {mika: TEST_MIKA_TOKEN, curator: TEST_CURATOR_TOKEN, "
+        "ops: TEST_OPS_TOKEN}\n"
+    )
+    result = TelegramLayout.from_file(path)
+    assert result.group_id == -100123 and result.bots["mika"] == "TEST_MIKA_TOKEN"
+
+
+async def test_fact_deletion_requires_owner_confirmation_and_expires(
+    database, tmp_path
+):
+    from datetime import timedelta
+
+    from src.core.time_utils import now
+
+    clock = [now()]
+    database.run_transaction(
+        lambda c: c.executemany(
+            "INSERT INTO people_facts(id,person_id,fact) VALUES (?,?,?)",
+            [(1, "123", "Owner fact"), (2, "456", "Other person's fact")],
+        )
+    )
+    service = CommandService(
+        database,
+        layout(),
+        SettingsRegistry.from_file(Path("config/settings.yaml")),
+        LibraryInbox(tmp_path / "library"),
+        log_path=tmp_path / "events.jsonl",
+        clock=lambda: clock[0],
+    )
+    message = SimpleNamespace(
+        text="/facts wipe",
+        chat=SimpleNamespace(type="private", id=123),
+        from_user=SimpleNamespace(id=123),
+    )
+    await service.command(message, AsyncMock(), "request")
+    with database.connection() as c:
+        payload = json.loads(c.execute("SELECT payload FROM outbox").fetchone()[0])
+        assert c.execute("SELECT count(*) FROM people_facts").fetchone()[0] == 2
+    token = payload["reply_markup"]["inline_keyboard"][0][0]["callback_data"].split(
+        ":"
+    )[-1]
+    await service.confirm(token, message, "bad-owner", owner_id=456)
+    clock[0] += timedelta(seconds=61)
+    await service.confirm(token, message, "expired", owner_id=123)
+    with database.connection() as c:
+        assert c.execute("SELECT count(*) FROM people_facts").fetchone()[0] == 2
+    await service.command(message, AsyncMock(), "request2")
+    with database.connection() as c:
+        payload = json.loads(
+            c.execute("SELECT payload FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[
+                0
+            ]
+        )
+    token = payload["reply_markup"]["inline_keyboard"][0][0]["callback_data"].split(
+        ":"
+    )[-1]
+    await service.confirm(token, message, "confirmed", owner_id=123)
+    with database.connection() as c:
+        assert [row[0] for row in c.execute("SELECT person_id FROM people_facts")] == [
+            "456"
+        ]
+
+
+def test_state_command_uses_durable_learner_snapshot(database, tmp_path):
+    from src.orchestrator import State
+    from src.runner import SQLiteLearningStore
+
+    state = State(3, 0.6, topic="security")
+    SQLiteLearningStore(database, state)
+    service = CommandService(
+        database,
+        layout(),
+        SettingsRegistry.from_file(Path("config/settings.yaml")),
+        LibraryInbox(tmp_path / "library"),
+        log_path=tmp_path / "events.jsonl",
+    )
+    assert service._state()["learning_state"]["topic"] == "security"
+
+
 @pytest.mark.parametrize(
     "text",
     [

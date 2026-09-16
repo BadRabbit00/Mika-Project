@@ -38,6 +38,11 @@ class JobQueue:
 
     async def start(self):
         if self._worker is None:
+            log.info(
+                "ephemeral_job_recovery_policy",
+                recovery="publication_and_learning_only",
+                discarded="previous_process_commands_chat_and_library_jobs",
+            )
             self._worker = asyncio.create_task(self._run())
 
     async def _run(self):

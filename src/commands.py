@@ -5,8 +5,10 @@ import io
 import json
 import shutil
 import time
+from dataclasses import asdict
 from datetime import timedelta
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import structlog
@@ -14,8 +16,10 @@ import structlog
 from src.bot import post_buttons, settings_buttons
 from src.core.settings import MissingSettingsStorage
 from src.core.time_utils import now
+from src.core.vectors import reindex
 from src.defects import CATEGORIES, Defects
 from src.publish import Destination, OutboxWorker, Publisher
+from src.trust import Trust
 
 log = structlog.get_logger("blogai.commands")
 
@@ -34,6 +38,9 @@ class CommandService:
         health_urls=None,
         lineage=None,
         chat_gateway=None,
+        llm=None,
+        clock=now,
+        settings_changed=None,
     ):
         self.database, self.layout, self.registry, self.library = (
             database,
@@ -52,6 +59,9 @@ class CommandService:
         )
         self.health_urls = health_urls or {}
         self.chat_gateway = chat_gateway
+        self.llm = llm if llm is not None else getattr(extractor, "llm", None)
+        self.clock, self.settings_changed = clock, settings_changed
+        self.confirmations = {}
 
     async def chat(self, message, bot, trace_id, *, channel):
         if self.chat_gateway is not None:
@@ -68,13 +78,19 @@ class CommandService:
             return Destination("owner", "ops", self.layout.owner_id)
         return self.layout.destination("control")
 
-    async def reply(self, message, value, trace_id, *, suffix="reply", markup=None):
+    async def reply(
+        self, message, value, trace_id, *, suffix="reply", markup=None, private=False
+    ):
         text = (
             value
             if isinstance(value, str)
             else json.dumps(value, ensure_ascii=False, indent=2)
         )
-        destination = self._reply_destination(message)
+        destination = (
+            Destination("owner", "ops", self.layout.owner_id)
+            if private
+            else self._reply_destination(message)
+        )
         if len(text) > 4096:
             await asyncio.to_thread(
                 self.publisher.enqueue_operation,
@@ -122,8 +138,11 @@ class CommandService:
 
     def _state(self):
         with self.database.connection() as connection:
+            learner = connection.execute(
+                "SELECT state_json FROM learner_state WHERE id='learner'"
+            ).fetchone()
             return {
-                "learning_state": "TODO(LEARNING-STATE)",
+                "learning_state": json.loads(learner[0]) if learner else None,
                 "topics": [
                     dict(row)
                     for row in connection.execute("SELECT * FROM topics ORDER BY name")
@@ -179,6 +198,94 @@ class CommandService:
             ]
             return {"node": dict(node), "edges": edges}
 
+    def _trust(self, identity):
+        if not identity:
+            raise ValueError("Use /trust <node ID, node name, or source ID>")
+        with self.database.connection() as c:
+            claims = [
+                dict(row)
+                for row in c.execute(
+                    "SELECT DISTINCT c.source_id,c.norm_hash FROM claims c "
+                    "JOIN edges e ON e.id=c.edge_id "
+                    "JOIN nodes n ON n.id=e.src OR n.id=e.dst "
+                    "WHERE c.source_id=? OR n.id=? OR n.name=?",
+                    (identity, identity, identity),
+                )
+            ]
+        trust = Trust.from_config(self.database)
+        return [
+            row
+            | asdict(
+                trust.claim(
+                    row["norm_hash"], source_id=row["source_id"], at=self.clock().date()
+                )
+            )
+            for row in claims
+        ]
+
+    def _facts(self):
+        with self.database.connection() as c:
+            return [
+                dict(row)
+                for row in c.execute(
+                    "SELECT * FROM people_facts WHERE person_id=? ORDER BY id",
+                    (str(self.layout.owner_id),),
+                )
+            ]
+
+    async def request_fact_deletion(self, message, trace_id, key):
+        if getattr(message.from_user, "id", None) != self.layout.owner_id:
+            raise ValueError("Only the owner may delete personal memory")
+        facts = await asyncio.to_thread(self._facts)
+        ids = tuple(row["id"] for row in facts if key is None or row["id"] == key)
+        if not ids:
+            raise ValueError("No matching owner facts")
+        token = uuid4().hex
+        # Snapshot the exact IDs reviewed; newly learned facts are never swept up.
+        self.confirmations[token] = (ids, self.clock() + timedelta(seconds=60))
+        await self.reply(
+            message,
+            {"delete_fact_ids": ids, "expires_in_seconds": 60},
+            trace_id,
+            markup={
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "Confirm deletion",
+                            "callback_data": "facts:confirm:" + token,
+                        }
+                    ]
+                ]
+            },
+            private=True,
+        )
+
+    async def confirm(self, token, message, trace_id, *, owner_id):
+        if owner_id != self.layout.owner_id:
+            return
+        pending = self.confirmations.pop(token, None)
+        if pending is None or self.clock() >= pending[1]:
+            await self.reply(
+                message, {"error": "Confirmation expired or already used"}, trace_id
+            )
+            return
+
+        def remove(c):
+            deleted = 0
+            for key in pending[0]:
+                deleted += c.execute(
+                    "DELETE FROM people_facts WHERE id=? AND person_id=?",
+                    (key, str(owner_id)),
+                ).rowcount
+            return deleted
+
+        with structlog.contextvars.bound_contextvars(
+            chat_channel="dm", trace_id=trace_id
+        ):
+            count = await asyncio.to_thread(self.database.run_transaction, remove)
+            log.info("personal_facts_deleted", count=count, trace_id=trace_id)
+            await self.reply(message, {"deleted": count}, trace_id, private=True)
+
     def trace(self, trace_id):
         records = []
         if self.log_path.exists():
@@ -226,7 +333,28 @@ class CommandService:
                 case "/state":
                     result = await asyncio.to_thread(self._state)
                 case "/graph":
-                    result = await asyncio.to_thread(self._graph, argument)
+                    if argument == "reindex":
+                        if self.llm is None:
+                            raise ValueError(
+                                "An embedding client is required for reindexing"
+                            )
+                        result = {"reindexed": await reindex(self.database, self.llm)}
+                    else:
+                        result = await asyncio.to_thread(self._graph, argument)
+                case "/trust":
+                    result = await asyncio.to_thread(self._trust, argument)
+                case "/facts":
+                    if argument == "wipe":
+                        await self.request_fact_deletion(message, trace_id, None)
+                        return
+                    if argument:
+                        raise ValueError("Use /facts or /facts wipe")
+                    result = await asyncio.to_thread(self._facts)
+                    await self.reply(message, result, trace_id, private=True)
+                    return
+                case "/forget-fact":
+                    await self.request_fact_deletion(message, trace_id, int(argument))
+                    return
                 case "/outbox":
                     if argument != "review":
                         raise ValueError("Use /outbox review")
@@ -239,6 +367,8 @@ class CommandService:
                         result = await asyncio.to_thread(
                             self.registry.set, key, value, trace_id=trace_id
                         )
+                        if self.settings_changed is not None:
+                            await self.settings_changed(key, trace_id=trace_id)
                     elif command == "/set":
                         await self.settings_view(message, key, trace_id)
                         return
@@ -301,6 +431,9 @@ class CommandService:
                             "/state",
                             "/graph",
                             "/outbox review",
+                            "/trust",
+                            "/facts",
+                            "/forget-fact",
                             "/set",
                             "/health",
                             "/defects",
@@ -366,8 +499,7 @@ class CommandService:
             elif action == "regen":
                 if self.regenerator is None:
                     raise ValueError(
-                        "TODO(POST-REGENERATION): current world and mood "
-                        "context provider is required"
+                        "Current world and mood context provider is required"
                     )
                 if post["state"] == "published":
                     raise ValueError(

@@ -9,7 +9,7 @@ from aiogram.exceptions import (
     TelegramRetryAfter,
 )
 from aiogram.types import BufferedInputFile
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 from ruamel.yaml import YAML
 
 from src.publish import DeliveryRejected, Destination
@@ -35,9 +35,16 @@ TOPIC_ROLES = {
 class TelegramLayout(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     owner_id: int = Field(gt=0)
-    group_id: int = Field(lt=0)
+    group_id: int = Field(
+        lt=0, validation_alias=AliasChoices("supergroup_id", "group_id")
+    )
     channel_id: int | None = None
     topics: dict[str, int]
+    bots: dict[str, str] = Field(
+        default_factory=lambda: {
+            role: f"{role.upper()}_BOT_TOKEN" for role in ("mika", "curator", "ops")
+        }
+    )
 
     @model_validator(mode="after")
     def validate_topics(self):
@@ -49,6 +56,18 @@ class TelegramLayout(BaseModel):
             raise ValueError("Seven distinct positive topic IDs are required")
         if self.channel_id is not None and self.channel_id >= 0:
             raise ValueError("A public channel must have a negative chat ID")
+        if (
+            set(self.bots) != {"mika", "curator", "ops"}
+            or len(set(self.bots.values())) != 3
+        ):
+            raise ValueError("Three distinct bot token environment names are required")
+        if any(
+            not value.isidentifier() or not value.isascii()
+            for value in self.bots.values()
+        ):
+            raise ValueError(
+                "Bot values must be environment variable names, never tokens"
+            )
         return self
 
     @classmethod
