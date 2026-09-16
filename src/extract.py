@@ -199,7 +199,7 @@ class Extractor:
                 output = await self.llm.generate(
                     request, grammar=self.grammar, max_tokens=self.max_output_tokens
                 )
-                raw = [json.loads(line) for line in output.splitlines() if line.strip()]
+                raw = [json.loads(line) for line in output.split("\n") if line.strip()]
                 if not raw:
                     raise ValueError("Claims grammar requires at least one claim")
                 valid, invalid = validate_claims(raw, chunk.text)

@@ -58,9 +58,13 @@ These are specification gaps, not defaults chosen by the implementation.
   grammar retains the literal structure until then. Truncated output is rejected
   in full and never committed. Automated three-article validation uses a mocked
   generation transport and must not be described as a successful live-model run.
+  The unapplied proposal is [claims-final-newline.patch](claims-final-newline.patch).
+  It keeps newlines mandatory between claims and only makes the final one optional.
 - TODO(RETRIEVAL-POLICY): the architecture specifies hybrid FTS/cosine search but
   no fusion formula or cutoff for self-quiz. Retrieval parameters must be supplied
-  explicitly. No production ranking parameters are inferred from the document.
+  explicitly. The provided policy uses reciprocal rank fusion, selected explicitly
+  by constructing RetrievalPolicy or supplying the CLI's required --rrf-k and
+  --min-similarity arguments. No production values are inferred from the document.
 - TODO(QUIZ-PERSONA): section 12 limits the question context to node names and
   earlier questions, while section 16 and selfquiz_ask.md add persona. The supplied
   persona also needs mood state from step 4. Until that dependency is implemented,
@@ -75,6 +79,10 @@ These are specification gaps, not defaults chosen by the implementation.
 - TODO(RUNS-PERSISTENCE): multiple calls in one trace are logged in full JSONL with
   distinct call IDs. The contradictory runs primary key is unchanged; multi-call
   traces are not squeezed into that table or silently overwritten.
+- TODO(QUIZ-CONFIDENCE): the answer prompt includes confident, but section 4.2
+  supplies no grading rule for it. The field is type-validated and logged. Verdicts
+  follow the documented citation checks; the model's confidence does not replace
+  evidence. Define any additional abstention semantics explicitly.
 
 ## Invariants for later delivery stages
 
@@ -83,12 +91,15 @@ relation vocabulary, FTS synchronization, transaction atomicity, retry limits,
 outbox keys, PAD storage precision, and absence of copied prompt strings.
 Step 2 additionally tests grounded extraction, overlap, per-source deduplication,
 atomic article writes, embedding compatibility, tokenizer budgets, and server
-termination signals. The executable
-stage gate in tests/test_stage_contracts.py requires the following behavioral
-tests before the corresponding module may be introduced.
+termination signals.
 
-- TODO(STEP-3-CONTRACTS): selfquiz_ask receives names only; empty retrieval gives
-  no_knowledge with zero model calls; invalid citations fail validation.
+Step 3 tests names-only context, empty retrieval without model calls, strict
+citation subsets, fresh answer contexts, topic scope, top-six retrieval, suspect
+exclusion, replay behavior, and the minimum question count and passing fraction.
+
+The executable stage gate in tests/test_stage_contracts.py requires the following
+behavioral tests before each later-stage module may be introduced.
+
 - TODO(STEP-4-CONTRACTS): copy the inertia, piercing, decay, and clamp tests from
   section 31.1; implement sections 28 and 35 literally and run the two-week
   simulation. PAD persistence rounding is already tested in step 1.

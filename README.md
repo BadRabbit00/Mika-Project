@@ -1,7 +1,7 @@
 # BlogAI
 
-Steps 1 and 2 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
-SQLite storage, time rules, and validated knowledge extraction.
+Steps 1–3 of [ARCHITECTURE.md](ARCHITECTURE.md): the Python 3.12 scaffold,
+SQLite storage, time rules, validated extraction, retrieval, and self-quiz.
 
 ## Development
 
@@ -91,6 +91,46 @@ Use `--max-output-tokens` to set an explicit generation cap (default 2048).
 The local model's final-newline compatibility issue is tracked as
 TODO(CLAIMS-TERMINATION); passing mocked integration tests does not establish
 successful extraction quality with that model.
+
+## Retrieval and self-quiz
+
+Run a round for one topic, or answer a supplied question against its graph:
+
+```sh
+nix develop --command blogai quiz --topic linux-sandbox \
+  --database data/blogai.sqlite3 --log-file logs/quiz.jsonl \
+  --min-similarity 0.8 --rrf-k 60
+
+nix develop --command blogai quiz --topic linux-sandbox \
+  --question 'How does seccomp use BPF?' \
+  --database data/blogai.sqlite3 --log-file logs/quiz.jsonl \
+  --min-similarity 0.8 --rrf-k 60
+```
+
+The two ranking values above are explicit examples, not architecture defaults.
+The architecture omits the fusion rule and retrieval cutoff, so the CLI requires
+both values. `RetrievalPolicy` selects reciprocal rank fusion: each matching
+ranking contributes `1 / (rrf_k + rank)`, with ranks starting at one. Lexical
+matches and cosine matches above the supplied cutoff form the candidate set.
+Results contain at most six nodes and only edges whose endpoints were selected.
+Suspect nodes and nodes outside the requested topic are excluded.
+
+`SelfQuiz.ask` selects only names and previous questions. It never selects node
+summaries or edges. `SelfQuiz.answer` performs retrieval before constructing an
+answer request; empty retrieval persists `no_knowledge` without calling the model.
+Each model call receives a newly built context. Profile budgets are 2000 tokens
+for questions and 3000 for answers, counted by the server tokenizer.
+
+The answer grammar comes from the object in the supplied answer prompt. Code
+requires every cited ID to be both retrieved and currently present and usable in
+the database. Mixed valid/invalid citations fail. Empty citations mean
+`no_knowledge`; malformed answer objects mean `invalid_citation`. Citations prove
+which graph records were referenced; they do not prove semantic entailment.
+
+Rounds use the defaults in `config/settings.yaml`: five questions and an answered
+fraction of at least 0.6, with a hard minimum of five questions. Repeated questions
+are deduplicated per topic. A completed question can be replayed by its ID without
+another retrieval or model call. Learning-state transitions remain in step 12.
 
 ## Storage
 
@@ -182,6 +222,9 @@ backups, Nix results, and tool caches are ignored. Explicit database snapshots
 outside runtime directories can be tracked intentionally.
 
 ## Open requirements
+
+[docs/VALIDATION.md](docs/VALIDATION.md) separates automated checks, live quiz
+results, and the unresolved live extraction grammar contract.
 
 [docs/TODO.md](docs/TODO.md) records architecture gaps, including the undefined
 learning-state schema, embedding upgrades, trace identity, date-only metadata,

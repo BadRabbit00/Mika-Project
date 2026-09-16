@@ -15,7 +15,7 @@ CONTRACTS = {
     },
     "src/selfquiz.py": {
         "test_context_isolation_quiz",
-        "test_empty_retriever_skips_model",
+        "test_empty_retriever_no_llm_call",
         "test_invalid_citations_rejected",
     },
     "src/core/mood.py": {

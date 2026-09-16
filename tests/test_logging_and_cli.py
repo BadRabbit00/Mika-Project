@@ -147,3 +147,31 @@ def test_init_db_cli_reports_failure_with_nonzero_exit(tmp_path):
         record for record in records if record["event"] == "initialization_failed"
     )
     assert "exception" in error
+
+
+def test_quiz_cli_empty_topic_needs_no_model(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.cli",
+            "quiz",
+            "--topic",
+            "unknown",
+            "--question",
+            "Unknown fact?",
+            "--database",
+            str(tmp_path / "quiz.sqlite3"),
+            "--log-file",
+            str(tmp_path / "quiz.jsonl"),
+            "--min-similarity",
+            "0.8",
+            "--rrf-k",
+            "60",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["verdict"] == "no_knowledge"

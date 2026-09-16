@@ -1,12 +1,17 @@
 """Stateless, file-backed contexts for the implemented learning profiles."""
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 _PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 _COMMENTS = re.compile(r"<!--.*?-->", re.S)
-_PROFILES = {"extract": (6000, frozenset({"existing_node_names", "article_chunk"}))}
+_PROFILES = {
+    "extract": (6000, frozenset({"existing_node_names", "article_chunk"})),
+    "selfquiz_ask": (2000, frozenset({"topic_node_names", "asked_questions", "n"})),
+    "selfquiz_answer": (3000, frozenset({"question", "retrieved_nodes"})),
+}
 
 
 @dataclass(frozen=True)
@@ -32,7 +37,19 @@ class ContextBuilder:
             )
         values = {}
         for name, value in blocks.items():
-            if isinstance(value, (list, tuple)) and all(
+            if name == "retrieved_nodes":
+                if not isinstance(value, (list, tuple)) or not value:
+                    raise ValueError("Answer context requires retrieved nodes")
+                for node in value:
+                    if not isinstance(node, dict) or node.keys() != {
+                        "id",
+                        "name",
+                        "summary",
+                        "edges",
+                    }:
+                        raise TypeError("Unexpected retrieved node fields")
+                values[name] = json.dumps(value, ensure_ascii=False)
+            elif isinstance(value, (list, tuple)) and all(
                 isinstance(item, str) for item in value
             ):
                 values[name] = "\n".join(value)
@@ -45,6 +62,9 @@ class ContextBuilder:
         if temperature is None:
             raise ValueError(f"Missing sampling metadata for {profile}")
         template = _COMMENTS.sub("", raw).strip()
+        if profile == "selfquiz_ask":
+            # TODO(QUIZ-PERSONA): section 12 excludes the later mood/persona state.
+            template = template.replace("{persona}", "").strip()
         if set(_PLACEHOLDER.findall(template)) != allowed:
             raise ValueError(f"Unexpected placeholders in {profile}")
         first = _PLACEHOLDER.search(template)
