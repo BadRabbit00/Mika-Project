@@ -53,8 +53,13 @@ nix develop --command python -m src.cli run \
   --log-file logs/mika.jsonl
 ```
 
-The supplied catalogue requires the six real first-topic articles. Layout IDs
-and token environment variables must be supplied. World and sleep are autonomous
+Provide `MIKA_BOT_TOKEN`, `CURATOR_BOT_TOKEN`, and `OPS_BOT_TOKEN` in `.env` in the
+working directory; [config/.env.example](config/.env.example) lists the keys.
+Both `run` and `bot` load this file automatically. Use `--env-file /path/to/bots.env`
+to select another file. Exported environment variables take precedence.
+
+The supplied catalogue requires the six real first-topic articles and layout IDs.
+World and sleep are autonomous
 by default; --world-state optionally supplies an initial snapshot and expiring
 overrides. Without it, startup logs neutral PAD and zero initial sleep debt.
 Their contracts and startup checks are in [docs/LIVE_RUNTIME.md](docs/LIVE_RUNTIME.md).
