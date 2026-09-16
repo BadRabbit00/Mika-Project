@@ -11,6 +11,17 @@ CATEGORIES = frozenset({"fact", "voice", "format", "repeat", "context"})
 class SQLiteLineageStore:
     """Consume explicit provenance; never infer derivation from topic similarity."""
 
+    def link(self, connection, post_id, *, node_ids=(), thread_ids=()):
+        """Call inside the transaction that creates the derived records."""
+        connection.executemany(
+            "INSERT OR IGNORE INTO post_nodes(post_id,node_id) VALUES (?,?)",
+            ((post_id, key) for key in node_ids),
+        )
+        connection.executemany(
+            "INSERT OR IGNORE INTO post_threads(post_id,thread_id) VALUES (?,?)",
+            ((post_id, key) for key in thread_ids),
+        )
+
     def invalidate(self, connection, post_id, *, trace_id):
         connection.execute(
             "UPDATE threads SET status='stale' WHERE id IN "
@@ -22,12 +33,18 @@ class SQLiteLineageStore:
             "(SELECT node_id FROM post_nodes WHERE post_id=?)",
             (post_id,),
         )
+        connection.execute(
+            "INSERT INTO curator_review(kind,subject,reason,opened_at) "
+            "SELECT 'suspect_node',node_id,?,? FROM post_nodes WHERE post_id=?",
+            (f"Invalidated post {post_id}; trace {trace_id}", now(), post_id),
+        )
         log.info("defect_lineage_invalidated", post_id=post_id, trace_id=trace_id)
 
 
 class Defects:
     def __init__(self, database, *, lineage=None):
-        self.database, self.lineage = database, lineage
+        self.database = database
+        self.lineage = lineage if lineage is not None else SQLiteLineageStore()
 
     def invalidate(self, post_id, *, category, reason, trace_id):
         category = {
@@ -61,14 +78,7 @@ class Defects:
             connection.execute(
                 "UPDATE narrative SET excluded=1 WHERE post_id=?", (post_id,)
             )
-            if self.lineage is not None:
-                self.lineage.invalidate(connection, post_id, trace_id=trace_id)
-            else:
-                log.warning(
-                    "defect_lineage_unavailable",
-                    post_id=post_id,
-                    todo="INVALIDATION-LINEAGE",
-                )
+            self.lineage.invalidate(connection, post_id, trace_id=trace_id)
             return dict(
                 connection.execute(
                     "SELECT * FROM invalidated WHERE post_id=?", (post_id,)

@@ -9,14 +9,6 @@ including structured log fields written as `todo="<id>"`.
 
 ## Storage and delivery
 
-- TODO(OUTBOX-DELIVERY), section 37.2, delivery step 8: a unique local key
-  deduplicates enqueue operations. If Telegram accepts a message and the process
-  dies before saving its message ID, SQLite cannot determine whether it was sent.
-  Step 8 now commits a durable claim before sending and never automatically
-  resends an uncertain claim. A verified message ID can reconcile the row.
-  Automated reconciliation remains undefined; a crash before sending can also
-  leave an uncertain claim. This favors duplicate
-  prevention over automatic recovery and does not claim exactly-once delivery.
 - TODO(LEARNING-STATE), sections 3 and 13: the pure state machine and
   SQLiteLearningStore are implemented. The architecture omits the durable schema;
   [learning-storage.sql](learning-storage.sql) is the explicit proposal exercised
@@ -30,13 +22,6 @@ including structured log fields written as `todo="<id>"`.
   cosine similarity normalizes vectors at comparison time. Pickle is disabled.
   TODO(EMBEDDING-UPGRADE): legacy unlabelled blobs and model changes require an
   explicit reindexing policy; incompatible vectors fail instead of being mixed.
-- TODO(INVALIDATION-LINEAGE), section 27: Defects excludes invalidated posts from
-  narrative. SQLiteLineageStore also marks explicitly linked threads stale and
-  nodes suspect when the proposed post_threads/post_nodes tables are installed
-  and the adapter is supplied. Without it, commands and logs report this marker.
-  The production migration and population of those links remain to be defined;
-  the curator review queue still has no storage contract. See
-  TODO(INTERFACE-LINEAGE) and [interface-storage.sql](interface-storage.sql).
 - TODO(UNSPECIFIED-STORES), sections 5, 20.5, 22.4, 31.4 and 36: the initial
   document did not define every persistence contract. Off-topic repeat history
   now uses canonical entities in life_journal; explicit proposals cover settings
@@ -67,11 +52,6 @@ including structured log fields written as `todo="<id>"`.
   but no aggregate grading formula is supplied. Callers provide its text; code
   validates the verdict vocabulary and complete question-index coverage rather
   than inventing an overall pass threshold.
-- TODO(INTERFACE-LINEAGE): explicit post_nodes/post_threads tables are proposed
-  and tested through SQLiteLineageStore. Without an installed lineage contract,
-  invalidation excludes narrative and preserves public evidence, but reports
-  unavailable propagation. Do not guess derived nodes from a post's topic.
-  A durable curator-review queue is still unspecified.
 - TODO(POST-REGENERATION): the runtime accepts an async regeneration provider,
   but persisted writing attempts do not contain the typed, current world/mood
   inputs needed to rebuild ContextBuilder safely. The standalone bot reports

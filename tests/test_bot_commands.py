@@ -74,8 +74,7 @@ def test_defect_propagates_only_explicit_post_lineage(database):
         thread = c.execute(
             "INSERT INTO threads(text, status) VALUES ('Derived thread', 'open')"
         ).lastrowid
-        c.execute("INSERT INTO post_nodes VALUES ('p', 'derived')")
-        c.execute("INSERT INTO post_threads VALUES ('p', ?)", (thread,))
+        SQLiteLineageStore().link(c, "p", node_ids=("derived",), thread_ids=(thread,))
 
     database.run_transaction(seed)
     Defects(database, lineage=SQLiteLineageStore()).invalidate(
@@ -89,6 +88,13 @@ def test_defect_propagates_only_explicit_post_lineage(database):
             c.execute("SELECT suspect FROM nodes WHERE id='other'").fetchone()[0] == 0
         )
         assert c.execute("SELECT status FROM threads").fetchone()[0] == "stale"
+        review = c.execute("SELECT * FROM curator_review").fetchone()
+        assert review["kind"] == "suspect_node" and review["subject"] == "derived"
+    Defects(database).invalidate(
+        "p", category="fact", reason="Wrong derivation", trace_id="trace"
+    )
+    with database.connection() as c:
+        assert c.execute("SELECT count(*) FROM curator_review").fetchone()[0] == 1
 
 
 def test_library_import_rejects_missing_origin_and_path_traversal(tmp_path):
@@ -147,7 +153,15 @@ def layout():
 
 
 @pytest.mark.parametrize(
-    "text", ["/state", "/graph", "/set", "/set study.quiz_threshold", "/defects"]
+    "text",
+    [
+        "/state",
+        "/graph",
+        "/set",
+        "/set study.quiz_threshold",
+        "/defects",
+        "/outbox review",
+    ],
 )
 async def test_owner_commands_without_arguments_return_state(database, tmp_path, text):
     service = CommandService(

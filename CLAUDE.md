@@ -25,7 +25,8 @@ corrections take precedence over these documents and ARCHITECTURE.md.
   values with round(value, 4). Use 200-token overlap and norm_hash deduplication
   when extraction is implemented.
 - Use transactional outbox insertion. An idempotency key cannot resolve the
-  remote-send/local-commit crash window; see TODO(OUTBOX-DELIVERY).
+  remote-send/local-commit crash window. Review uncertain claims with /outbox review;
+  never resend them automatically.
 - Update Graphify after code changes: nix develop --command graphify update .
 - Record incomplete or conflicting requirements as searchable TODO entries;
   do not silently invent missing domain rules.

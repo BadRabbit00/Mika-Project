@@ -15,7 +15,7 @@ from src.bot import post_buttons, settings_buttons
 from src.core.settings import MissingSettingsStorage
 from src.core.time_utils import now
 from src.defects import CATEGORIES, Defects
-from src.publish import Destination, Publisher
+from src.publish import Destination, OutboxWorker, Publisher
 
 log = structlog.get_logger("blogai.commands")
 
@@ -227,6 +227,12 @@ class CommandService:
                     result = await asyncio.to_thread(self._state)
                 case "/graph":
                     result = await asyncio.to_thread(self._graph, argument)
+                case "/outbox":
+                    if argument != "review":
+                        raise ValueError("Use /outbox review")
+                    result = await asyncio.to_thread(
+                        OutboxWorker(self.database, None).uncertain
+                    )
                 case "/set" | "/get" | "/help" | "/config":
                     key, _, value = argument.partition(" ")
                     if command == "/set" and value:
@@ -294,6 +300,7 @@ class CommandService:
                         "commands": [
                             "/state",
                             "/graph",
+                            "/outbox review",
                             "/set",
                             "/health",
                             "/defects",
@@ -408,9 +415,7 @@ class CommandService:
                 message,
                 {
                     "invalidated": post_id,
-                    "lineage": "applied"
-                    if self.defects.lineage
-                    else "TODO(INVALIDATION-LINEAGE)",
+                    "lineage": "applied",
                 },
                 trace_id,
             )
