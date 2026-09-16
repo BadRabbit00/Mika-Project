@@ -98,3 +98,15 @@ with explicit fixture sleep/location inputs, without publication. Evidence:
 `data/live/decisions-writing-report.json` and the corresponding JSONL log.
 Typed context snapshots retain PAD bands, world inputs, and memory identities
 for regeneration from current observations.
+
+## Dialogue decisions
+
+The dialogue/storage/writing gate passes 117 tests. Session PAD observations are
+rounded to four decimals in SQLite and excluded from prompt histories. Exports
+include norm(delta)/(2*sqrt(3)), individual P/A/D deltas, and every observed band
+transition, including intermediate replies. A full three-axis reversal measures
+1.0; a return trip still records its intermediate band changes after restart.
+
+DM question threads have explicit provenance. Public context loaders exclude
+them. Memory compression uses the supplied dialog_summary.md; runtime setting
+changes apply to the next chat operation.

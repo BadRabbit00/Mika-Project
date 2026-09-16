@@ -138,16 +138,20 @@ async def test_chat_routes_unknown_and_opens_one_question(
     )
     assert result.mode == "unknown" and not result.cited
     service.retriever.search.assert_awaited_once_with(
-        "What is seccomp?", topic="security", threshold=0.55
+        "What is seccomp?", topic="security"
     )
     request = service.llm.generate.call_args.args[0]
     assert request.profile == "chat_unknown"
     with database.connection() as c:
         assert (
-            c.execute("SELECT count(*) FROM threads WHERE kind='question'").fetchone()[
-                0
-            ]
+            c.execute(
+                "SELECT count(*) FROM threads WHERE kind='question' "
+                "AND channel='public'"
+            ).fetchone()[0]
             == public_threads
+        )
+        assert c.execute("SELECT channel FROM threads").fetchone()[0] == (
+            "dm" if channel == "dm" else "public"
         )
         assert c.execute("SELECT count(*) FROM nodes").fetchone()[0] == 0
 
@@ -307,6 +311,49 @@ async def test_session_export_measures_first_to_last_reply_similarity(
     else:
         assert metrics["voice_drift"] == pytest.approx(0.6)
         assert service.llm.embed.await_count == 2
+
+
+async def test_session_mood_export_uses_normalized_deltas_and_all_band_changes(
+    service, day
+):
+    import math
+
+    start = Mood(-1, -1, -1)
+    session = await service.open("dm", at=AT, mood=start)
+    samples = [Mood(1, 1, 1), Mood(-1, -1, -1), Mood(1, 1, 1)]
+    for index, mood in enumerate(samples):
+        await service.reply(
+            "dm",
+            f"Greeting {index}",
+            trace_id=f"mood-{index}",
+            day=day,
+            mood=mood,
+            wake_reason="alarm",
+            topic="security",
+        )
+    await service.close(session["id"], at=AT + timedelta(minutes=5), mood=Mood(1, 1, 1))
+    # Reopening the store must preserve intermediate transitions.
+    service.store = SessionStore(service.database)
+    service.llm.embed.return_value = [1.0, 0.0]
+    exported = (await service.export(session["id"])).splitlines()
+    metrics = json.loads(exported[0])["metrics"]
+    assert metrics["mood_drift"] == pytest.approx(math.sqrt(12) / (2 * math.sqrt(3)))
+    assert metrics["mood_delta"] == {"P": 2.0, "A": 2.0, "D": 2.0}
+    assert metrics["band_changes"] == 9
+    assert '"bands"' not in service.llm.generate.call_args.args[0].user
+    assert '"PAD"' not in service.llm.generate.call_args.args[0].user
+
+
+async def test_chat_uses_setting_overrides_on_next_call(service):
+    from src.core.settings import SQLiteSettingsStore
+
+    registry = SettingsRegistry.from_file(
+        Path("config/settings.yaml"), store=SQLiteSettingsStore(service.database)
+    )
+    service._settings = registry
+    assert service.settings.ttl_hours == 6
+    registry.set("chat.session_ttl_hours", "8", trace_id="setting")
+    assert service.settings.ttl_hours == 8
 
 
 def test_fact_filter_rejects_inferences_sensitive_data_and_wrong_speaker():

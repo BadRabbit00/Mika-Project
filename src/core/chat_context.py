@@ -8,6 +8,7 @@ from ruamel.yaml import YAML
 
 from src.core.context import ContextIsolationError, Request
 from src.core.pad import Mood
+from src.core.settings import SettingsRegistry
 from src.core.world import DayContext
 
 _COMMENTS = re.compile(r"<!--.*?-->", re.S)
@@ -15,9 +16,14 @@ _FIELD = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 
 
 class ChatContext:
-    def __init__(self, prompt_dir, mood_model, *, config_dir=Path("config")):
+    def __init__(
+        self, prompt_dir, mood_model, *, config_dir=Path("config"), settings=None
+    ):
         self.prompt_dir, self.config_dir = Path(prompt_dir), Path(config_dir)
         self.mood_model = mood_model
+        self.settings = settings or SettingsRegistry.from_file(
+            self.config_dir / "settings.yaml"
+        )
 
     def build(
         self,
@@ -41,13 +47,12 @@ class ChatContext:
         if not isinstance(day, DayContext) or not isinstance(mood, Mood):
             raise TypeError("Chat requires validated day and mood values")
         yaml = YAML(typ="safe")
-        settings = yaml.load((self.config_dir / "settings.yaml").read_text())
-        emoji_max = next(
-            row["default"]
-            for row in settings["settings"]
-            if row["key"] == "persona.emoji_max"
-        )
-        persona = _COMMENTS.sub("", (self.prompt_dir / "_base.md").read_text()).strip()
+        emoji_max = self.settings.get("persona.emoji_max")
+        persona = _COMMENTS.sub(
+            "", (self.prompt_dir / "_base_core.md").read_text()
+        ).strip()
+        if mode == "topical":
+            persona += "\n\n" + (self.prompt_dir / "_base_study.md").read_text().strip()
         values = {"mood": self.mood_model.mood_block(mood), "emoji_max": str(emoji_max)}
         if set(_FIELD.findall(persona)) != values.keys():
             raise ValueError("Unexpected persona fields")

@@ -11,14 +11,31 @@ _FIELD = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 
 
 class ChatMemory:
-    def __init__(self, llm, prompt_dir, *, grammar_dir=Path("grammars"), budget=16000):
-        self.llm, self.prompt_dir, self.budget = llm, Path(prompt_dir), budget
+    def __init__(
+        self,
+        llm,
+        prompt_dir,
+        *,
+        grammar_dir=Path("grammars"),
+        budget=16000,
+        settings=None,
+    ):
+        self.llm, self.prompt_dir, self._budget = llm, Path(prompt_dir), budget
         self.grammar_dir = Path(grammar_dir)
+        self.settings = settings
+
+    @property
+    def budget(self):
+        return (
+            self._budget
+            if self.settings is None
+            else self.settings.get("chat.context_tokens")
+        )
 
     def _request(self, name, values):
         path = self.prompt_dir / f"{name}.md"
         if not path.exists():
-            raise ValueError(f"TODO(CHAT-SUMMARY-PROMPT): missing {path.name}")
+            raise ValueError(f"Missing memory prompt: {path.name}")
         raw = path.read_text(encoding="utf-8")
         temperature = re.search(r"\btemp\s+([0-9.]+)", raw)
         if temperature is None:
