@@ -151,8 +151,9 @@ class Publisher:
 
 
 class OutboxWorker:
-    def __init__(self, database, transport):
+    def __init__(self, database, transport, *, allowed=None):
         self.database, self.transport = database, transport
+        self.allowed = allowed
 
     def _claim(self, at):
         def claim(connection):
@@ -258,6 +259,23 @@ class OutboxWorker:
             return "idle"
         payload = json.loads(row["payload"])
         with structlog.contextvars.bound_contextvars(trace_id=payload["trace_id"]):
+            if self.allowed is not None and payload.get("post_id"):
+                try:
+                    admitted = await self.allowed(payload, at)
+                except ValueError:
+                    log.exception("publication_observations_unavailable")
+                    admitted = False
+                if not admitted:
+                    await asyncio.to_thread(
+                        self.database.run_transaction,
+                        lambda c: c.execute(
+                            "UPDATE outbox SET next_try_at=? WHERE id=? "
+                            "AND sent_at IS NULL",
+                            (add_elapsed(at, minutes=1), row["id"]),
+                        ),
+                    )
+                    log.info("publication_deferred", outbox_id=row["id"])
+                    return "deferred"
             try:
                 message_id = await self.transport.send(payload)
             except DeliveryRejected as error:

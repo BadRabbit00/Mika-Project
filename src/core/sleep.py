@@ -42,15 +42,18 @@ class SleepHistory:
                     raise ValueError(
                         "A sleep night already exists with different facts"
                     )
-                return
+                return False
             c.execute(
                 "INSERT INTO sleep_log(night,planned_bedtime,actual_bedtime,"
                 "wake_at,wake_reason,hours,debt_after) VALUES (?,?,?,?,?,?,0)",
                 values,
             )
+            return True
 
-        self.database.run_transaction(save)
-        log.info("sleep_recorded", night=values[0], wake_at=values[3], reason=reason)
+        if self.database.run_transaction(save):
+            log.info(
+                "sleep_recorded", night=values[0], wake_at=values[3], reason=reason
+            )
 
     def complete(self, night: date, *, at) -> float:
         at = require_aware(at)
@@ -95,6 +98,14 @@ class SleepHistory:
 
     def current(self, at):
         at = require_aware(at)
+        with self.database.connection() as c:
+            due = c.execute(
+                "SELECT night FROM sleep_log WHERE debt_applied=0 "
+                "AND wake_at<=? ORDER BY wake_at DESC LIMIT 1",
+                (at,),
+            ).fetchone()
+        if due:
+            self.complete(date.fromisoformat(due[0]), at=at)
         with self.database.connection() as c:
             row = c.execute(
                 "SELECT * FROM sleep_log WHERE actual_bedtime<=? "

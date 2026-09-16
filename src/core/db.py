@@ -322,6 +322,11 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "ALTER TABLE session_turns ADD COLUMN mood TEXT "
         "CHECK (mood IS NULL OR json_valid(mood))",
     ),
+    (
+        f"ALTER TABLE learner_state ADD COLUMN {_utc('curator_paused_until')}",
+        "ALTER TABLE learner_state ADD COLUMN curator_auth_failed INTEGER NOT NULL "
+        "DEFAULT 0 CHECK (curator_auth_failed IN (0,1))",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 

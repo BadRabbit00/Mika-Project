@@ -27,6 +27,27 @@ RHYTHM = {
 }
 
 
+def test_supplied_rhythm_loads_mapping_quiet_hours():
+    rhythm = Rhythm.from_file("config/rhythm.yaml")
+    assert rhythm.quiet_hours == ("23:30", "09:00")
+
+
+def test_public_thread_selection_excludes_dm(tmp_path):
+    from src.core.db import Database
+    from src.scheduler import load_threads
+
+    database = Database(tmp_path / "threads.sqlite3")
+    database.initialize()
+    database.run_transaction(
+        lambda c: c.executemany(
+            "INSERT INTO threads(opened_at,kind,text,status,channel) VALUES "
+            "(?,'question',?,'open',?)",
+            [(AT, "Private question", "dm"), (AT, "Public question", "public")],
+        )
+    )
+    assert len(load_threads(database, at=AT)) == 1
+
+
 def test_rhythm_uses_literal_lognormal_gaps_and_aware_windows():
     rhythm = Rhythm.from_mapping(RHYTHM)
     left, right = Random(7), Random(7)

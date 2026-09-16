@@ -3,12 +3,13 @@
 import asyncio
 import json
 import subprocess
-from dataclasses import asdict, dataclass
-from datetime import datetime
+from dataclasses import asdict, dataclass, replace
+from datetime import datetime, timedelta
 
 import httpx
 import structlog
 
+from src.core.llm_vendor import CuratorFailure
 from src.core.time_utils import add_elapsed, from_utc_iso, require_aware, to_utc_iso
 from src.orchestrator import Action, Event, Phase, State, transition
 
@@ -23,6 +24,10 @@ _DUE = (
     "AND (json_extract(a.action_json,'$.kind') NOT IN "
     "('found','impression','struggle','summary') OR NOT EXISTS "
     "(SELECT 1 FROM learner_state WHERE generation_after>?)) "
+    "AND (json_extract(a.action_json,'$.kind') NOT IN "
+    "('exam','grade','select_articles') OR NOT EXISTS "
+    "(SELECT 1 FROM learner_state WHERE curator_auth_failed=1 "
+    "OR curator_paused_until>?)) "
 )
 
 
@@ -60,8 +65,8 @@ class Deferred:
 
 
 class SQLiteLearningStore:
-    def __init__(self, database, initial):
-        self.database = database
+    def __init__(self, database, initial, *, settings=None):
+        self.database, self.settings = database, settings
         with database.connection() as c:
             tables = {
                 row[0]
@@ -71,7 +76,7 @@ class SQLiteLearningStore:
             }
         if not {"learner_state", "learning_events", "learning_actions"} <= tables:
             raise ValueError(
-                "TODO(LEARNING-STATE): the explicit runner schema is not installed"
+                "The runner schema is not installed; initialize the database"
             )
         database.run_transaction(
             lambda c: c.execute(
@@ -103,6 +108,12 @@ class SQLiteLearningStore:
             if prior[0] != encoded:
                 raise ValueError("Event identity was reused with a changed payload")
             return state
+        if self.settings is not None:
+            state = replace(
+                state,
+                min_articles=self.settings.get("study.min_articles"),
+                quiz_threshold=self.settings.get("study.quiz_threshold"),
+            )
         new, actions = transition(state, event)
         snapshot = json.dumps(asdict(new))
         c.execute(
@@ -156,7 +167,7 @@ class SQLiteLearningStore:
         with self.database.connection() as c:
             row = c.execute(
                 _DUE + "ORDER BY a.due_at,a.id LIMIT 1",
-                (at, at, at),
+                (at, at, at, at),
             ).fetchone()
         return dict(row) if row else None
 
@@ -166,7 +177,7 @@ class SQLiteLearningStore:
         def claim(c):
             row = c.execute(
                 _DUE + "AND (? IS NULL OR a.id=?) ORDER BY a.due_at,a.id LIMIT 1",
-                (at, at, at, identity, identity),
+                (at, at, at, at, identity, identity),
             ).fetchone()
             if row is None:
                 return None
@@ -276,7 +287,7 @@ class ActionRunner:
                     result = decode_event(row["result_event"])
                 else:
                     if action.kind not in self.handlers:
-                        raise ValueError(f"TODO(ACTION-HANDLER): missing {action.kind}")
+                        raise ValueError(f"Missing action handler: {action.kind}")
                     result = await self.handlers[action.kind](action, at)
                 after = (
                     self.generation_delay(at)
@@ -308,6 +319,45 @@ class ActionRunner:
                 if self.alert:
                     await self.alert(action.trace_id, "local_model_unavailable")
                 return "retry" if retryable else "failed"
+            except CuratorFailure as error:
+                category = error.category
+                retry = category == "limit" or (
+                    category in {"transport", "unknown"} and row["attempts"] < 3
+                )
+                midnight = (at + timedelta(days=1)).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                delay = (
+                    (midnight.timestamp() - at.timestamp()) / 3600
+                    if category == "limit"
+                    else 6
+                )
+                await asyncio.to_thread(
+                    self.store.failure,
+                    row,
+                    error,
+                    at=at,
+                    delay_hours=delay if retry else None,
+                )
+                if category in {"limit", "auth"}:
+                    await asyncio.to_thread(
+                        self.store.database.run_transaction,
+                        lambda c: c.execute(
+                            "UPDATE learner_state SET "
+                            "curator_paused_until=?,curator_auth_failed=? WHERE "
+                            "id='learner'",
+                            (
+                                midnight if category == "limit" else None,
+                                int(category == "auth"),
+                            ),
+                        ),
+                    )
+                log.warning("curator_policy_applied", category=category, retry=retry)
+                if self.alert and (
+                    category in {"limit", "auth", "unknown"} or not retry
+                ):
+                    await self.alert(action.trace_id, "curator_" + category)
+                return "retry" if retry else "failed"
             except (subprocess.SubprocessError, TimeoutError) as error:
                 retry = (
                     action.kind in {"exam", "grade", "select_articles"}

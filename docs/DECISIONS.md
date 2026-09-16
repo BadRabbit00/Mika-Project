@@ -1,4 +1,4 @@
-# DECISIONS.md — решения по всем TODO
+# Approved implementation decisions
 
 Ответ на `docs/TODO.md` из ветки `develop`. Каждый пункт получает вердикт.
 Assets are installed in config/, prompts/, and library/. Configuration changes are in docs/CONFIG_PATCHES.md.
@@ -14,7 +14,7 @@ Assets are installed in config/, prompts/, and library/. Configuration changes a
 Агент нашёл настоящие противоречия в архитектуре, а не придрался.
 Спека неправа, код прав.
 
-| TODO | В чём я ошиблась | Как правильно |
+| Decision | В чём я ошиблась | Как правильно |
 |---|---|---|
 | DECAY-ASSERTION | пример «меньше 0.1 за 6 часов» не сходится с формулой и полураспадом A=2ч | верно 0.1625 за 6 ч. Тест: `< 0.2` на 6 ч, `< 0.1` на 8 ч |
 | BASELINE-CLAMP | пример с базовой линией −0.93 против границ ±0.6 | границы авторитетны. Ниже −0.6 может уходить **текущее значение**, но не базовая линия. Текст главы 28.3 неверен |
@@ -289,7 +289,7 @@ ALTER TABLE exams ADD COLUMN exam_run_id TEXT REFERENCES exam_runs(id);
 
 Здесь агент прав, работы нет.
 
-| TODO | Почему принято |
+| Decision | Почему принято |
 |---|---|
 | CLAIMS-GRAMMAR | лексические правила дописаны корректно |
 | OUTBOX-DELIVERY | at-most-once — верный выбор. Дубль в публичном дневнике хуже пропуска. Добавить только `/outbox review` для ручного разбора неопределённых записей |
@@ -314,7 +314,7 @@ ALTER TABLE exams ADD COLUMN exam_run_id TEXT REFERENCES exam_runs(id);
 
 ### CLAIMS-TERMINATION · применить патч
 
-`docs/claims-final-newline.patch` — **применять**. JSON Lines допускает
+The final-newline correction is applied in `grammars/claims.gbnf`. JSON Lines допускает
 отсутствие завершающего перевода строки, разделители между записями
 патч оставляет обязательными. Упор в лимит вывода — реальная проблема,
 а не косметика.
@@ -432,7 +432,7 @@ SleepProvider  → bedtime, wake, reason, debt из sleep_log
    `write_insight.md`, `output_envelope.md`, `_base_core.md`,
    `_base_study.md`
 2. Применить `PATCHES.md` к четырём конфигам
-3. Применить `claims-final-newline.patch`
+3. Apply the final-newline correction in `grammars/claims.gbnf` (completed).
 4. Миграции 004–007
 5. Исправить `write_daily.md` и `selfquiz_ask.md` (пункт 4 выше)
 6. Подставить `{output_envelope}` во все `write_*`, добавить стоп-теги

@@ -1,9 +1,12 @@
 """Almaty activity scheduling and generation admission, independent of the FSM."""
 
 import asyncio
+import hashlib
+import inspect
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from random import Random
 
 import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -45,6 +48,7 @@ class Rhythm:
     min_min: float
     max_min: float
     max_events: int
+    jitter_minutes: int = 0
 
     @classmethod
     def from_mapping(cls, data):
@@ -56,12 +60,15 @@ class Rhythm:
         result = cls(
             tuple((row["start"], row["len_min"]) for row in sessions["weekday"]),
             tuple((row["start"], row["len_min"]) for row in sessions["weekend"]),
-            tuple(data["quiet_hours"]),
+            (data["quiet_hours"]["from"], data["quiet_hours"]["to"])
+            if isinstance(data["quiet_hours"], dict)
+            else tuple(data["quiet_hours"]),
             data["gap"]["mu"],
             data["gap"]["sigma"],
             data["gap"]["min_min"],
             data["gap"]["max_min"],
             data["max_events_per_session"],
+            data.get("jitter_minutes", 0),
         )
         if (
             not result.weekday
@@ -85,7 +92,7 @@ class Rhythm:
     def from_file(cls, path):
         path = Path(path)
         if not path.exists():
-            raise ValueError("TODO(RHYTHM-CONFIG): an explicit rhythm file is required")
+            raise ValueError("An explicit rhythm file is required")
         return cls.from_mapping(YAML(typ="safe").load(path.read_text()))
 
     def gap_minutes(self, rng):
@@ -96,10 +103,18 @@ class Rhythm:
     def windows(self, day):
         day = require_aware(day)
         slots = self.weekday if day.weekday() < 5 else self.weekend
+
+        def start_at(start):
+            seed = hashlib.sha256(f"{day.date()}:{start}".encode()).digest()
+            shift = Random(int.from_bytes(seed)).uniform(
+                -self.jitter_minutes, self.jitter_minutes
+            )
+            return add_elapsed(local_clock(day, start), minutes=shift)
+
         return tuple(
             Window(
-                local_clock(day, start),
-                add_elapsed(local_clock(day, start), minutes=duration),
+                start_at(start),
+                add_elapsed(start_at(start), minutes=duration),
             )
             for start, duration in sorted(slots)
         )
@@ -130,6 +145,33 @@ class Rhythm:
                 ):
                     return window
         raise ValueError("The rhythm has no future activity window outside quiet hours")
+
+
+class ConfiguredRhythm:
+    """Resolve mutable rhythm settings at the next scheduling operation."""
+
+    def __init__(self, path, settings):
+        self.data = YAML(typ="safe").load(Path(path).read_text())
+        self.settings = settings
+
+    def current(self):
+        data = {**self.data, "quiet_hours": dict(self.data["quiet_hours"])}
+        data["quiet_hours"]["from"] = self.settings.get("rhythm.quiet_from")
+        data["jitter_minutes"] = self.settings.get("rhythm.jitter_minutes")
+        return Rhythm.from_mapping(data)
+
+    @property
+    def max_events(self):
+        return self.current().max_events
+
+    def window(self, at):
+        return self.current().window(at)
+
+    def next_window(self, at):
+        return self.current().next_window(at)
+
+    def gap_minutes(self, rng):
+        return self.current().gap_minutes(rng)
 
 
 class MemoryReservations:
@@ -213,7 +255,11 @@ class ActivityScheduler:
     async def enqueue(self, identity, work, *, trace_id):
         at = require_aware(self.clock())
         window = self.rhythm.window(at)
-        if identity in self._queued or window is None or self.blackout(at).blocked:
+        if (
+            identity in self._queued
+            or window is None
+            or (await self._blackout(at)).blocked
+        ):
             log.info("generation_not_admitted", trace_id=trace_id, action_id=identity)
             return False
         self._queued.add(identity)
@@ -232,7 +278,7 @@ class ActivityScheduler:
             try:
                 current = require_aware(self.clock())
                 active = self.rhythm.window(current)
-                if active is None or self.blackout(current).blocked:
+                if active is None or (await self._blackout(current)).blocked:
                     log.info("generation_deferred_before_execution", trace_id=trace_id)
                     return
                 if not await asyncio.to_thread(
@@ -256,6 +302,10 @@ class ActivityScheduler:
             self._queued.discard(identity)
             return False
         return True
+
+    async def _blackout(self, at):
+        result = self.blackout(at)
+        return await result if inspect.isawaitable(result) else result
 
     async def close(self):
         if self.scheduler.running:
@@ -317,7 +367,9 @@ def load_threads(database, *, at):
                 row["status"],
             )
             for row in c.execute(
-                "SELECT * FROM threads WHERE status='open' AND opened_at<=?", (at,)
+                "SELECT * FROM threads WHERE status='open' AND channel='public' "
+                "AND opened_at<=?",
+                (at,),
             )
         ]
 

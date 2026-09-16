@@ -4,6 +4,7 @@ import json
 import math
 
 from src.core.pad import AXES, Mood
+from src.core.time_utils import from_utc_iso
 
 
 def encode_mood(mood, model):
@@ -22,31 +23,35 @@ def encode_mood(mood, model):
     )
 
 
-def mood_metrics(session, turns):
-    samples = []
-    for raw in [
-        session["mood_start"],
-        *(row.get("mood") for row in turns),
-        session["mood_end"],
-    ]:
-        if not raw:
-            continue
+def mood_metrics(session, turns, events=()):
+    def decode(raw):
         try:
             value = json.loads(raw)
             Mood(**value["PAD"])
             if set(value["bands"]) != set(AXES):
-                continue
+                return None
         except (ValueError, TypeError, KeyError):
-            continue
-        samples.append(value)
-    if len(samples) < 2:
+            return None
+        return value
+
+    start, end = decode(session["mood_start"]), decode(session["mood_end"])
+    if start is None or end is None:
         return dict(
             mood_drift=None,
             mood_delta=None,
             band_changes=None,
             mood_drift_status="insufficient_observations",
         )
-    delta = {axis: samples[-1]["PAD"][axis] - samples[0]["PAD"][axis] for axis in AXES}
+    observations = sorted(
+        [*events, *(row for row in turns if row.get("mood"))],
+        key=lambda row: from_utc_iso(row["at"]),
+    )
+    samples = [
+        start,
+        *(value for row in observations if (value := decode(row["mood"]))),
+        end,
+    ]
+    delta = {axis: end["PAD"][axis] - start["PAD"][axis] for axis in AXES}
     drift = math.sqrt(sum(value**2 for value in delta.values())) / (2 * math.sqrt(3))
     changes = sum(
         left["bands"][axis] != right["bands"][axis]

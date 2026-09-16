@@ -70,9 +70,7 @@ class ChatGateway:
                     raise ValueError("Use /chat to control this dialogue channel")
                 elif current:
                     if self.context_provider is None:
-                        raise ValueError(
-                            "TODO(RUNTIME-CONTEXT): current world and mood are required"
-                        )
+                        raise ValueError("current world and mood are required")
                     blocks = await self.context_provider()
                     result = await self.service.reply(
                         channel, message.text, trace_id=trace_id, **blocks

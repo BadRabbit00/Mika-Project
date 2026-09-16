@@ -23,7 +23,10 @@ from src.library import LibraryInbox
 from src.publish import OutboxWorker, Publisher
 
 
-async def run_telegram(args, *, chat_factory=None, learning_factory=None):
+async def run_telegram(
+    args, *, chat_factory=None, learning_factory=None, assemble=None
+):
+    # TODO(TELEGRAM-DEPLOYMENT): supply real layout IDs and verify test-group delivery.
     layout = TelegramLayout.from_file(args.layout)
     tokens = {role: os.environ[name] for role, name in layout.bots.items()}
     if len(set(tokens.values())) != 3:
@@ -55,7 +58,10 @@ async def run_telegram(args, *, chat_factory=None, learning_factory=None):
 
     try:
         async with LocalLLM(
-            args.generation_url, args.embedding_url, database=database
+            args.generation_url,
+            args.embedding_url,
+            database=database,
+            settings=registry,
         ) as llm:
             extractor = Extractor(
                 database,
@@ -87,14 +93,13 @@ async def run_telegram(args, *, chat_factory=None, learning_factory=None):
             )
             dispatcher = Dispatcher()
             dispatcher.include_router(ingress.router)
-            await jobs.start()
             learning = (
-                await learning_factory(database, llm, publisher, layout, jobs)
+                await assemble(args, service, jobs)
+                if assemble
+                else await learning_factory(database, llm, publisher, layout, jobs)
                 if learning_factory
                 else None
             )
-            if learning is not None:
-                await learning.start()
 
             async def expire_chat():
                 while not stop.is_set():
@@ -113,6 +118,15 @@ async def run_telegram(args, *, chat_factory=None, learning_factory=None):
                         pass
 
             try:
+                await jobs.start()
+                if learning is not None:
+                    if assemble is not None:
+
+                        async def allowed(payload, at):
+                            return not (await learning.providers.blackout(at)).blocked
+
+                        worker.allowed = allowed
+                    await learning.start()
                 async with asyncio.TaskGroup() as tasks:
                     tasks.create_task(drain())
                     tasks.create_task(expire_chat())

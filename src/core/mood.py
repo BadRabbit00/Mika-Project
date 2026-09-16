@@ -85,6 +85,7 @@ class BaselineContext:
     exam_result: str | None = None
     correction_recent: bool = False
     quiz_streak_good: bool = False
+    pressure: Mood = Mood(0, 0, 0)
 
     def __post_init__(self):
         if (
@@ -100,6 +101,8 @@ class BaselineContext:
             or type(self.quiz_streak_good) is not bool
         ):
             raise ValueError("Baseline flags must be boolean")
+        if not isinstance(self.pressure, Mood):
+            raise TypeError("Semester pressure must contain validated PAD deltas")
 
     @classmethod
     def from_history(
@@ -112,6 +115,7 @@ class BaselineContext:
         exam=None,
         correction_at=None,
         quiz_streak=0,
+        pressure=None,
     ):
         at = require_aware(at)
         recent_exam = (
@@ -132,6 +136,7 @@ class BaselineContext:
             exam_result=exam[1] if recent_exam else None,
             correction_recent=correction,
             quiz_streak_good=quiz_streak >= windows["quiz_streak_good_count"],
+            pressure=Mood(0, 0, 0) if pressure is None else pressure,
         )
 
 
@@ -259,6 +264,7 @@ class MoodModel:
             for modifier, coefficient in config["modifiers"].items():
                 value += factors[modifier] * coefficient
             value += getattr(effect.baseline, axis)
+            value += getattr(context.pressure, axis)
             values.append(clamp(value, *self._data["clamp_baseline"]))
         return Mood(*values)
 
@@ -457,13 +463,14 @@ class MoodService:
         queue_id: int | None = None,
     ) -> MoodSnapshot:
         at = require_aware(at)
-        if queue_id is None and event_id not in self.model.events:
+        disabled = event_id == "settings_disabled" and not self.model.enabled
+        if queue_id is None and event_id not in self.model.events and not disabled:
             raise KeyError(event_id)
 
         def save(connection):
             trigger_id = None
             if queue_id is None:
-                delta = self.model.events[event_id]["delta"]
+                delta = (0, 0, 0) if disabled else self.model.events[event_id]["delta"]
             else:
                 row = connection.execute(
                     "SELECT * FROM mood_queue WHERE id=?", (queue_id,)

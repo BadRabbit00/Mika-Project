@@ -1,4 +1,4 @@
-# library/topics.yaml — карта тем. Закрывает TODO(TOPIC-CATALOGUE).
+# Topic catalogue and curator allocation rules.
 # Куратор выбирает статьи только отсюда. id ссылаются на library/*.md.
 
 start: agents-basics

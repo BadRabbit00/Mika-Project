@@ -1,4 +1,37 @@
-# Validation of architecture steps 2 and 3
+# Validation evidence
+
+## Approved decisions: final verification, 2026-09-16
+
+- `nix develop --command pytest -q --tb=short --show-capture=no`: 348 passed.
+- `nix flake check`: passed on x86_64-linux, including the complete pytest suite,
+  locked dependencies, Ruff lint/format checks, and Nix formatting. The host
+  does not build aarch64-linux checks.
+- `nix build .#default --no-link`: application environment built successfully.
+- `nix develop --command python -m src.cli run --dry-run`: reached EXAM with
+  three sources, three claims, five answered questions, a summary draft, and
+  five curator exam questions. It made 45 fixture tokenize calls and no external
+  deliveries. The command uses mocked external services.
+- Graphify updated the code graph: 1,477 nodes and 3,735 edges. The Python AST
+  graph is available; SQL AST extraction is unavailable in the supplied Graphify
+  package because its optional SQL parser is absent.
+
+Regression coverage includes automatic migrations, live composition, curator
+quota/authentication gates, publication blackout, runtime settings, and shutdown
+that drains jobs before closing their providers. Code markers and docs/TODO.md
+are checked for exact agreement.
+
+Cycle tests cover every length from 26 through 30, fixed non-follicular phases,
+the final-five-day late luteal window, and reproducible histories before and after
+the epoch. Session exports use the literal denominator 2*sqrt(3), separate PAD
+deltas, and band transitions from stored mood events and replies. An excursion
+that returns to its starting PAD has zero drift but retains its band changes.
+Open sessions do not invent an end observation.
+
+Only deployment inputs remain open: the six real first-topic articles, current
+world/sleep observations, and the actual Telegram layout and token environment.
+No live Telegram delivery is claimed. See [TODO.md](TODO.md).
+
+## Initial validation of architecture steps 2 and 3
 
 Validated on 2026-09-16 with Python 3.12 in the uv2nix devShell.
 
@@ -104,8 +137,8 @@ for regeneration from current observations.
 The dialogue/storage/writing gate passes 117 tests. Session PAD observations are
 rounded to four decimals in SQLite and excluded from prompt histories. Exports
 include norm(delta)/(2*sqrt(3)), individual P/A/D deltas, and every observed band
-transition, including intermediate replies. A full three-axis reversal measures
-1.0; a return trip still records its intermediate band changes after restart.
+transition, including stored events between replies. A full three-axis reversal
+measures 1.0; a return trip still records its intermediate band changes after restart.
 
 DM question threads have explicit provenance. Public context loaders exclude
 them. Memory compression uses the supplied dialog_summary.md; runtime setting

@@ -69,7 +69,7 @@ class CommandService:
         elif message.text.startswith("/chat"):
             await self.reply(
                 message,
-                {"error": "TODO(RUNTIME-CONTEXT): chat has no context provider"},
+                {"error": "chat has no context provider"},
                 trace_id,
             )
 
@@ -388,6 +388,33 @@ class CommandService:
                     ]
                 case "/health":
                     result = await self.health(bot)
+                case "/pause" | "/resume":
+                    result = await asyncio.to_thread(
+                        self.registry.set,
+                        "system.paused",
+                        "true" if command == "/pause" else "false",
+                        trace_id=trace_id,
+                    )
+                case "/exam":
+
+                    def resume_curator(c):
+                        c.execute(
+                            "UPDATE learner_state SET curator_paused_until=NULL,"
+                            "curator_auth_failed=0"
+                        )
+                        return c.execute(
+                            "UPDATE learning_actions SET status='pending',"
+                            "due_at=?,attempts=0 WHERE status='failed' "
+                            "AND json_extract(action_json,'$.kind') "
+                            "IN ('exam','grade','select_articles')",
+                            (self.clock(),),
+                        ).rowcount
+
+                    result = {
+                        "resumed": await asyncio.to_thread(
+                            self.database.run_transaction, resume_curator
+                        )
+                    }
                 case "/defects":
                     if argument not in {"", "week"}:
                         raise ValueError("Use /defects or /defects week")
@@ -436,6 +463,9 @@ class CommandService:
                             "/forget-fact",
                             "/set",
                             "/health",
+                            "/pause",
+                            "/resume",
+                            "/exam",
                             "/defects",
                             "/trace",
                             "/preview",

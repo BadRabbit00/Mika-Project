@@ -1,4 +1,4 @@
-# config/rhythm.yaml — производственный ритм. Закрывает TODO(RHYTHM-CONFIG).
+# Activity sessions and publication rhythm.
 # Все времена — Asia/Almaty, планировщик приводит их к aware datetime.
 
 sessions:

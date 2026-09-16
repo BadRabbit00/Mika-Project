@@ -1,11 +1,12 @@
 """Require behavioral contracts before later-stage implementations are added."""
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
 
-# TODO(STAGE-CONTRACTS): each later stage must supply these behavioral tests.
+# Each implemented stage must retain these behavioral regression tests.
 CONTRACTS = {
     "src/extract.py": {
         "test_model_output_validated_before_writes",
@@ -68,4 +69,17 @@ def test_behavioral_contracts_required_when_stage_is_implemented(module, require
     }
     assert required <= declared, (
         f"Missing behavioral tests for {module}: {required - declared}"
+    )
+
+
+def test_open_decisions_match_code_registry():
+    marker = re.compile(r"TODO\(([A-Z][A-Z0-9-]+)\)")
+    tracked = set(marker.findall(Path("docs/TODO.md").read_text()))
+    found = set()
+    for directory in ("src", "tests", "scripts", "config", "prompts", "library"):
+        for path in Path(directory).rglob("*"):
+            if path.is_file() and path.suffix in {".py", ".yaml", ".md"}:
+                found.update(marker.findall(path.read_text()))
+    assert found == tracked, (
+        f"Unregistered: {found - tracked}; stale: {tracked - found}"
     )
