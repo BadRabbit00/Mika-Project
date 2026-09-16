@@ -46,7 +46,9 @@ async def _curator(args):
 async def _extract(args):
     database = Database(args.database)
     await asyncio.to_thread(database.initialize)
-    async with LocalLLM(args.generation_url, args.embedding_url) as llm:
+    async with LocalLLM(
+        args.generation_url, args.embedding_url, database=database
+    ) as llm:
         extractor = Extractor(
             database,
             llm,
@@ -64,7 +66,9 @@ async def _quiz(args):
     await asyncio.to_thread(database.initialize)
     policy = RetrievalPolicy(args.min_similarity, args.rrf_k)
     settings = QuizSettings.from_registry(args.settings)
-    async with LocalLLM(args.generation_url, args.embedding_url) as llm:
+    async with LocalLLM(
+        args.generation_url, args.embedding_url, database=database
+    ) as llm:
         service = SelfQuiz(
             database,
             llm,

@@ -57,17 +57,17 @@ Local evidence is under the ignored `data/live/` directory:
 - `quiz-positive-results.jsonl` and `quiz-positive-events.jsonl`.
 - `quiz-empty-results.jsonl` and `quiz-empty-events.jsonl`.
 
-## Unresolved live extraction contract
+## Approved grammar and live rerun, 2026-09-16
 
-The literal section 4.1 structure requires a newline after every claim, including
-the final one. With this grammar, the local model repeated claims until its output
-limit on both full-document and excerpt probes. Truncated responses committed no
-article or graph data. The client recognizes both older `stopped_limit` responses
-and the installed server's `stop_type: "limit"` response.
+The approved grammar makes only the final newline optional. The rerun used the
+three kernel excerpts above and real generation, tokenization, and embedding
+servers. Yama accepted 2 claims and rejected 2; no-new-privileges accepted 1 and
+rejected 3. Seccomp first hit the output limit without committing anything. Its
+retry terminated and rejected all 3 claims. These are transport and validation
+results, not an extraction-quality guarantee. No rejected claim entered the graph.
 
-A diagnostic grammar allowing an optional final newline terminated successfully.
-[JSON Lines permits omitting the final newline](https://jsonlines.org/), but
-section 4.1 leaves its `nl` production undefined. Clarification was requested
-before changing the production structure. The committed grammar remains literal;
-see TODO(CLAIMS-TERMINATION) in [TODO.md](TODO.md). Full live extraction of three
-articles is therefore still unverified.
+Evidence: data/live/decisions-extraction-events.jsonl and
+data/live/decisions-extraction-retry-events.jsonl (ignored runtime files).
+The storage and knowledge gate passes 79 tests, including migration upgrades,
+calendar publication dates, atomic reindexing, independent source trust, and
+multiple call receipts under one shared trace.

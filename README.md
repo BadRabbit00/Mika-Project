@@ -86,8 +86,8 @@ llama-server --model ./result-embedding --host 127.0.0.1 --port 8081 \
 
 Each Markdown article needs YAML frontmatter with `id`, `title`, and `topic`.
 Optional metadata includes `origin_key`, `url`, `kind`, `publisher`, `given_by`,
-`trust_prior`, and an aware `published_at` timestamp. Date-only values are logged
-and stored as NULL because the architecture does not define their time of day.
+`trust_prior`, `peer_reviewed`, and a calendar `published_at` date (YYYY-MM-DD).
+Publication dates are not instants; no timezone or midnight is invented.
 
 ```sh
 nix develop --command blogai extract library/topic/article.md \

@@ -11,11 +11,11 @@ from src.core.time_utils import now
 
 
 class MissingSettingsStorage(RuntimeError):
-    """The architecture has not specified a persistent overrides schema."""
+    """No migrated database was attached to this settings provider."""
 
 
 class SQLiteSettingsStore:
-    """Use the proposed schema only when it has been supplied explicitly."""
+    """Read and write overrides installed by database migration 5."""
 
     def __init__(self, database):
         self.database = database
@@ -29,7 +29,7 @@ class SQLiteSettingsStore:
             <= columns
         ):
             raise MissingSettingsStorage(
-                "TODO(SETTINGS-SCHEMA): settings_overrides is not installed"
+                "settings_overrides is not installed; initialize the database"
             )
 
     def get(self, key):
@@ -134,7 +134,7 @@ class SettingsRegistry:
         value = self.validate(key, text)
         if self.store is None:
             raise MissingSettingsStorage(
-                "TODO(SETTINGS-SCHEMA): persistent overrides require an explicit schema"
+                "Persistent overrides require a database-backed settings provider"
             )
         previous = self.get(key)
         self.store.set(key, value, previous=previous, at=now(), trace_id=trace_id)

@@ -377,3 +377,43 @@ settings:
   locked: true
   type: int
   desc: Твой telegram id. Только из конфига, не из чата.
+
+# Approved runtime policy settings.
+- {key: curator.timeout_sec, group: curator, type: int, range: [60, 900],
+   default: 300, title: Таймаут куратора,
+   desc: Сколько ждать ответа от claude -p.,
+   effect: Меньше — чаще срывы на длинных экзаменах.}
+
+- {key: retrieval.rrf_k, group: study, type: int, range: [10, 200], default: 60,
+   title: Константа RRF,
+   desc: Параметр слияния рангов FTS и косинуса.,
+   effect: Больше — ранги сглаживаются, меньше — верхние результаты доминируют.}
+
+- {key: retrieval.min_similarity, group: study, type: float, range: [0.3, 0.9],
+   default: 0.55, title: Порог косинуса,
+   desc: Ниже этого узел не считается найденным.,
+   effect: Выше — чаще честное «не знаю». Ниже — чаще притянутые ответы.}
+
+- {key: retrieval.top_k, group: study, type: int, range: [3, 12], default: 6,
+   title: Узлов в ответ, desc: Сколько заметок подаётся в контекст ответа.,
+   effect: Больше — полнее ответ, выше риск, что она смешает темы.}
+
+- {key: offtop.max_slot_uses, group: world, type: int, range: [1, 5], default: 2,
+   title: Повторов слота за окно,
+   desc: Сколько раз один слот офтопа может сработать за 14 дней.,
+   effect: Больше — однообразнее лента.}
+
+- {key: offtop.slot_smoothing, group: world, type: float, range: [0.1, 5.0],
+   default: 1.0, title: Сглаживание весов,
+   desc: Прибавка Лапласа к счётчику использований слота.,
+   effect: Защищает от деления на ноль и резких перекосов у новых слотов.}
+
+- {key: validator.echo_threshold, group: system, type: float, range: [0.5, 0.95],
+   default: 0.8, title: Порог эха промпта,
+   desc: Жаккар по 5-граммам токенов между ответом и промптом.,
+   effect: Ниже — режет нормальные ответы, выше — пропускает пересказ задания.}
+
+- {key: validator.repeat_threshold, group: system, type: float, range: [0.6, 0.95],
+   default: 0.86, title: Порог повтора,
+   desc: Косинус против последних 30 постов.,
+   effect: Ниже — частые ложные перегенерации.}

@@ -30,20 +30,6 @@ including structured log fields written as `todo="<id>"`.
   cosine similarity normalizes vectors at comparison time. Pickle is disabled.
   TODO(EMBEDDING-UPGRADE): legacy unlabelled blobs and model changes require an
   explicit reindexing policy; incompatible vectors fail instead of being mixed.
-- TODO(SOURCE-DATE), sections 2 and 38.1, step 2: sources.published_at is a DATE,
-  while the later rule requires UTC timestamps for database dates. This schema
-  enforces the explicit UTC rule. A date-only publication value cannot be turned
-  into an instant without an agreed timezone/time-of-day policy; reject it or
-  leave published_at NULL until that policy is defined. Do not invent midnight.
-- TODO(TRACE-IDENTITY), sections 19.2 and 19.3: runs.trace_id remains the legacy
-  primary key although a trace spans multiple model calls. Calls already have
-  distinct IDs in JSONL. Writer rows use unique attempt IDs in the legacy column
-  and retain the root trace in params_json. The proposed call_id/trace_id split
-  in [interface-storage.sql](interface-storage.sql) is not an automatic migration.
-  Native SQL indexing of the shared trace awaits TODO(INTERFACE-TRACE-SCHEMA).
-- TODO(CORRECTION-ID), sections 2 and 4.4, step 9: nodes.corrected_by is TEXT,
-  while exams.id is INTEGER. Define the intended identity format before adding
-  a foreign key; the documented column type is preserved.
 - TODO(INVALIDATION-LINEAGE), section 27: Defects excludes invalidated posts from
   narrative. SQLiteLineageStore also marks explicitly linked threads stale and
   nodes suspect when the proposed post_threads/post_nodes tables are installed
@@ -57,27 +43,8 @@ including structured log fields written as `todo="<id>"`.
   overrides, post lineage, and learner actions. Diary comments and curator review
   still lack contracts, and no general cross-subsystem event schema is supplied.
   The proposed schemas remain separate from automatic production migrations.
-- TODO(MODEL-CONFIG), section 18.1, step 2: config/models.yaml is referenced but
-  not supplied. Existing settings and prompts also contain model settings.
-  Establish the source of truth for model deployment settings. The implemented
-  client accepts explicit endpoint URLs; sampling temperatures are read from the
-  supplied prompt metadata. No replacement models.yaml is invented.
-
 ## Extraction and self-quiz
 
-- TODO(CLAIMS-GRAMMAR): section 4.1 references undefined string, ws, and nl rules.
-  The grammar supplies JSON string escaping, horizontal whitespace, and a line
-  terminator while preserving the specified claim fields and relation vocabulary.
-- TODO(CLAIMS-TERMINATION): the local Gemma repeatedly hits the output limit with
-  the literal mandatory final newline. A diagnostic allowing an optional final
-  newline terminates. JSON Lines permits omitting the last newline, but applying
-  that convention requires changing the supplied production structure so record
-  separators remain mandatory. Clarification has been requested; the committed
-  grammar retains the literal structure until then. Truncated output is rejected
-  in full and never committed. Automated three-article validation uses a mocked
-  generation transport and must not be described as a successful live-model run.
-  The unapplied proposal is [claims-final-newline.patch](claims-final-newline.patch).
-  It keeps newlines mandatory between claims and only makes the final one optional.
 - TODO(RETRIEVAL-POLICY): the architecture specifies hybrid FTS/cosine search but
   no fusion formula or cutoff for self-quiz. Retrieval parameters must be supplied
   explicitly. The provided policy uses reciprocal rank fusion, selected explicitly
@@ -89,18 +56,6 @@ including structured log fields written as `todo="<id>"`.
   the user's stricter names-only contract with an empty persona substitution.
   Mood is implemented, but adding it would still violate that isolation rule.
   No persona or mood text is invented; supplied files stay intact.
-- TODO(TRUST-PRIOR): section 4.3 does not define the reliability lookup for source
-  kind, peer review, and publisher. Extraction preserves explicit trust_prior and
-  origin_key metadata, and deduplicates each normalized triple per source. It does
-  not manufacture trust scores or collapse independent sources into one claim.
-- TODO(SOURCE-REVISION): a reused source ID with changed text is rejected. Define
-  graph retraction and re-extraction semantics before supporting source revisions.
-- TODO(RUNS-PERSISTENCE): multiple calls in one trace are logged in full JSONL with
-  distinct call IDs. The contradictory runs primary key is unchanged; multi-call
-  learning traces are not squeezed into that table or silently overwritten.
-  Writer rows retain unique attempt IDs in the legacy primary-key column;
-  params_json links them by post_id and shared trace_id. JSONL carries the shared
-  trace directly. Native SQL trace indexing awaits TODO(INTERFACE-TRACE-SCHEMA).
 - TODO(QUIZ-CONFIDENCE): the answer prompt includes confident, but section 4.2
   supplies no grading rule for it. The field is type-validated and logged. Verdicts
   follow the documented citation checks; the model's confidence does not replace
@@ -237,17 +192,6 @@ including structured log fields written as `todo="<id>"`.
   but no aggregate grading formula is supplied. Callers provide its text; code
   validates the verdict vocabulary and complete question-index coverage rather
   than inventing an overall pass threshold.
-- TODO(SETTINGS-SCHEMA): section 36 requires persistent overrides but supplies no
-  schema. The concrete proposal is docs/interface-storage.sql. SQLiteSettingsStore
-  implements that contract and restart persistence is tested against explicitly
-  installed tables. Default startup leaves it disabled; /set mutations report
-  this gap. The user was asked whether to add these migrations; no answer has
-  been received. The existing config files are not used as writable storage.
-- TODO(INTERFACE-TRACE-SCHEMA): the proposed runs migration separates call_id
-  from trace_id. Until approved, full JSONL carries shared trace IDs and call IDs.
-  Writer rows keep their legacy unique attempt key and store the chain trace in
-  params_json.trace_id; publication resolves that chain identity. No run is
-  overwritten to accommodate another call.
 - TODO(INTERFACE-LINEAGE): explicit post_nodes/post_threads tables are proposed
   and tested through SQLiteLineageStore. Without an installed lineage contract,
   invalidation excludes narrative and preserves public evidence, but reports
@@ -303,11 +247,6 @@ including structured log fields written as `todo="<id>"`.
 - TODO(RHYTHM-CONFIG): config/rhythm.yaml is absent. Section 6 supplies an
   example, but no configured production rhythm. The missing file and durable
   learner/scheduler schema have been raised for a user decision.
-- TODO(LEARNING-STORAGE): docs/learning-storage.sql specifies the proposed
-  event receipts, action dependencies, durable pauses, and activity reservations.
-  SQLiteLearningStore implements it, and isolated tests exercise restart
-  behavior. No production migration is applied without the missing schema
-  decision. run --dry-run installs it only in its own new temporary database.
 - TODO(LIVE-RUNNER): the offline composition is executable. Unattended live
   startup still needs the missing rhythm and summary files, a durable storage
   decision, and current world/mood providers. run without --dry-run refuses
@@ -367,47 +306,8 @@ expiry, direct-fact validation, pure transitions, action receipts, retry timing,
 activity gates, and the complete offline article-to-exam scenario. All ten tests
 listed in section 38.2 and the section 18.2 boundaries run in the full suite.
 
-## Code marker index
+## Registry maintenance
 
-Reconciled against the working tree on 2026-09-16: **33 distinct IDs in 41
-locations**. Scope: tracked source, tests, scripts, grammars, SQL proposals,
-Nix files, and TOML files. Both `TODO(<id>)` annotations/runtime messages and
-`todo="<id>"` log fields are included. IDs are unique below; repeated uses share
-one description above. Other entries in this registry record architecture or
-integration questions that do not yet have an inline marker.
-
-| Marker ID | Locations |
-| --- | --- |
-| ACTION-HANDLER | [src/runner.py:279](../src/runner.py#L279) |
-| CHAT-MOOD-METRIC | [src/chat.py:427](../src/chat.py#L427) |
-| CHAT-SUMMARY-PROMPT | [src/core/chat_memory.py:21](../src/core/chat_memory.py#L21) |
-| CLAIMS-GRAMMAR | [grammars/claims.gbnf:5](../grammars/claims.gbnf#L5) |
-| CURATOR-GRADING-POLICY | [src/pipeline.py:221](../src/pipeline.py#L221) |
-| DAILY-ISOLATION | [src/core/context.py:268](../src/core/context.py#L268) |
-| DECAY-ASSERTION | [tests/test_mood_and_schedule.py:61](../tests/test_mood_and_schedule.py#L61) |
-| FACT-DELETION | [src/chat_gateway.py:65](../src/chat_gateway.py#L65) |
-| INSIGHT-PROMPT | [src/core/context.py:272](../src/core/context.py#L272) |
-| INVALIDATION-LINEAGE | [docs/interface-storage.sql:3](interface-storage.sql#L3), [src/commands.py:413](../src/commands.py#L413), [src/defects.py:70](../src/defects.py#L70) |
-| LEARNING-STATE | [src/commands.py:126](../src/commands.py#L126), [src/runner.py:74](../src/runner.py#L74) |
-| LIVE-RUNNER | [src/cli.py:158](../src/cli.py#L158) |
-| MODEL-CONFIG | [src/core/llm_vendor.py:70](../src/core/llm_vendor.py#L70) |
-| MOOD-DISABLED | [src/core/mood.py:239](../src/core/mood.py#L239) |
-| OFFTOP-BINDINGS | [src/offtop.py:247](../src/offtop.py#L247) |
-| OFFTOP-ENTITY | [src/offtop.py:61](../src/offtop.py#L61), [src/offtop.py:100](../src/offtop.py#L100) |
-| OFFTOP-PERSONA | [src/core/context.py:306](../src/core/context.py#L306) |
-| OUTBOX-DELIVERY | [src/core/db.py:466](../src/core/db.py#L466) |
-| POST-REGENERATION | [src/commands.py:362](../src/commands.py#L362) |
-| PROMPT-ECHO | [src/validator.py:206](../src/validator.py#L206) |
-| QUIZ-CONFIDENCE | [src/selfquiz.py:82](../src/selfquiz.py#L82) |
-| QUIZ-PERSONA | [src/core/context.py:203](../src/core/context.py#L203) |
-| RETRIEVAL-POLICY | [src/retrieve.py:20](../src/retrieve.py#L20) |
-| RHYTHM-CONFIG | [src/scheduler.py:88](../src/scheduler.py#L88) |
-| RUNTIME-CONTEXT | [src/chat_gateway.py:74](../src/chat_gateway.py#L74), [src/commands.py:62](../src/commands.py#L62) |
-| SETTINGS-SCHEMA | [docs/interface-storage.sql:2](interface-storage.sql#L2), [src/core/settings.py:32](../src/core/settings.py#L32), [src/core/settings.py:137](../src/core/settings.py#L137) |
-| SOURCE-DATE | [src/ingest.py:60](../src/ingest.py#L60) |
-| STAGE-CONTRACTS | [tests/test_stage_contracts.py:8](../tests/test_stage_contracts.py#L8) |
-| TOPIC-CATALOGUE | [src/pipeline.py:276](../src/pipeline.py#L276) |
-| TRACE-IDENTITY | [docs/interface-storage.sql:2](interface-storage.sql#L2), [src/core/db.py:96](../src/core/db.py#L96) |
-| TRIGGER-POLICY | [src/core/mood.py:459](../src/core/mood.py#L459) |
-| WAKE-TIMES | [src/core/schedule.py:209](../src/core/schedule.py#L209) |
-| WEATHER-MONTHS | [src/core/weather.py:104](../src/core/weather.py#L104) |
+Approved decisions are being implemented in architecture stage order. This file
+retains open integration work; completed decisions and evidence are recorded in
+[DECISIONS.md](DECISIONS.md) and [VALIDATION.md](VALIDATION.md).

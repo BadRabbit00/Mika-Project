@@ -1,8 +1,10 @@
 """Self-describing NumPy vectors; no pickle or inferred dimensions."""
 
+import asyncio
 from io import BytesIO
 
 import numpy as np
+import structlog
 
 
 def validate_vector(value: np.ndarray) -> np.ndarray:
@@ -35,3 +37,39 @@ def cosine(left: np.ndarray, right: np.ndarray) -> float:
     if left.shape != right.shape:
         raise ValueError("Embedding dimensions do not match")
     return float(np.dot(left / np.linalg.norm(left), right / np.linalg.norm(right)))
+
+
+async def reindex(database, llm) -> int:
+    """Build a complete replacement off-transaction, then compare and swap it."""
+
+    def snapshot():
+        with database.connection() as c:
+            return [
+                tuple(row) for row in c.execute("SELECT id,name FROM nodes ORDER BY id")
+            ]
+
+    before = await asyncio.to_thread(snapshot)
+    model = await llm.embedding_model()
+    vectors = [
+        (node_id, encode_vector(await llm.embed(name)), model)
+        for node_id, name in before
+    ]
+
+    def commit(c):
+        current = [
+            tuple(row) for row in c.execute("SELECT id,name FROM nodes ORDER BY id")
+        ]
+        if current != before:
+            raise ValueError("Graph changed during reindex; retry the operation")
+        c.execute("DELETE FROM node_embeddings")
+        c.executemany(
+            "INSERT INTO node_embeddings(node_id,embedding,model) VALUES (?,?,?)",
+            vectors,
+        )
+        return len(vectors)
+
+    count = await asyncio.to_thread(database.run_transaction, commit)
+    structlog.get_logger("blogai.vectors").info(
+        "graph_reindexed", nodes=count, model=model
+    )
+    return count

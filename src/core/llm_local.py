@@ -11,6 +11,7 @@ import structlog
 
 from src.core.context import ContextBuilder, Request
 from src.core.context import ContextOverflow as ContextOverflow
+from src.core.runs import RunRecorder
 from src.core.vectors import validate_vector
 
 log = structlog.get_logger("blogai.llm_local")
@@ -25,6 +26,7 @@ class LocalLLM:
         transport: httpx.AsyncBaseTransport | None = None,
         timeout: float = 300.0,
         token_cache_size: int = 256,
+        database=None,
     ):
         if token_cache_size < 0:
             raise ValueError("Token cache size cannot be negative")
@@ -45,6 +47,7 @@ class LocalLLM:
         )
         self._cache_size = token_cache_size
         self._embedding_model: str | None = None
+        self.recorder = RunRecorder(database) if database is not None else None
 
     async def __aenter__(self):
         return self
@@ -161,12 +164,52 @@ class LocalLLM:
             params=payload,
             tokens_in=len(tokens),
         )
-        response = await self._request(
-            self.generation, "POST", "/completion", json=payload
-        )
+        if self.recorder:
+            await self.recorder.begin(
+                call_id=call_id,
+                trace_id=structlog.contextvars.get_contextvars().get("trace_id")
+                or call_id,
+                actor="student",
+                request=request,
+                params=payload,
+                tokens_in=len(tokens),
+            )
+        try:
+            response = await self._request(
+                self.generation, "POST", "/completion", json=payload
+            )
+        except Exception as error:
+            if self.recorder:
+                await self.recorder.finish(
+                    call_id,
+                    error=str(error),
+                    duration_ms=round((time.monotonic() - started) * 1000),
+                )
+            raise
         content = response.get("content")
         if not isinstance(content, str):
+            if self.recorder:
+                await self.recorder.finish(
+                    call_id,
+                    error="Invalid completion response",
+                    duration_ms=round((time.monotonic() - started) * 1000),
+                )
             raise ValueError("Invalid completion response")
+        truncated = (
+            response.get("stopped_limit")
+            or response.get("stop_type") == "limit"
+            or response.get("truncated")
+        )
+        if self.recorder:
+            await self.recorder.finish(
+                call_id,
+                output=content,
+                thought=response.get("reasoning_content"),
+                model=response.get("model"),
+                tokens_out=len(await self.tokenize(content)),
+                duration_ms=round((time.monotonic() - started) * 1000),
+                error="Truncated generation" if truncated else None,
+            )
         log.info(
             "local_generation_finished",
             call_id=call_id,
@@ -177,11 +220,7 @@ class LocalLLM:
             tokens_out=len(await self.tokenize(content)),
             duration_ms=round((time.monotonic() - started) * 1000),
         )
-        if (
-            response.get("stopped_limit")
-            or response.get("stop_type") == "limit"
-            or response.get("truncated")
-        ):
+        if truncated:
             raise ValueError(
                 "Generation or input was truncated; no output may be stored"
             )
