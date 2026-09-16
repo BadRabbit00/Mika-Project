@@ -49,11 +49,14 @@ class ChatMemory:
             lambda match: json.dumps(values[match[1]], ensure_ascii=False),
             template[boundary:],
         )
-        return Request(
-            name, template[:boundary].strip(), user, self.budget, float(temperature[1])
-        )
+        instructions = template[:boundary].strip()
+        if name == "facts_extract":
+            instructions += (
+                "\n\n" + (self.prompt_dir / "chat_fact_rules.md").read_text().strip()
+            )
+        return Request(name, instructions, user, self.budget, float(temperature[1]))
 
-    async def _batches(self, name, turns, **values):
+    async def _batches(self, name, turns, *, preserve_question=False, **values):
         batch = []
         for turn in turns:
             candidate = [*batch, turn]
@@ -64,8 +67,15 @@ class ChatMemory:
                     raise ContextOverflow(
                         "A single archived turn exceeds the memory budget"
                     )
+                previous = batch[-1]
                 yield batch
-                batch = [turn]
+                batch = (
+                    [previous, turn]
+                    if preserve_question
+                    and previous["role"] == "mika"
+                    and turn["role"] == "user"
+                    else [turn]
+                )
                 request = self._request(name, values | {"dialog": batch})
                 ContextBuilder._enforce(request, await self.llm.prompt_tokens(request))
             else:
@@ -88,8 +98,10 @@ class ChatMemory:
     async def facts(self, *, turns, trace_id):
         grammar = (self.grammar_dir / "facts.gbnf").read_text(encoding="utf-8")
         facts = []
-        user_turns = [turn for turn in turns if turn["role"] == "user"]
-        async for batch in self._batches("facts_extract", user_turns):
+        # The caller supplies receipt-confirmed history, including questions.
+        async for batch in self._batches(
+            "facts_extract", turns, preserve_question=True
+        ):
             request = self._request("facts_extract", {"dialog": batch})
             ContextBuilder._enforce(request, await self.llm.prompt_tokens(request))
             result = json.loads(await self.llm.generate(request, grammar=grammar))

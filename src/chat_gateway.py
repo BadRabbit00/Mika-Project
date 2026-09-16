@@ -75,7 +75,7 @@ class ChatGateway:
                         raise ValueError(
                             "Use the owner confirmation controls to delete facts"
                         )
-                    facts, _, _, _ = await asyncio.to_thread(self.service._memory, None)
+                    facts, _, _ = await asyncio.to_thread(self.service._memory, None)
                     text, document = json.dumps(facts, ensure_ascii=False), True
                 elif command.startswith("/"):
                     raise ValueError("Use /chat to control this dialogue channel")
