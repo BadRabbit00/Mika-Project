@@ -8,8 +8,6 @@ from unittest.mock import AsyncMock
 import httpx
 import numpy as np
 import pytest
-from src.retrieve import RetrievalPolicy, RetrievedNode, Retriever
-from src.selfquiz import QuizSettings, SelfQuiz
 
 from src.core.context import ContextBuilder
 from src.core.db import Database
@@ -17,6 +15,8 @@ from src.core.llm_local import ContextOverflow, LocalLLM
 from src.core.vectors import cosine, decode_vector, encode_vector
 from src.extract import Extractor, chunk_text, grounded, validate_claims
 from src.ingest import Source, read_source
+from src.retrieve import RetrievalPolicy, RetrievedNode, Retriever
+from src.selfquiz import QuizSettings, SelfQuiz
 
 
 @pytest.fixture
@@ -144,17 +144,32 @@ async def test_independent_sources_keep_separate_claims(database):
 
 
 async def test_three_articles_build_one_deduplicated_graph(database):
-    llm = fake_llm([json.dumps(claim()) + "\n"] * 3)
+    claims = [
+        claim(),
+        claim("Yama", "is_a", "Linux Security Module"),
+        claim("seccomp", "requires", "no_new_privs"),
+    ]
+    articles = [
+        "seccomp defends against container escape.",
+        "Yama is a Linux Security Module.",
+        "Unprivileged seccomp filters require no_new_privs.",
+    ]
+    names = sorted(
+        {item[field].casefold() for item in claims for field in ("src", "dst")}
+    )
+    vectors = {name: np.eye(len(names))[index] for index, name in enumerate(names)}
+    llm = fake_llm([json.dumps(item) + "\n" for item in claims])
+    llm.embed.side_effect = lambda text: vectors[text]
     extractor = Extractor(database, llm, ContextBuilder(Path("prompts")))
     reports = [
-        await extractor.extract(source(source_id=str(index), origin=str(index)))
-        for index in range(3)
+        await extractor.extract(source(text, source_id=str(index), origin=str(index)))
+        for index, text in enumerate(articles)
     ]
     assert [report.accepted for report in reports] == [1, 1, 1]
     with database.connection() as connection:
         assert connection.execute("SELECT count(*) FROM sources").fetchone()[0] == 3
         assert connection.execute("SELECT count(*) FROM claims").fetchone()[0] == 3
-        assert connection.execute("SELECT count(*) FROM nodes").fetchone()[0] == 2
+        assert connection.execute("SELECT count(*) FROM nodes").fetchone()[0] == 5
 
 
 async def test_extraction_failure_rolls_back_entire_article(database):
@@ -168,6 +183,16 @@ async def test_extraction_failure_rolls_back_entire_article(database):
             assert (
                 connection.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0
             )
+
+
+async def test_jsonl_preserves_unicode_separators_inside_strings(database):
+    raw = json.dumps(
+        claim(text="seccomp\u2028defends against container escape."), ensure_ascii=False
+    )
+    report = await Extractor(
+        database, fake_llm([raw]), ContextBuilder(Path("prompts"))
+    ).extract(source())
+    assert report.accepted == 1
 
 
 async def test_fts_then_embeddings_merge_nodes(database):
@@ -477,3 +502,59 @@ async def test_quiz_round_requires_five_questions_and_three_answers(
         "security"
     )
     assert short.answered == 1 and not short.passed
+
+
+async def test_completed_question_replay_skips_retrieval_and_model(database, knowledge):
+    payload = {"answer": "Fixture", "cited": [knowledge[0].id], "confident": True}
+    llm = fake_llm([json.dumps(payload)])
+    service = quiz(database, llm, knowledge)
+    result = await service.answer("Fixture?", topic="security")
+    repeated = await service.answer(
+        "Fixture?", topic="security", question_id=result.question_id
+    )
+    assert repeated == result
+    assert llm.generate.await_count == service.retriever.search.await_count == 1
+
+
+async def test_retrieval_top_six_excludes_suspect_nodes_and_external_edges(
+    database, knowledge
+):
+    def seed(connection):
+        for i in range(8):
+            node_id = f"extra-{i}"
+            connection.execute(
+                "INSERT INTO nodes(id, name, summary, suspect) VALUES (?, ?, ?, ?)",
+                (node_id, "shared", "fixture", int(i == 0)),
+            )
+            connection.execute(
+                "INSERT INTO edges(src, rel, dst, source_id) "
+                "VALUES (?, 'enables', ?, 'one')",
+                (knowledge[0].id, node_id),
+            )
+            connection.execute(
+                "INSERT INTO node_embeddings(node_id, embedding, model) "
+                "VALUES (?, ?, ?)",
+                (node_id, encode_vector(np.array([1.0, 0.0])), "fixture-embedding"),
+            )
+
+    database.run_transaction(seed)
+    llm = fake_llm()
+    llm.embed.side_effect = lambda _: np.array([1.0, 0.0])
+    nodes = await Retriever(database, llm, RetrievalPolicy(0.8, 60)).search(
+        "shared", topic="security"
+    )
+    assert len(nodes) == 6 and "extra-0" not in {node.id for node in nodes}
+    ids = {node.id for node in nodes}
+    assert all(
+        edge.src in ids and edge.dst in ids for node in nodes for edge in node.edges
+    )
+
+
+async def test_retrieval_rejects_embedding_model_changes(database, knowledge):
+    llm = fake_llm()
+    llm.embedding_model.return_value = "different-model"
+    with pytest.raises(ValueError, match="model mismatch"):
+        await Retriever(database, llm, RetrievalPolicy(0.8, 60)).search(
+            "seccomp", topic="security"
+        )
+    llm.embed.assert_not_called()

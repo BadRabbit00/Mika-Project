@@ -77,7 +77,7 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
             {_utc("published_at")}, tg_message_id INT
         )""",
         "CREATE VIRTUAL TABLE nodes_fts USING fts5(id, name, summary)",
-        # TODO(EMBEDDING-FORMAT): the architecture does not define a vector codec.
+        # Migration 3 identifies the model; core/vectors.py defines the NPY codec.
         """CREATE TABLE node_embeddings (
             node_id TEXT PRIMARY KEY NOT NULL REFERENCES nodes(id),
             embedding BLOB NOT NULL CHECK (typeof(embedding) = 'blob')

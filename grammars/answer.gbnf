@@ -1,0 +1,4 @@
+# The exact answer object specified by prompts/selfquiz_answer.md.
+root ::= "{" ws "\"answer\":" ws string "," ws "\"cited\":" ws "[" ws (string (ws "," ws string)*)? ws "]" "," ws "\"confident\":" ws ("true" | "false") ws "}" ws
+string ::= "\"" ([^"\\\x00-\x1F] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F]{4}))* "\""
+ws ::= [ \t\n\r]*
