@@ -4,10 +4,17 @@ import json
 import math
 import re
 from pathlib import Path
+from typing import Protocol
 
 from ruamel.yaml import YAML
 
 from src.core.time_utils import now
+
+
+class SettingsProvider(Protocol):
+    """Consumers read settings at call time so overrides affect the next step."""
+
+    def get(self, key: str): ...
 
 
 class MissingSettingsStorage(RuntimeError):

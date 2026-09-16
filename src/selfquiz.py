@@ -79,7 +79,7 @@ def validate_citations(answer: Answer, retrieved: set[str], existing: set[str]) 
         return "no_knowledge"
     if not set(answer.cited) <= retrieved & existing:
         return "invalid_citation"
-    # TODO(QUIZ-CONFIDENCE): section 4.2 grades citations, not self-reported confidence.
+    # Confidence is logged; only the supplied evidence determines the verdict.
     return "answered" if answer.answer.strip() else "no_knowledge"
 
 
@@ -98,9 +98,18 @@ class SelfQuiz:
         if type(max_output_tokens) is not int or max_output_tokens <= 0:
             raise ValueError("A positive generation limit is required")
         self.database, self.llm, self.retriever = database, llm, retriever
-        self.context, self.settings = context, settings
+        self.context, self._settings = context, settings
         self.grammar = (Path(grammar_dir) / "answer.gbnf").read_text(encoding="utf-8")
         self.max_output_tokens = max_output_tokens
+
+    @property
+    def settings(self):
+        if isinstance(self._settings, QuizSettings):
+            return self._settings
+        return QuizSettings(
+            self._settings.get("study.questions_per_round"),
+            self._settings.get("study.quiz_threshold"),
+        )
 
     def _question_context(self, topic):
         with self.database.connection() as connection:

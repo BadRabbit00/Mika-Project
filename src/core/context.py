@@ -173,9 +173,9 @@ class ContextBuilder:
         values = {}
         for name, value in blocks.items():
             if name == "retrieved_nodes":
-                if not isinstance(value, (list, tuple)) or not 1 <= len(value) <= 6:
+                if not isinstance(value, (list, tuple)) or not 1 <= len(value) <= 12:
                     raise ValueError(
-                        "Answer context requires one to six retrieved nodes"
+                        "Answer context requires one to twelve retrieved nodes"
                     )
                 for node in value:
                     if not isinstance(node, dict) or node.keys() != {
@@ -199,9 +199,6 @@ class ContextBuilder:
         if temperature is None:
             raise ValueError(f"Missing sampling metadata for {profile}")
         template = _COMMENTS.sub("", raw).strip()
-        if profile == "selfquiz_ask":
-            # TODO(QUIZ-PERSONA): section 12 excludes the later mood/persona state.
-            template = template.replace("{persona}", "").strip()
         if set(_PLACEHOLDER.findall(template)) != allowed:
             raise ValueError(f"Unexpected placeholders in {profile}")
         first = _PLACEHOLDER.search(template)

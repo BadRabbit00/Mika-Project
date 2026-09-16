@@ -16,12 +16,13 @@ from src.core.db import Database
 from src.core.llm_local import LocalLLM
 from src.core.llm_vendor import ClaudeCodeBackend, VendorConfig
 from src.core.logging import configure_logging
+from src.core.settings import SettingsRegistry, SQLiteSettingsStore
 from src.curator import Curator
 from src.extract import Extractor
 from src.ingest import read_source
 from src.retrieve import RetrievalPolicy, Retriever
 from src.runtime import dry_run
-from src.selfquiz import QuizSettings, SelfQuiz
+from src.selfquiz import SelfQuiz
 from src.telegram_runtime import run_telegram
 
 
@@ -64,15 +65,26 @@ async def _extract(args):
 async def _quiz(args):
     database = Database(args.database)
     await asyncio.to_thread(database.initialize)
-    policy = RetrievalPolicy(args.min_similarity, args.rrf_k)
-    settings = QuizSettings.from_registry(args.settings)
+    settings = SettingsRegistry.from_file(
+        args.settings, store=SQLiteSettingsStore(database)
+    )
+    policy = (
+        RetrievalPolicy(
+            args.min_similarity
+            if args.min_similarity is not None
+            else settings.get("retrieval.min_similarity"),
+            args.rrf_k if args.rrf_k is not None else settings.get("retrieval.rrf_k"),
+        )
+        if args.min_similarity is not None or args.rrf_k is not None
+        else None
+    )
     async with LocalLLM(
         args.generation_url, args.embedding_url, database=database
     ) as llm:
         service = SelfQuiz(
             database,
             llm,
-            Retriever(database, llm, policy),
+            Retriever(database, llm, policy, settings=settings),
             ContextBuilder(args.prompt_dir),
             settings,
             grammar_dir=args.grammar_dir,
@@ -107,8 +119,8 @@ def main(argv: list[str] | None = None) -> int:
         "--question", help="Answer one supplied question instead of a round"
     )
     quiz.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
-    quiz.add_argument("--min-similarity", type=float, required=True)
-    quiz.add_argument("--rrf-k", type=float, required=True)
+    quiz.add_argument("--min-similarity", type=float)
+    quiz.add_argument("--rrf-k", type=float)
     curator = commands.add_parser("curator", help="Run a file-backed curator workflow")
     curator.add_argument("action", choices=("exam", "grade", "select"))
     curator.add_argument("--context", type=Path, required=True)

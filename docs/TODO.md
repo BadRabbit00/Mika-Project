@@ -45,22 +45,6 @@ including structured log fields written as `todo="<id>"`.
   The proposed schemas remain separate from automatic production migrations.
 ## Extraction and self-quiz
 
-- TODO(RETRIEVAL-POLICY): the architecture specifies hybrid FTS/cosine search but
-  no fusion formula or cutoff for self-quiz. Retrieval parameters must be supplied
-  explicitly. The provided policy uses reciprocal rank fusion, selected explicitly
-  by constructing RetrievalPolicy or supplying the CLI's required --rrf-k and
-  --min-similarity arguments. No production values are inferred from the document.
-- TODO(QUIZ-PERSONA): section 12 limits the question context to node names and
-  earlier questions, while section 16 and selfquiz_ask.md add persona. The supplied
-  persona includes technical and mood content. The question context preserves
-  the user's stricter names-only contract with an empty persona substitution.
-  Mood is implemented, but adding it would still violate that isolation rule.
-  No persona or mood text is invented; supplied files stay intact.
-- TODO(QUIZ-CONFIDENCE): the answer prompt includes confident, but section 4.2
-  supplies no grading rule for it. The field is type-validated and logged. Verdicts
-  follow the documented citation checks; the model's confidence does not replace
-  evidence. Define any additional abstention semantics explicitly.
-
 ## Mood and sleep contracts
 
 - TODO(DECAY-ASSERTION): section 31.1 expects a distance below 0.1 after six
