@@ -2,19 +2,20 @@
 
 Read ARCHITECTURE.md before making changes. Follow the delivery order in
 section 38.3. Steps 1–12 include chat sessions, pure transitions, and scheduling.
-Live-model compatibility limits and deferred requirements are in docs/TODO.md.
-The proposed interface and learning storage schemas are not installed in live
-databases automatically. The offline dry run installs the learning proposal only
-in its own new, disposable database.
+Open requirements are in docs/TODO.md. Approved corrections and configuration
+changes are in docs/DECISIONS.md and docs/CONFIG_PATCHES.md. Later explicit user
+corrections take precedence over these documents and ARCHITECTURE.md.
 
 - Keep main limited to the initial architecture. Work on feature branches and
   merge completed, verified changes into develop.
 - Run Python, uv, tests, and developer tools inside the flake devShell.
 - Use Python 3.12, uv2nix, and the standard-library sqlite3 module. Do not add an ORM.
-- Keep config/ and prompts/ unchanged. Write new comments, logs, and documentation
-  in English. Never put model prompts or model settings in Python source.
+- Apply the supplied decisions to config/ and prompts/. Write new comments,
+  logs, and documentation in English. Never put model prompts or settings in
+  Python source. config/settings.yaml is the model-settings source of truth.
 - Use timezone-aware Asia/Almaty datetimes internally. Store UTC ISO-8601 strings
-  in SQLite. Reject naive datetimes. Never call datetime.now() without a timezone.
+  in SQLite. Source publication dates and calendar keys are YYYY-MM-DD dates,
+  not instants. Reject naive datetimes. Never call datetime.now() without a timezone.
 - Count model tokens with llama-server /tokenize, never an estimate.
 - Keep the state machine a pure transition function; keep model calls out of
   Telegram handlers and use a task queue when those stages are implemented.

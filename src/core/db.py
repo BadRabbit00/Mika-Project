@@ -11,7 +11,7 @@ import sqlite3
 import time
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -35,7 +35,7 @@ def _pad(column: str) -> str:
 
 
 # Migration 1 preserves the documented tables, including sections 17 and 25.
-# Missing domain schemas and ambiguous identities are tracked in docs/TODO.md.
+# Append migrations; never renumber or rewrite an applied migration.
 MIGRATIONS: tuple[tuple[str, ...], ...] = (
     (
         f"""CREATE TABLE sources (
@@ -93,7 +93,7 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
             id INTEGER PRIMARY KEY, {_utc("at")}, kind TEXT, subject TEXT,
             claim TEXT, reasoning TEXT, exam_id INTEGER REFERENCES exams(id)
         )""",
-        # TODO(TRACE-IDENTITY): one trace currently permits only one runs row.
+        # The historical primary key is split into call and trace IDs in version 6.
         f"""CREATE TABLE runs (
             trace_id TEXT PRIMARY KEY NOT NULL, {_utc("at")}, actor TEXT,
             profile TEXT, model TEXT, params_json TEXT, system TEXT, user TEXT,
@@ -209,6 +209,115 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
             NEW.sleep_debt != round(NEW.sleep_debt, 4))
         BEGIN SELECT RAISE(ABORT, 'Invalid or unrounded sleep debt'); END""",
     ),
+    (
+        f"""CREATE TABLE settings_overrides (
+            key TEXT PRIMARY KEY NOT NULL,
+            value_json TEXT NOT NULL CHECK (json_valid(value_json)),
+            previous_json TEXT NOT NULL CHECK (json_valid(previous_json)),
+            {_utc("updated_at")} NOT NULL, trace_id TEXT NOT NULL
+        )""",
+        """CREATE TABLE post_nodes (
+            post_id TEXT NOT NULL REFERENCES posts(id),
+            node_id TEXT NOT NULL REFERENCES nodes(id),
+            PRIMARY KEY (post_id, node_id)
+        )""",
+        """CREATE TABLE post_threads (
+            post_id TEXT NOT NULL REFERENCES posts(id),
+            thread_id INTEGER NOT NULL REFERENCES threads(id),
+            PRIMARY KEY (post_id, thread_id)
+        )""",
+    ),
+    (
+        "ALTER TABLE runs RENAME COLUMN trace_id TO call_id",
+        "ALTER TABLE runs ADD COLUMN trace_id TEXT",
+        """UPDATE runs SET trace_id = CASE WHEN json_valid(params_json)
+            THEN COALESCE(json_extract(params_json, '$.trace_id'), call_id)
+            ELSE call_id END""",
+        "CREATE INDEX runs_trace ON runs(trace_id)",
+    ),
+    (
+        f"""CREATE TABLE learner_state (
+            id TEXT PRIMARY KEY CHECK (id='learner'),
+            state_json TEXT NOT NULL CHECK (json_valid(state_json)),
+            {_utc("paused_until")}, {_utc("generation_after")}
+        )""",
+        f"""CREATE TABLE learning_events (
+            id TEXT PRIMARY KEY, trace_id TEXT NOT NULL, {_utc("at")} NOT NULL,
+            event_json TEXT NOT NULL CHECK (json_valid(event_json)),
+            state_json TEXT NOT NULL CHECK (json_valid(state_json))
+        )""",
+        f"""CREATE TABLE learning_actions (
+            id TEXT PRIMARY KEY,
+            event_id TEXT NOT NULL REFERENCES learning_events(id),
+            predecessor TEXT REFERENCES learning_actions(id),
+            action_json TEXT NOT NULL CHECK (json_valid(action_json)),
+            status TEXT NOT NULL CHECK (status IN
+                ('pending','running','waiting','completed','failed','uncertain')),
+            attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts>=0),
+            {_utc("due_at")} NOT NULL, {_utc("completed_at")},
+            result_event TEXT CHECK (result_event IS NULL OR json_valid(result_event)),
+            error TEXT
+        )""",
+        "CREATE INDEX learning_actions_due ON learning_actions(status,due_at)",
+        f"""CREATE TABLE activity_reservations (
+            action_id TEXT PRIMARY KEY, session_key TEXT NOT NULL,
+            {_utc("at")} NOT NULL
+        )""",
+    ),
+    (
+        f"""CREATE TABLE curator_review (
+            id INTEGER PRIMARY KEY, kind TEXT NOT NULL
+                CHECK (kind IN ('suspect_node','correction','trust')),
+            subject TEXT NOT NULL, reason TEXT NOT NULL,
+            {_utc("opened_at")} NOT NULL, {_utc("resolved_at")},
+            verdict TEXT, exam_id TEXT
+        )""",
+        f"""CREATE TABLE diary_comments (
+            id INTEGER PRIMARY KEY, tg_message_id INTEGER NOT NULL,
+            post_id TEXT REFERENCES posts(id), author_id INTEGER NOT NULL,
+            text TEXT NOT NULL, {_utc("at")} NOT NULL,
+            surfaced INTEGER NOT NULL DEFAULT 0 CHECK (surfaced IN (0,1))
+        )""",
+        f"""CREATE TABLE sleep_log (
+            night TEXT PRIMARY KEY NOT NULL CHECK (is_calendar_date(night)),
+            {_utc("planned_bedtime")} NOT NULL,
+            {_utc("actual_bedtime")} NOT NULL, {_utc("wake_at")} NOT NULL,
+            wake_reason TEXT NOT NULL,
+            hours REAL NOT NULL CHECK (hours>=0 AND hours<1e999
+                AND hours=round(hours,4)),
+            debt_after REAL NOT NULL CHECK (debt_after>=0 AND debt_after<1e999
+                AND debt_after=round(debt_after,4)),
+            debt_applied INTEGER NOT NULL DEFAULT 0 CHECK (debt_applied IN (0,1))
+        )""",
+    ),
+    (
+        # Preserve old instants for audit; their original calendar dates are unknown.
+        "ALTER TABLE sources RENAME COLUMN published_at TO legacy_published_at",
+        "ALTER TABLE sources ADD COLUMN published_at TEXT "
+        "CHECK (published_at IS NULL OR is_calendar_date(published_at))",
+        "ALTER TABLE sources ADD COLUMN peer_reviewed INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (peer_reviewed IN (0,1))",
+        f"""CREATE TABLE exam_runs (
+            id TEXT PRIMARY KEY NOT NULL, topic TEXT NOT NULL,
+            {_utc("at")} NOT NULL, verdict TEXT, trace_id TEXT NOT NULL
+        )""",
+        "ALTER TABLE exams ADD COLUMN exam_run_id TEXT REFERENCES exam_runs(id)",
+        "ALTER TABLE threads ADD COLUMN channel TEXT NOT NULL DEFAULT 'public' "
+        "CHECK (channel IN ('public','dm'))",
+        "ALTER TABLE posts ADD COLUMN context_snapshot TEXT "
+        "CHECK (context_snapshot IS NULL OR json_valid(context_snapshot))",
+        *tuple(
+            f"""CREATE TRIGGER nodes_correction_{operation.split()[0].lower()}
+                BEFORE {operation} ON nodes
+                WHEN NEW.corrected_by IS NOT NULL AND (
+                    instr(NEW.corrected_by, ':')<1 OR
+                    substr(NEW.corrected_by, 1, instr(NEW.corrected_by, ':')-1)
+                        NOT IN ('exam','curator','human') OR
+                    length(substr(NEW.corrected_by, instr(NEW.corrected_by, ':')+1))=0)
+                BEGIN SELECT RAISE(ABORT, 'Invalid correction identity'); END"""
+            for operation in ("INSERT", "UPDATE OF corrected_by")
+        ),
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 
@@ -221,9 +330,19 @@ def _is_utc_timestamp(value: Any) -> int:
     return 1
 
 
+def _is_calendar_date(value: Any) -> int:
+    try:
+        return int(
+            isinstance(value, str) and date.fromisoformat(value).isoformat() == value
+        )
+    except ValueError:
+        return 0
+
+
 # Python's default sqlite timestamp adapter accepts naive values. Replace it
 # explicitly; do not enable the default converter that drops timezone offsets.
 sqlite3.register_adapter(datetime, to_utc_iso)
+sqlite3.register_adapter(date, date.isoformat)
 
 
 def _is_locked(error: sqlite3.OperationalError) -> bool:
@@ -326,6 +445,9 @@ class Database:
             connection.row_factory = sqlite3.Row
             connection.create_function(
                 "is_utc_timestamp", 1, _is_utc_timestamp, deterministic=True
+            )
+            connection.create_function(
+                "is_calendar_date", 1, _is_calendar_date, deterministic=True
             )
             mode = self._retry(
                 lambda: connection.execute("PRAGMA journal_mode=WAL").fetchone()[0]
