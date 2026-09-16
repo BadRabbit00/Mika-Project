@@ -79,6 +79,21 @@ class SessionStore:
                 )
             ]
 
+    def mood_events(self, session, turns):
+        until = session["closed_at"] or (
+            turns[-1]["at"] if turns else session["opened_at"]
+        )
+        with self.database.connection() as c:
+            return [
+                dict(row)
+                for row in c.execute(
+                    "SELECT at,p,a,d FROM mood WHERE "
+                    "julianday(at)>=julianday(?) AND julianday(at)<=julianday(?) "
+                    "ORDER BY julianday(at),rowid",
+                    (session["opened_at"], until),
+                )
+            ]
+
     def add_user(self, session_id, text, *, trace_id, at):
         at = require_aware(at)
         if not text.strip() or not trace_id:

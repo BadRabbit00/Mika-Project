@@ -17,6 +17,7 @@ from src.core.chat_store import SessionStore as SessionStore
 from src.core.chat_store import summary_state
 from src.core.content_rules import normalized_text, technical_match
 from src.core.context import ContextBuilder, ContextOverflow
+from src.core.pad import Mood
 from src.core.time_utils import elapsed_hours, from_utc_iso, require_aware
 from src.core.vectors import cosine
 from src.selfquiz import Answer, validate_citations
@@ -417,6 +418,15 @@ class ChatService:
     async def export(self, session_id):
         session = await asyncio.to_thread(self.store.get, session_id)
         turns = await asyncio.to_thread(self.store.turns, session_id, include_mood=True)
+        events = [
+            {
+                "at": row["at"],
+                "mood": encode_mood(
+                    Mood(row["p"], row["a"], row["d"]), self.context.mood_model
+                ),
+            }
+            for row in await asyncio.to_thread(self.store.mood_events, session, turns)
+        ]
         topical = [
             turn
             for turn in turns
@@ -440,6 +450,7 @@ class ChatService:
         header = json.dumps(
             {
                 "session": session,
+                "mood_events": events,
                 "metrics": {
                     "valid_citation_fraction": 1.0 if topical else None,
                     "tokens_before_first_compression": summary_state(session).get(
@@ -452,7 +463,7 @@ class ChatService:
                     "unknown_reply_fraction": unknown / len(replies)
                     if replies
                     else None,
-                    **mood_metrics(session, turns),
+                    **mood_metrics(session, turns, events),
                 },
             },
             ensure_ascii=False,

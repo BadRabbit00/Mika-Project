@@ -1,17 +1,17 @@
 # Точечные правки к существующим конфигам
 
-Применять как есть. Каждая закрывает конкретный TODO.
+Applied configuration corrections from the supplied decisions.
 
 ## life.yaml
 
-**TODO(WEATHER-MONTHS)** — добавить в `weather:`
+**WEATHER-MONTHS** — добавить в `weather:`
 
 ```yaml
   7:  [пекло, душно даже ночью, гроза к вечеру, ветер с гор принёс прохладу]
   8:  [жара к обеду, дым от чего-то, прохладные ночи, арбузы везде]
 ```
 
-**TODO(OFFTOP-PEOPLE)** — добавить `ref` каждому человеку в `people:`
+**OFFTOP-PEOPLE** — добавить `ref` каждому человеку в `people:`
 
 ```yaml
   - id: dasha
@@ -29,14 +29,14 @@
 Фрейм подставляет форму по падежу: `{people:dasha.nom}`.
 Фрейм с неразрешённой ссылкой остаётся недоступным — правило агента верное.
 
-**TODO(OFFTOP-BINDINGS)** — привязать `coffee_state` в слоте `dom`
+**OFFTOP-BINDINGS** — привязать `coffee_state` в слоте `dom`
 
 ```yaml
     bindings:
       coffee_state: {from: progress, key: coffee_machine.stages}
 ```
 
-**TODO(SEMESTER-EPOCH)** — добавить в корень
+**SEMESTER-EPOCH** — добавить в корень
 
 ```yaml
 semester:
@@ -44,7 +44,7 @@ semester:
   weeks: 16
 ```
 
-**TODO(CYCLE-EPOCH)** — добавить в корень
+**CYCLE-EPOCH** — добавить в корень
 
 ```yaml
 cycle_epoch: 2026-09-21  # дата запуска канала, aware, Asia/Almaty
@@ -52,13 +52,13 @@ cycle_epoch: 2026-09-21  # дата запуска канала, aware, Asia/Alm
 
 ## mood.yaml
 
-**TODO(CYCLE-EPOCH)** — заменить `start_offset_days: 11` на однозначное
+**CYCLE-EPOCH** — заменить `start_offset_days: 11` на однозначное
 
 ```yaml
   start_day: 12          # порядковый день цикла на cycle_epoch, 1-based
 ```
 
-**TODO(CYCLE-WEEKDAY)** — 28 делится на 7, привязка к дням недели реальна.
+**CYCLE-WEEKDAY** — 28 делится на 7, привязка к дням недели реальна.
 Добавить дрожание длины цикла:
 
 ```yaml
@@ -69,7 +69,7 @@ cycle_epoch: 2026-09-21  # дата запуска канала, aware, Asia/Alm
   # Follicular length is L - 20; it absorbs all variation.
 ```
 
-**TODO(TRIGGER-POLICY)** — вероятности развязок должны давать 1.0.
+**TRIGGER-POLICY** — вероятности развязок должны давать 1.0.
 Заменить блоки `resolution` на полные:
 
 ```yaml
@@ -96,7 +96,7 @@ cycle_epoch: 2026-09-21  # дата запуска канала, aware, Asia/Alm
     week_window: rolling       # неделя = скользящие 7 суток от now
 ```
 
-**TODO(BASELINE-HISTORY)** — добавить окна давности
+**BASELINE-HISTORY** — добавить окна давности
 
 ```yaml
 baseline_windows:
@@ -106,7 +106,7 @@ baseline_windows:
   stuck_days_from: 1
 ```
 
-**TODO(MOOD-DISABLED)** — добавить раздел
+**MOOD-DISABLED** — добавить раздел
 
 ```yaml
 disabled_state:
@@ -121,7 +121,7 @@ disabled_state:
 
 ## schedule.yaml
 
-**TODO(SLEEP-RECOVERY)** — удалить строку целиком:
+**SLEEP-RECOVERY** — удалить строку целиком:
 
 ```yaml
   debt_recovery_per_good_night: 2.5     # УДАЛИТЬ
@@ -129,7 +129,7 @@ disabled_state:
 
 Долг гасится только избытком сна по формуле. Агент прав: двойной учёт.
 
-**TODO(WAKE-TIMES)** — добавить `window` тем прерываниям, где его нет
+**WAKE-TIMES** — добавить `window` тем прерываниям, где его нет
 
 ```yaml
     - id: dasha_hairdryer
@@ -140,7 +140,7 @@ disabled_state:
       window: ["+0:00", "+0:45"]   # смещение от времени будильника
 ```
 
-**TODO(CLASS-GRACE)** — уточнить смысл
+**CLASS-GRACE** — уточнить смысл
 
 ```yaml
 blackout:
@@ -149,7 +149,7 @@ blackout:
 
 Пять минут после конца пары, внутрь занятия окно не заходит.
 
-**TODO(COMMUTE-WINDOW)** — убрать фиксированное окно, считать от расписания
+**COMMUTE-WINDOW** — убрать фиксированное окно, считать от расписания
 
 ```yaml
   - reason: дорога
@@ -157,7 +157,7 @@ blackout:
     chance_to_post: 0.3
 ```
 
-**TODO(SLEEP-MOOD)** — добавить правило маппинга
+**SLEEP-MOOD** — добавить правило маппинга
 
 ```yaml
 mood_labels:

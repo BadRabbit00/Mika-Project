@@ -123,6 +123,19 @@ async def test_outbox_concurrent_workers_claim_once(database):
     transport.send.assert_awaited_once()
 
 
+async def test_publication_rechecks_blackout_after_draft_creation(database):
+    Publisher(database).enqueue_post("p", [DIARY], trace_id="blackout", at=AT)
+    transport = AsyncMock()
+    allowed = AsyncMock(return_value=False)
+    worker = OutboxWorker(database, transport, allowed=allowed)
+    assert await worker.run_once(at=AT) == "deferred"
+    transport.send.assert_not_awaited()
+    assert not worker.uncertain()
+    allowed.return_value = True
+    transport.send.return_value = 74
+    assert await worker.run_once(at=AT + timedelta(minutes=1)) == "sent"
+
+
 async def test_outbox_retries_only_confirmed_rejection(database):
     Publisher(database).enqueue_post("p", [DIARY], trace_id="trace-1", at=AT)
     transport = AsyncMock()

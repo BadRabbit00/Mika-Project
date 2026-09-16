@@ -356,6 +356,35 @@ async def test_chat_uses_setting_overrides_on_next_call(service):
     assert service.settings.ttl_hours == 8
 
 
+async def test_session_band_changes_include_mood_events_between_replies(service):
+    session = await service.open("dm", at=AT, mood=Mood(0, 0, 0))
+    service.database.run_transaction(
+        lambda c: c.executemany(
+            "INSERT INTO mood(at,p,a,d) VALUES (?,?,?,?)",
+            [
+                (AT + timedelta(minutes=1), -1, -1, -1),
+                (AT + timedelta(minutes=2), 1, 1, 1),
+            ],
+        )
+    )
+    await service.close(session["id"], at=AT + timedelta(minutes=3), mood=Mood(0, 0, 0))
+    metrics = json.loads((await service.export(session["id"])).splitlines()[0])[
+        "metrics"
+    ]
+    assert metrics["mood_drift"] == 0
+    assert metrics["band_changes"] == 9
+
+
+async def test_open_session_does_not_invent_end_mood(service):
+    session = await service.open("dm", at=AT, mood=Mood(0, 0, 0))
+    metrics = json.loads((await service.export(session["id"])).splitlines()[0])[
+        "metrics"
+    ]
+    assert metrics["mood_drift"] is None
+    assert metrics["mood_delta"] is None
+    assert metrics["mood_drift_status"] == "insufficient_observations"
+
+
 def test_fact_filter_rejects_inferences_sensitive_data_and_wrong_speaker():
     turns = [
         {"id": 1, "role": "user", "text": "My name is Alex. My salary is 1000."},

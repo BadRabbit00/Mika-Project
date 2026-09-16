@@ -20,7 +20,7 @@ corrections take precedence over these documents and ARCHITECTURE.md.
 - Keep the state machine a pure transition function; keep model calls out of
   Telegram handlers and use a task queue when those stages are implemented.
 - Write the applicable invariants from sections 18.2 and 38.2 as tests before
-  implementing each stage. Later-stage contracts are tracked in docs/TODO.md.
+  implementing each stage. Regression contracts are in tests/test_stage_contracts.py.
 - Preserve the formulas in sections 28 and 35 literally. Round stored PAD
   values with round(value, 4). Use 200-token overlap and norm_hash deduplication
   when extraction is implemented.

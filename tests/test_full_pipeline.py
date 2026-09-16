@@ -173,8 +173,9 @@ async def test_pipeline_grading_uses_only_validated_graph_answers(learning_store
     await pipeline.handlers["grade"](action, AT)
     assert quiz.answer.await_count == 2
     pipeline.pass_rule = None
-    with pytest.raises(ValueError, match="CURATOR-GRADING-POLICY"):
-        await pipeline.handlers["grade"](action, AT)
+    curator.pass_rule = lambda: "Configured file policy"
+    await pipeline.handlers["grade"](action, AT)
+    assert curator.grade.await_args.kwargs["pass_rule"] == "Configured file policy"
 
 
 @pytest.mark.parametrize("passed", [True, False])
@@ -436,3 +437,217 @@ def test_all_final_architecture_invariants_have_executable_tests(name):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
     assert name in declared
+
+
+@pytest.mark.parametrize("category", ["limit", "auth", "unknown"])
+async def test_curator_error_policy_persists_without_global_pause(
+    learning_store, category
+):
+    from dataclasses import asdict
+
+    from src.core.llm_vendor import CuratorFailure
+    from src.core.time_utils import from_utc_iso
+
+    state = State(3, 0.6, phase=Phase.SUMMARY, topic="security", post_id="summary")
+    learning_store.database.run_transaction(
+        lambda c: c.execute(
+            "UPDATE learner_state SET state_json=?",
+            (json.dumps(asdict(state)),),
+        )
+    )
+    alert = AsyncMock()
+    runner = ActionRunner(
+        learning_store,
+        {"exam": AsyncMock(side_effect=CuratorFailure(category, "Fixture failure"))},
+        alert=alert,
+    )
+    await runner.dispatch(event("summary_written", status="draft", post_id="summary"))
+    assert await runner.run_once(at=AT) == ("failed" if category == "auth" else "retry")
+    with learning_store.database.connection() as c:
+        row = c.execute("SELECT * FROM learner_state").fetchone()
+        assert row["paused_until"] is None
+        if category == "limit":
+            due = from_utc_iso(row["curator_paused_until"])
+            assert (
+                due.hour == due.minute == 0
+                and due.date() == (AT + timedelta(days=1)).date()
+            )
+        if category == "auth":
+            assert row["curator_auth_failed"] == 1
+    alert.assert_awaited_once()
+
+
+def test_topic_catalogue_requires_real_first_topic_articles(tmp_path):
+    import shutil
+
+    from src.catalogue import Catalogue
+
+    shutil.copy("library/topics.yaml", tmp_path / "topics.yaml")
+    with pytest.raises(ValueError, match="ab-01"):
+        Catalogue.load(tmp_path)
+
+
+async def test_runtime_providers_use_explicit_state_and_persist_sleep_once(tmp_path):
+    from src.core.db import Database
+    from src.core.settings import SettingsRegistry, SQLiteSettingsStore
+    from src.core.time_utils import to_utc_iso
+    from src.providers import RuntimeProviders
+
+    db = Database(tmp_path / "providers.sqlite3")
+    db.initialize()
+    inputs = tmp_path / "world.json"
+    inputs.write_text(
+        json.dumps(
+            dict(
+                location="дом",
+                observed_at=to_utc_iso(AT),
+                valid_until=to_utc_iso(AT + timedelta(hours=1)),
+                road_roll=0.99,
+                initial_mood=dict(P=0, A=0, D=0),
+                initial_mood_at=to_utc_iso(AT),
+                initial_sleep_debt=0,
+                sleep=[
+                    dict(
+                        bedtime=to_utc_iso(AT.replace(hour=1)),
+                        wake=to_utc_iso(AT.replace(hour=9)),
+                        planned_bedtime=to_utc_iso(AT.replace(hour=1)),
+                        reason="alarm",
+                    )
+                ],
+            )
+        )
+    )
+    settings = SettingsRegistry.from_file(
+        Path("config/settings.yaml"), store=SQLiteSettingsStore(db)
+    )
+    providers = RuntimeProviders(db, Path("config"), inputs, settings)
+    try:
+        first = await providers.context(AT)
+        second = await providers.context(AT)
+        assert first == second and first["day"].location == "дом"
+        assert first["day"].at.tzinfo == ALMATY
+        with db.connection() as c:
+            assert (
+                c.execute(
+                    "SELECT count(*) FROM sleep_log WHERE debt_applied=1"
+                ).fetchone()[0]
+                == 1
+            )
+        with pytest.raises(ValueError, match="expired"):
+            await providers.context(AT + timedelta(hours=2))
+    finally:
+        await providers.close()
+
+
+async def test_live_composition_builds_all_providers_without_external_calls(
+    tmp_path, monkeypatch
+):
+    from src.catalogue import Catalogue
+    from src.core.mood import MoodModel
+    from src.core.schedule import Blackout
+    from src.core.settings import SettingsRegistry, SQLiteSettingsStore
+    from src.core.tasks import JobQueue
+    from src.core.telegram import TelegramLayout
+    from src.live import assemble_live
+    from src.providers import RuntimeProviders
+    from src.publish import Publisher
+
+    db = Database(tmp_path / "live.sqlite3")
+    db.initialize()
+    settings = SettingsRegistry.from_file(
+        Path("config/settings.yaml"), store=SQLiteSettingsStore(db)
+    )
+    catalogue = Catalogue(
+        "security",
+        {
+            "security": {
+                "name": "security",
+                "status": "active",
+                "adjacent": [],
+                "articles": [],
+            }
+        },
+        {},
+    )
+    providers = SimpleNamespace(
+        model=MoodModel.from_config(Path("config")),
+        context=AsyncMock(return_value={}),
+        blackout=AsyncMock(return_value=Blackout(False)),
+        mood=SimpleNamespace(current=AsyncMock(), settings_changed=AsyncMock()),
+        close=AsyncMock(),
+    )
+    monkeypatch.setattr(Catalogue, "load", lambda _: catalogue)
+    monkeypatch.setattr(
+        RuntimeProviders,
+        "__init__",
+        lambda self, *args: self.__dict__.update(providers.__dict__),
+    )
+    service = SimpleNamespace(
+        database=db,
+        llm=AsyncMock(),
+        publisher=Publisher(db),
+        layout=TelegramLayout(
+            owner_id=123,
+            group_id=-100123,
+            topics=dict(
+                diary=11,
+                author=12,
+                curator=13,
+                chat=14,
+                library=15,
+                machine=16,
+                control=17,
+            ),
+        ),
+        registry=settings,
+    )
+    args = SimpleNamespace(
+        library=tmp_path,
+        config_dir=Path("config"),
+        prompt_dir=Path("prompts"),
+        grammar_dir=Path("grammars"),
+        world_state=tmp_path / "world.json",
+    )
+    app = await assemble_live(args, service, JobQueue())
+    assert service.chat_gateway.service is not None
+    assert service.regenerator is not None
+    assert set(app.runner.handlers) >= {
+        "extract",
+        "quiz",
+        "summary",
+        "exam",
+        "grade",
+        "select_articles",
+    }
+    service.llm.generate.assert_not_awaited()
+    await app.close()
+
+
+async def test_live_shutdown_drains_jobs_before_closing_providers():
+    from src.core.tasks import JobQueue
+    from src.live import LiveApplication
+
+    jobs = JobQueue()
+    order = []
+
+    async def work():
+        order.append("job")
+
+    async def close_providers():
+        order.append("providers")
+
+    activity = SimpleNamespace(jobs=jobs, close=AsyncMock())
+    app = LiveApplication(
+        None,
+        activity,
+        catalogue=None,
+        providers=SimpleNamespace(close=close_providers),
+        settings=None,
+    )
+    await jobs.start()
+    jobs.submit("shutdown", "fixture", work)
+    try:
+        await app.close()
+    finally:
+        await jobs.close()
+    assert order == ["job", "providers"]

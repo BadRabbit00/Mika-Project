@@ -216,10 +216,7 @@ class LearningPipeline:
             await self.on_curator(phase, receipt, trace_id=action.trace_id)
 
     async def grade_exam(self, action, at):
-        if not self.pass_rule:
-            raise ValueError(
-                "TODO(CURATOR-GRADING-POLICY): an explicit pass rule is required"
-            )
+        pass_rule = self.pass_rule or self.curator.pass_rule()
         if not action.exam_trace_id:
             raise ValueError("The exam receipt identity is required")
         receipt = await asyncio.to_thread(
@@ -264,7 +261,7 @@ class LearningPipeline:
             receipt = await self.curator.grade(
                 action.topic,
                 answers=answers,
-                pass_rule=self.pass_rule,
+                pass_rule=pass_rule,
                 trace_id=action.exam_trace_id,
             )
         await self._curator_receipt("grade", receipt, action)
@@ -272,9 +269,7 @@ class LearningPipeline:
 
     async def select_articles(self, action, at):
         if self.topics_map is None:
-            raise ValueError(
-                "TODO(TOPIC-CATALOGUE): an explicit topic catalogue is required"
-            )
+            raise ValueError("An explicit topic catalogue is required")
         if not action.exam_trace_id:
             raise ValueError("The exam receipt identity is required")
 

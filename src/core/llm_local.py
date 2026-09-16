@@ -1,4 +1,4 @@
-"""Async llama-server transport without database access or model tools."""
+"""Async llama-server transport with optional durable call receipts."""
 
 import asyncio
 import time
@@ -27,6 +27,7 @@ class LocalLLM:
         timeout: float = 300.0,
         token_cache_size: int = 256,
         database=None,
+        settings=None,
     ):
         if token_cache_size < 0:
             raise ValueError("Token cache size cannot be negative")
@@ -48,6 +49,7 @@ class LocalLLM:
         self._cache_size = token_cache_size
         self._embedding_model: str | None = None
         self.recorder = RunRecorder(database) if database is not None else None
+        self.settings = settings
 
     async def __aenter__(self):
         return self
@@ -60,6 +62,8 @@ class LocalLLM:
         await self.embeddings.aclose()
 
     async def _request(self, client, method, path, **kwargs):
+        if self.settings is not None:
+            kwargs["timeout"] = self.settings.get("system.llm_timeout_sec")
         for attempt in range(4):
             try:
                 response = await client.request(method, path, **kwargs)

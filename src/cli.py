@@ -114,10 +114,20 @@ async def _quiz(args):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="BlogAI storage and learning commands")
     commands = parser.add_subparsers(dest="command", required=True)
-    run = commands.add_parser("run", help="Run the assembled application in test mode")
+    run = commands.add_parser("run", help="Run the assembled application")
     run.add_argument("--dry-run", action="store_true")
     run.add_argument("--workdir", type=Path)
     run.add_argument("--log-file", type=Path)
+    run.add_argument("--layout", type=Path)
+    run.add_argument("--world-state", type=Path)
+    run.add_argument("--database", type=Path)
+    run.add_argument("--config-dir", type=Path, default=Path("config"))
+    run.add_argument("--settings", type=Path, default=Path("config/settings.yaml"))
+    run.add_argument("--library", type=Path, default=Path("library"))
+    run.add_argument("--prompt-dir", type=Path, default=Path("prompts"))
+    run.add_argument("--grammar-dir", type=Path, default=Path("grammars"))
+    run.add_argument("--generation-url", default="http://127.0.0.1:8080")
+    run.add_argument("--embedding-url", default="http://127.0.0.1:8081")
     initialize = commands.add_parser("init-db", help="Create or migrate a database")
     initialize.add_argument("--database", type=Path, required=True)
     initialize.add_argument("--log-file", type=Path, required=True)
@@ -182,9 +192,20 @@ def main(argv: list[str] | None = None) -> int:
             asyncio.run(run_telegram(args))
         elif args.command == "run":
             if not args.dry_run:
-                raise ValueError(
-                    "TODO(LIVE-RUNNER): storage and runtime contracts are required"
-                )
+                from src.catalogue import Catalogue
+                from src.live import assemble_live
+                from src.providers import LiveInputs
+
+                if args.layout is None or args.world_state is None:
+                    raise ValueError("Live run requires --layout and --world-state")
+                Catalogue.load(args.library)
+                LiveInputs.read(args.world_state)
+                registry = SettingsRegistry.from_file(args.settings)
+                args.database = args.database or Path(registry.get("system.db_path"))
+                if args.log_file is None:
+                    raise ValueError("Live run requires --log-file for durable tracing")
+                asyncio.run(run_telegram(args, assemble=assemble_live))
+                return 0
             if args.workdir:
                 report = asyncio.run(dry_run(args.workdir))
             else:
