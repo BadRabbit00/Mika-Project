@@ -2692,6 +2692,192 @@
       "_origin": "ast"
     },
     {
+      "id": "src_publish",
+      "label": "publish.py",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_destination",
+      "label": "Destination",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L23",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_destination_post_init",
+      "label": ".__post_init__()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L30",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_deliveryrejected",
+      "label": "DeliveryRejected",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L41",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "exception",
+      "label": "Exception",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_deliveryrejected_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L44",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_publisher",
+      "label": "Publisher",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L53",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_publisher_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L54",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_publisher_enqueue_post",
+      "label": ".enqueue_post()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L57",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_py_datetime",
+      "label": "datetime",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_publisher_enqueue_operation",
+      "label": ".enqueue_operation()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L119",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_outboxworker",
+      "label": "OutboxWorker",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L153",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_outboxworker_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L154",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_outboxworker_claim",
+      "label": "._claim()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L157",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_outboxworker_uncertain",
+      "label": ".uncertain()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L174",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_outboxworker_reconcile",
+      "label": ".reconcile()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L184",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_outboxworker_run_once",
+      "label": ".run_once()",
+      "file_type": "code",
+      "source_file": "src/publish.py",
+      "source_location": "L221",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_rationale_1",
+      "label": "Transactional delivery intents with conservative crash recovery. An unsent row…",
+      "file_type": "rationale",
+      "source_file": "src/publish.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_rationale_42",
+      "label": "The remote API explicitly confirms it did not accept the operation.",
+      "file_type": "rationale",
+      "source_file": "src/publish.py",
+      "source_location": "L42",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_rationale_129",
+      "label": "Persist operational messages/documents/edits with an explicit stable key.",
+      "file_type": "rationale",
+      "source_file": "src/publish.py",
+      "source_location": "L129",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_publish_rationale_185",
+      "label": "A caller must verify this receipt with Telegram before reconciliation.",
+      "file_type": "rationale",
+      "source_file": "src/publish.py",
+      "source_location": "L185",
+      "_origin": "ast"
+    },
+    {
       "id": "src_retrieve",
       "label": "retrieve.py",
       "file_type": "code",
@@ -3588,6 +3774,120 @@
       "label": "Output validation contracts, followed by isolated context contracts in step 7.",
       "file_type": "rationale",
       "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish",
+      "label": "test_curator_and_publish.py",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_py_fixture",
+      "label": "fixture",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_database",
+      "label": "database()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L21",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_rows",
+      "label": "rows()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L34",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "label": "test_outbox_worker_restart_does_not_duplicate_telegram()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L41",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "label": "test_outbox_crash_after_remote_acceptance_is_not_retried()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L61",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_outbox_receipt_commit_failure_does_not_resend",
+      "label": "test_outbox_receipt_commit_failure_does_not_resend()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L80",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_outbox_concurrent_workers_claim_once",
+      "label": "test_outbox_concurrent_workers_claim_once()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L96",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "label": "test_outbox_retries_only_confirmed_rejection()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L107",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "label": "test_publication_trace_survives_enqueue_and_worker_restart()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L118",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_publication_refuses_killed_or_changed_drafts",
+      "label": "test_publication_refuses_killed_or_changed_drafts()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L132",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_test_publication_rejects_naive_time_before_mutation",
+      "label": "test_publication_rejects_naive_time_before_mutation()",
+      "file_type": "code",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L148",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_curator_and_publish_rationale_1",
+      "label": "Publication contracts, declared before the delivery implementation.",
+      "file_type": "rationale",
+      "source_file": "tests/test_curator_and_publish.py",
       "source_location": "L1",
       "_origin": "ast"
     },
@@ -4863,7 +5163,7 @@
       "label": "test_behavioral_contracts_required_when_stage_is_implemented()",
       "file_type": "code",
       "source_file": "tests/test_stage_contracts.py",
-      "source_location": "L50",
+      "source_location": "L55",
       "_callable": true,
       "_origin": "ast"
     },
@@ -6208,6 +6508,33 @@
       "_origin": "ast"
     },
     {
+      "id": "docs_interfaces",
+      "label": "INTERFACES.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "source_file": "docs/INTERFACES.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_interfaces_publication_curator_and_telegram_interfaces",
+      "label": "Publication, curator, and Telegram interfaces",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/INTERFACES.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_interfaces_durable_publication",
+      "label": "Durable publication",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/INTERFACES.md",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
       "id": "docs_mood_and_sleep",
       "label": "MOOD_AND_SLEEP.md",
       "file_type": "document",
@@ -6294,7 +6621,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L48",
+      "source_location": "L51",
       "_origin": "ast"
     },
     {
@@ -6303,7 +6630,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L91",
+      "source_location": "L94",
       "_origin": "ast"
     },
     {
@@ -6312,7 +6639,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L151",
+      "source_location": "L154",
       "_origin": "ast"
     },
     {
@@ -6321,7 +6648,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L203",
+      "source_location": "L206",
       "_origin": "ast"
     },
     {
@@ -14667,6 +14994,350 @@
       "_origin": "ast"
     },
     {
+      "source": "src_publish",
+      "target": "asyncio",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "json",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "dataclasses",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_publish_py_datetime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_core_db",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_publish_destination",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_destination",
+      "target": "src_publish_destination_post_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_publish_deliveryrejected",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_deliveryrejected",
+      "target": "exception",
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_deliveryrejected",
+      "target": "src_publish_deliveryrejected_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L44",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_publish_publisher",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L53",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher",
+      "target": "src_publish_publisher_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher",
+      "target": "src_publish_publisher_enqueue_post",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_post",
+      "target": "src_publish_destination",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_post",
+      "target": "src_publish_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher",
+      "target": "src_publish_publisher_enqueue_operation",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_operation",
+      "target": "src_publish_destination",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_operation",
+      "target": "src_publish_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_publish_outboxworker",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L153",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker",
+      "target": "src_publish_outboxworker_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L154",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker",
+      "target": "src_publish_outboxworker_claim",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L157",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker",
+      "target": "src_publish_outboxworker_uncertain",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L174",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker",
+      "target": "src_publish_outboxworker_reconcile",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L184",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker_reconcile",
+      "target": "src_publish_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L184",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker",
+      "target": "src_publish_outboxworker_run_once",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L221",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker_run_once",
+      "target": "src_publish_py_datetime",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L221",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_deliveryrejected_init",
+      "target": "src_publish_outboxworker_init",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_rationale_1",
+      "target": "src_publish",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_rationale_42",
+      "target": "src_publish_deliveryrejected",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_rationale_129",
+      "target": "src_publish_publisher_enqueue_operation",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L129",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_rationale_185",
+      "target": "src_publish_outboxworker_reconcile",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L185",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "src_retrieve",
       "target": "asyncio",
       "relation": "imports",
@@ -16990,6 +17661,292 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "asyncio",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "json",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "datetime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "unittest_mock",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "pytest",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_core_db",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_publish",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_database",
+      "target": "tests_test_curator_and_publish_py_fixture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "context": "decorator",
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_database",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_outbox_receipt_commit_failure_does_not_resend",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L80",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_outbox_concurrent_workers_claim_once",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L96",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L107",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L118",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_publication_refuses_killed_or_changed_drafts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L132",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "tests_test_curator_and_publish_test_publication_rejects_naive_time_before_mutation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L148",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L115",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L129",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_refuses_killed_or_changed_drafts",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L145",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_rejects_naive_time_before_mutation",
+      "target": "tests_test_curator_and_publish_rows",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L153",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_rationale_1",
+      "target": "tests_test_curator_and_publish",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
       "source_location": "L1",
       "weight": 1.0,
       "_origin": "ast"
@@ -19900,7 +20857,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_stage_contracts.py",
-      "source_location": "L49",
+      "source_location": "L54",
       "weight": 1.0,
       "context": "decorator",
       "_origin": "ast"
@@ -19911,7 +20868,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_stage_contracts.py",
-      "source_location": "L50",
+      "source_location": "L55",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -21426,6 +22383,26 @@
       "_origin": "ast"
     },
     {
+      "source": "docs_interfaces",
+      "target": "docs_interfaces_publication_curator_and_telegram_interfaces",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/INTERFACES.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_interfaces_publication_curator_and_telegram_interfaces",
+      "target": "docs_interfaces_durable_publication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/INTERFACES.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "docs_mood_and_sleep",
       "target": "docs_mood_and_sleep_mood_and_biological_time",
       "relation": "contains",
@@ -21511,7 +22488,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L48",
+      "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -21521,7 +22498,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L91",
+      "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -21531,7 +22508,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L151",
+      "source_location": "L154",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -21541,7 +22518,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
-      "source_location": "L203",
+      "source_location": "L206",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -23115,6 +24092,50 @@
       "_origin": "ast"
     },
     {
+      "source": "src_publish",
+      "target": "src_core_db_enqueue_outbox",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_core_time_utils_now",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish",
+      "target": "src_core_time_utils_to_utc_iso",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/publish.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "src_retrieve",
       "target": "src_core_db_database",
       "relation": "imports",
@@ -23452,6 +24473,61 @@
       "confidence": "EXTRACTED",
       "source_file": "tests/test_context_and_validator.py",
       "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_core_db_database",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_publish_deliveryrejected",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_publish_destination",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_publish_outboxworker",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish",
+      "target": "src_publish_publisher",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L13",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -24519,6 +25595,171 @@
       "confidence": "EXTRACTED",
       "source_file": "tests/test_context_and_validator.py",
       "source_location": "L487",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "target": "src_publish_outboxworker",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L50",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "target": "src_publish_outboxworker",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L71",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_receipt_commit_failure_does_not_resend",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L81",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_receipt_commit_failure_does_not_resend",
+      "target": "src_publish_outboxworker",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_concurrent_workers_claim_once",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L97",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_concurrent_workers_claim_once",
+      "target": "src_publish_outboxworker",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L101",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L108",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "src_publish_deliveryrejected",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L110",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "src_publish_outboxworker",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L111",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "target": "src_publish_outboxworker",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L128",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_refuses_killed_or_changed_drafts",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L133",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_rejects_naive_time_before_mutation",
+      "target": "src_publish_publisher",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -26202,6 +27443,182 @@
       "confidence_score": 0.95,
       "source_file": "tests/test_context_and_validator.py",
       "source_location": "L486",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_database",
+      "target": "src_core_db_database",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L22",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "src_publish_deliveryrejected",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L110",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "target": "src_publish_outboxworker",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L50",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "target": "src_publish_outboxworker",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L71",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_receipt_commit_failure_does_not_resend",
+      "target": "src_publish_outboxworker",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L84",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_concurrent_workers_claim_once",
+      "target": "src_publish_outboxworker",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L101",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "src_publish_outboxworker",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L111",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "target": "src_publish_outboxworker",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L128",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_worker_restart_does_not_duplicate_telegram",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L42",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_crash_after_remote_acceptance_is_not_retried",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L62",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_receipt_commit_failure_does_not_resend",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L81",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_concurrent_workers_claim_once",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L97",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_outbox_retries_only_confirmed_rejection",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L108",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_trace_survives_enqueue_and_worker_restart",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L119",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_refuses_killed_or_changed_drafts",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L133",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_curator_and_publish_test_publication_rejects_naive_time_before_mutation",
+      "target": "src_publish_publisher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_curator_and_publish.py",
+      "source_location": "L150",
       "weight": 0.8,
       "_origin": "ast"
     },
@@ -28125,6 +29542,114 @@
       "confidence_score": 1.0,
       "source_file": "src/offtop.py",
       "source_location": "L344",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_post",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_post",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_operation",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L130",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_operation",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L130",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_publisher_enqueue_operation",
+      "target": "src_core_db_enqueue_outbox",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L143",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker_claim",
+      "target": "tests_test_extract_and_quiz_claim",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "src/publish.py",
+      "source_location": "L172",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker_reconcile",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L186",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker_run_once",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L222",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_publish_outboxworker_run_once",
+      "target": "src_core_time_utils_now",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/publish.py",
+      "source_location": "L222",
       "weight": 1.0,
       "_origin": "ast"
     },
