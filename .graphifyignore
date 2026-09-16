@@ -1,0 +1,16 @@
+.git/
+.venv/
+.direnv/
+graphify-out/
+data/
+logs/
+backups/
+result
+library/
+mika-startup/
+config/telegram.yaml
+config/telegram.yml
+config/world-*.json
+.env
+.env.*
+*.env

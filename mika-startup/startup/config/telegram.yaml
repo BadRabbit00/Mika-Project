@@ -1,0 +1,20 @@
+# Заполни реальными id. Токены сюда НЕ писать — только имена переменных.
+# Как узнать id: добавь @RawDataBot в группу, он покажет chat id и thread id.
+
+owner_id:             # твой telegram user id
+supergroup_id: -100  # id супергруппы с топиками
+channel_id: 0     # id канала-витрины
+
+topics:
+  diary: 0      # Дневник Мики
+  author: 0     # Автор
+  curator: 0    # Кураторская
+  chat: 0       # Разговор
+  library: 0    # Библиотека
+  machine: 0    # Машинное
+  control: 0    # Управление
+
+bots:
+  mika: MIKA_BOT_TOKEN
+  curator: CURATOR_BOT_TOKEN
+  ops: OPS_BOT_TOKEN

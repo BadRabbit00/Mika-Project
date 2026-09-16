@@ -1,0 +1,29 @@
+{
+  "description": "Controlled simulation workload, not a production event-frequency policy.",
+  "daily": [
+    {"time": "12:00", "event": "ate_something_good"},
+    {"time": "17:00", "event": "article_received"},
+    {"time": "21:00", "event": "series_episode_good"}
+  ],
+  "study_rotation": ["article_easy", "article_hard", "selfquiz_passed", "selfquiz_failed", "curator_corrected", "understood_something", "exam_passed"],
+  "study_time": "19:00",
+  "triggers": [
+    {"day": 1, "time": "20:00", "id": "fight_with_boyfriend"},
+    {"day": 8, "time": "20:00", "id": "fight_with_boyfriend"}
+  ],
+  "sleep_debt_rotation": [0.0, 1.5, 2.0, 0.5, 1.0, 0.0, 0.0],
+  "schedule": {
+    "initial_debt": 0.0,
+    "blackout_checks": ["08:40"],
+    "complexity_rotation": [5, 9, 4, 8, 6, 3, 7],
+    "sleep_labels": ["neutral", "stuck", "neutral", "down", "neutral", "neutral", "stuck"],
+    "interruption_times": {"dasha_hairdryer": "08:00", "delivery_doorbell": "10:15", "overslept": "12:20"},
+    "trigger_states": {"not_fighting": false},
+    "locations": {"sleep": "дом", "class": "универ", "commute": "транспорт", "free": "дом"},
+    "daily": [
+      {"time": "16:15", "event": "ate_something_good"},
+      {"time": "17:00", "event": "article_received"},
+      {"time": "21:00", "event": "series_episode_good"}
+    ]
+  }
+}

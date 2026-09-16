@@ -1,0 +1,30 @@
+# Activity sessions and publication rhythm.
+# Все времена — Asia/Almaty, планировщик приводит их к aware datetime.
+
+sessions:
+  weekday:
+    - {start: "10:00", len_min: 90,  kind: study}
+    - {start: "19:30", len_min: 120, kind: study}
+  weekend:
+    - {start: "13:00", len_min: 150, kind: study}
+
+gap:
+  dist: lognormal
+  mu: 2.6
+  sigma: 0.7
+  min_min: 4
+  max_min: 40
+
+max_events_per_session: 6
+jitter_minutes: 40
+quiet_hours: {from: "23:30", to: "09:00"}   # перекрывается моделью сна
+
+targets:
+  posts_per_day: 2
+  offtop_per_week: 2
+  daily_greeting_per_week: 3
+  situation_share: 0.25
+
+# Приоритет выбора типа поста, соответствует next_post_kind() из 21.2.
+priority: [correction, struggle, summary, answer, found, impression,
+           insight, daily, offtop]
