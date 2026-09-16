@@ -49,42 +49,6 @@ including structured log fields written as `todo="<id>"`.
 
 - TODO(BASELINE-HISTORY): the configured history windows and BaselineContext.from_history are implemented.
   Live providers must still assemble exam, correction, waiting, and quiz facts.
-## Output and writing contracts
-
-- TODO(OFFTOP-PERSONA): the shared prompts/_base.md names AI agents, while
-  sections 12 and 16 prohibit technical terms anywhere in off-topic context.
-  Prompt files remain read-only. The persona-selection policy needs an explicit
-  decision; an isolation failure must not be silently bypassed.
-  ContextBuilder defaults to rejecting that conflict. Its explicit
-  offtop_persona="nontechnical_sections" option selects the existing character
-  and voice sections and obtains identity from life.yaml. Tests exercise that
-  opt-in; no production default or prompt-file modification is applied.
-- TODO(WRITE-MODE-INSTRUCTIONS): section 5 requires a matching closed output
-  mode, but supplied writing templates name only the opening mode in metadata.
-  A live Gemma 12B smoke test on 2026-09-16 omitted mode tags in all three
-  attempts (1259 input tokens each); attempts two and three also exceeded the
-  template's length limit. The writer rejected every attempt and stored killed
-  with NULL text. The templates need an explicit output-envelope instruction
-  before successful live generation can be claimed. Prompt files remain intact;
-  the writer does not manufacture tags or weaken validation to accept these runs.
-- TODO(OFFTOP-FREQUENCY): overused() has no threshold and inverse-frequency
-  weights have no zero-count rule. The planner requires explicit max_slot_uses
-  and slot_weight inputs. No production threshold or smoothing is inferred.
-- TODO(OFFTOP-ENTITY): legacy entity strings do not preserve variable names or
-  frame history. New events use canonical JSON containing slot and variable
-  values. Frame history is recoverable from unique placeholder sets in the
-  supplied frames. Ambiguous frame signatures or legacy history fail explicitly.
-- TODO(OFFTOP-PEOPLE): people entries provide IDs and descriptions, but not
-  grammatical name forms for frame references. Callers supply reference labels;
-  frames with unresolved references are ineligible instead of inventing names.
-- TODO(OFFTOP-BINDINGS): the coffee_state placeholder has no explicit binding
-  in the supplied slot. Callers can supply bindings; unresolved frames are logged
-  and ineligible. Other complete frames remain usable.
-- TODO(DAILY-ISOLATION): write_daily.md requests article complexity inside an
-  off-topic profile. Keep that variant unavailable under strict isolation until
-  the supplied template is corrected. The slot and situation variants are separate.
-- TODO(INSIGHT-PROMPT): insight is listed as a post kind but has no supplied
-  write_insight.md. Do not substitute a different prompt silently.
 ## Curator and interface contracts
 
 - TODO(CURATOR-MODEL-SOURCE): config/models.yaml remains absent. The explicitly
@@ -206,8 +170,7 @@ exclusion, replay behavior, and the minimum question count and passing fraction.
 Steps 6 and 7 test all three output-validation layers, isolated writing memory,
 quoted curator material in the user role, exact server token budgets, rejection
 retries, killed drafts, read-only event selection, publication-time continuity,
-and weather fallback/relevance. Successful generation tests use a mocked model;
-the live output-envelope limitation is documented above.
+and weather fallback/relevance. Mocked regression tests and three successful live Gemma drafts verify the output envelope; see VALIDATION.md.
 
 The executable stage gate in tests/test_stage_contracts.py requires behavioral
 tests before each later-stage module may be introduced.

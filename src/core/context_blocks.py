@@ -64,7 +64,8 @@ def open_threads(ctx):
     day, offtop = ctx["day"], ctx["offtop"]
     return _rows(
         ctx,
-        "SELECT kind, text, topic FROM threads WHERE status='open' AND opened_at<=? "
+        "SELECT id, kind, text, topic FROM threads WHERE channel='public' "
+        "AND status='open' AND opened_at<=? "
         "AND opened_at>=? AND ((?=1 AND kind='life') OR "
         "(?=0 AND kind!='life' AND topic=?)) ORDER BY priority DESC, opened_at, id",
         (

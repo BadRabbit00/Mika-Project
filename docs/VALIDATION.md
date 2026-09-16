@@ -84,3 +84,17 @@ Evidence: data/decisions-mood-simulation/{report.json,samples.csv,transitions.cs
 
 A live question on the newly extracted graph returned answered with two verified
 Yama citations; data/live/decisions-quiz-events.jsonl records the request.
+
+## Approved writing profiles
+
+The writing gate passes 142 tests. Core and study personas are separated, daily
+and insight templates are enabled, and every writing mode has an explicit
+file-based envelope and example. The server consumes the closing stop word;
+the client restores it only when the server confirms that exact stop word.
+
+Three real Gemma calls on the kernel excerpts each produced a valid draft on
+the first attempt. No envelope repair was enabled. These were generation tests
+with explicit fixture sleep/location inputs, without publication. Evidence:
+`data/live/decisions-writing-report.json` and the corresponding JSONL log.
+Typed context snapshots retain PAD bands, world inputs, and memory identities
+for regeneration from current observations.

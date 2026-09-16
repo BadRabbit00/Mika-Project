@@ -1,5 +1,6 @@
 """Output validation contracts, followed by isolated context contracts in step 7."""
 
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -307,16 +308,75 @@ def test_context_isolation_offtop(builder, day):
         )
 
 
-def test_unchanged_shared_persona_cannot_bypass_offtop_isolation(writing_db, day):
+def test_core_persona_is_isolated_by_default(writing_db, day):
     builder = ContextBuilder(
         Path("prompts"),
         database=writing_db,
         mood_model=MoodModel.from_config(Path("config"), epoch=AT),
     )
-    with pytest.raises(ContextIsolationError):
-        builder.build(
-            "write_offtop", kind="offtop", **writing_blocks(day, offtop_event=TEXT)
+    request = builder.build(
+        "write_offtop", kind="offtop", **writing_blocks(day, offtop_event=TEXT)
+    )
+    ContextBuilder._isolate(request)
+    assert "{output_envelope}" not in request.system
+    assert "<casual>" in request.system and "</casual>" in request.system
+
+
+def test_daily_and_insight_have_complete_file_backed_contexts(builder, day):
+    daily = builder.build(
+        "write_offtop",
+        kind="daily",
+        **writing_blocks(
+            day,
+            weather="",
+            tired_reason="легла поздно",
+            sleep_state="",
+            recent_greetings=[],
+        ),
+    )
+    assert "last_complexity" not in daily.system + daily.user
+    insight = builder.build(
+        "write_tech",
+        kind="insight",
+        **writing_blocks(
+            day,
+            node_a="A",
+            relation="requires",
+            node_b="B",
+            edge_summary="A requires B",
+            source_title="Source",
+        ),
+    )
+    assert insight.mode == "casual" and insight.temperature == 0.85
+    assert "A requires B" in insight.user
+    assert "<casual>" in insight.system
+
+
+async def test_generation_restores_only_server_consumed_closing_tag(builder, day):
+    payloads = []
+    request = builder.build(
+        "write_offtop", kind="offtop", **writing_blocks(day, offtop_event=TEXT)
+    )
+
+    def handle(http_request):
+        payload = json.loads(http_request.content)
+        if http_request.url.path == "/apply-template":
+            return httpx.Response(200, json={"prompt": "fixture"})
+        if http_request.url.path == "/tokenize":
+            return httpx.Response(200, json={"tokens": [1, 2]})
+        payloads.append(payload)
+        return httpx.Response(
+            200,
+            json={
+                "content": "<casual>" + TEXT,
+                "stop_type": "word",
+                "stopping_word": "</casual>",
+            },
         )
+
+    async with LocalLLM(transport=httpx.MockTransport(handle)) as llm:
+        assert await llm.generate(request) == "<casual>" + TEXT + "</casual>"
+    assert payloads[0]["stop"] == ["</casual>"]
 
 
 def test_context_technical_memory_is_bounded_and_excludes_life(builder, day):
@@ -464,6 +524,10 @@ async def test_writer_validates_before_saving_and_keeps_attempts_stateless(
     )
     result = await writer.generate("offtop", **writing_blocks(day, offtop_event=TEXT))
     assert result.status == "draft" and result.text == valid and result.attempts == 2
+    snapshot = writer.snapshot(result.id)
+    assert snapshot.mood == writing_blocks(day)["mood"]
+    assert snapshot.day == day and snapshot.payload == {"offtop_event": TEXT}
+    assert snapshot.bands.keys() == {"P", "A", "D"}
     assert all(
         "汉" not in call.args[0].system + call.args[0].user
         for call in llm.generate.call_args_list

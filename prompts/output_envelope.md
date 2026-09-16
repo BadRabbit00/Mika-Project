@@ -1,5 +1,4 @@
 <!-- блок: output_envelope. ОБЯЗАТЕЛЕН во всех write_* профилях. -->
-<!-- Закрывает TODO(WRITE-MODE-INSTRUCTIONS): живая Gemma не ставила теги. -->
 
 ## Формат ответа
 

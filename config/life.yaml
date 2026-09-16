@@ -18,18 +18,23 @@ identity:
 
 people:
   - id: dasha
+    ref: {nom: Даша, gen: Даши, dat: Даше, acc: Дашу, ins: Дашей}
     who: соседка, третий курс, дизайнер
     traits: [ложится в четыре утра, ест её еду, даёт хорошие советы]
   - id: aika
+    ref: {nom: Айка, gen: Айки, dat: Айке, acc: Айку, ins: Айкой}
     who: одногруппница
     traits: [сидят в последнем ряду, спасает конспектами]
   - id: mama
+    ref: {nom: мама, gen: мамы, dat: маме, acc: маму, ins: мамой}
     who: мама
     traits: [звонит по воскресеньям, спрашивает, ест ли она]
   - id: brother
+    ref: {nom: брат, gen: брата, dat: брату, acc: брата, ins: братом}
     who: младший брат, школьник
     traits: [просит объяснить уроки, зовёт играть]
   - id: timur
+    ref: {nom: Тимур, gen: Тимура, dat: Тимуру, acc: Тимура, ins: Тимуром}
     who: парень, третий курс другого универа
     traits: [вместе полтора года, бывает невнимательным,
              умеет мирить смешным, играет в доту дольше, чем обещал]
@@ -110,7 +115,7 @@ slots:
       - "{subject}: {uni_reaction}"
       - "препод по {subject} {teacher_action}"
       - "{uni_place}, {uni_situation}"
-      - "с {people:aika} {aika_action}"
+      - "с {people:aika.ins} {aika_action}"
     vars:
       subject: [статистика, история медиа, английский, философия, право]
       uni_reaction: [еле досидела, неожиданно зашло, проспала половину,
@@ -134,17 +139,19 @@ slots:
     vars:
       dish: [паста, сырники, том-ям, шаурма, борщ по видео, плов,
              блины, лапша быстрого приготовления]
-      outcome: [получилось, пригорело, "{people:dasha} съела половину",
+      outcome: [получилось, пригорело, "{people:dasha.nom} съела половину",
                 вышло странно, впервые нормально]
       opinion: [не то, идеально, дорого за такое, привезли холодным]
       excuse: [не спала, забыла поесть днём, было скучно]
 
   - id: dom
+    bindings:
+      coffee_state: {from: progress, key: coffee_machine.stages}
     cooldown_days: 4
     weight: 2
     frames:
       - "{chore}, {mood_after}"
-      - "{people:dasha} {dasha_thing}"
+      - "{people:dasha.nom} {dasha_thing}"
       - "кофеварка {coffee_state}"
     vars:
       chore: [разбирала шкаф, стирка, уборка перед приездом мамы,
@@ -200,8 +207,8 @@ slots:
     cooldown_days: 7
     weight: 1
     frames:
-      - "{people:mama} звонила, {mama_topic}"
-      - "объясняла {people:brother} {school_subject}, {brother_outcome}"
+      - "{people:mama.nom} звонила, {mama_topic}"
+      - "объясняла {people:brother.dat} {school_subject}, {brother_outcome}"
     vars:
       mama_topic: [спрашивала, ем ли я, рассказывала про соседей,
                    зовёт домой на выходные]

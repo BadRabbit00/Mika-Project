@@ -153,6 +153,8 @@ class LocalLLM:
         }
         if grammar is not None:
             payload["grammar"] = grammar
+        if request.mode is not None:
+            payload["stop"] = [f"</{request.mode}>"]
         call_id = uuid4().hex
         started = time.monotonic()
         log.info(
@@ -195,6 +197,16 @@ class LocalLLM:
                     duration_ms=round((time.monotonic() - started) * 1000),
                 )
             raise ValueError("Invalid completion response")
+        if request.mode is not None:
+            closing = f"</{request.mode}>"
+            if (
+                response.get("stop_type") == "word"
+                and response.get("stopping_word") == closing
+                and content.lstrip().startswith(f"<{request.mode}>")
+                and closing not in content
+            ):
+                content += closing
+                log.info("output_stop_restored", call_id=call_id, mode=request.mode)
         truncated = (
             response.get("stopped_limit")
             or response.get("stop_type") == "limit"

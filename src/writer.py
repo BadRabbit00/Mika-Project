@@ -11,6 +11,7 @@ import structlog
 
 from src.core.context import OFFTOP_KINDS, WRITE_INPUTS
 from src.core.time_utils import now, to_utc_iso
+from src.core.writing_snapshot import WritingSnapshot
 from src.validator import PastPost, ValidationContext, ValidationResult
 
 log = structlog.get_logger("blogai.writer")
@@ -67,8 +68,10 @@ class Writer:
         duration_ms,
         tokens_out,
         trace_id,
+        snapshot,
+        max_attempts,
     ):
-        final = validation.accepted or attempt == 3
+        final = validation.accepted or attempt == max_attempts
         status = (
             "validated" if validation.accepted else "killed" if final else "rejected"
         )
@@ -108,16 +111,37 @@ class Writer:
             )
             if final:
                 connection.execute(
-                    "INSERT INTO posts(id, kind, state, text) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO posts(id, kind, state, text, context_snapshot) "
+                    "VALUES (?, ?, ?, ?, ?)",
                     (
                         post_id,
                         kind,
                         "draft" if validation.accepted else "killed",
                         validation.text if validation.accepted else None,
+                        snapshot.encode(),
                     ),
                 )
 
         self.database.run_transaction(save)
+
+    def snapshot(self, post_id):
+        with self.database.connection() as c:
+            row = c.execute(
+                "SELECT context_snapshot FROM posts WHERE id=?", (post_id,)
+            ).fetchone()
+        if row is None or row[0] is None:
+            raise ValueError("This post has no typed regeneration snapshot")
+        return WritingSnapshot.decode(row[0])
+
+    async def regenerate(self, post_id, *, day, mood, wake_reason):
+        snapshot = await asyncio.to_thread(self.snapshot, post_id)
+        return await self.generate(
+            snapshot.kind,
+            day=day,
+            mood=mood,
+            wake_reason=wake_reason,
+            **snapshot.payload,
+        )
 
     async def generate(self, kind: str, **blocks) -> WriteResult:
         post_id = uuid4().hex
@@ -136,9 +160,29 @@ class Writer:
         profile = "write_offtop" if offtop else "write_tech"
         posts, terms = await asyncio.to_thread(self._history, day.at)
         feedback = {}
-        for attempt in range(1, 4):
+        max_attempts = self.context.settings.get("system.max_retries")
+        for attempt in range(1, max_attempts + 1):
             request = await self.context.build_checked(
                 profile, llm=self.llm, kind=kind, **blocks, **feedback
+            )
+            snapshot = WritingSnapshot(
+                kind,
+                day,
+                blocks["mood"],
+                blocks["wake_reason"],
+                {
+                    key: value
+                    for key, value in blocks.items()
+                    if key not in {"day", "mood", "wake_reason"}
+                },
+                {
+                    axis: self.context.mood_model.band_for(
+                        axis, getattr(blocks["mood"], axis)
+                    )["id"]
+                    for axis in ("P", "A", "D")
+                },
+                request.node_ids,
+                request.thread_ids,
             )
             run_id, started_at, started = uuid4().hex, now(), time.monotonic()
             raw, tokens_out = "", 0
@@ -189,6 +233,8 @@ class Writer:
                     duration_ms=round((time.monotonic() - started) * 1000),
                     tokens_out=tokens_out,
                     trace_id=trace_id,
+                    snapshot=snapshot,
+                    max_attempts=max_attempts,
                 )
                 log.info(
                     "writing_attempt_completed",
@@ -208,4 +254,4 @@ class Writer:
                         "similar_text": similar.text,
                     }
                 }
-        return WriteResult(post_id, "killed", None, 3, validation.reasons)
+        return WriteResult(post_id, "killed", None, max_attempts, validation.reasons)

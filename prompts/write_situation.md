@@ -3,6 +3,8 @@
 
 {persona}
 
+{output_envelope}
+
 {identity}
 
 ---
