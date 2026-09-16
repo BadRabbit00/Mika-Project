@@ -157,6 +157,40 @@
       "_origin": "ast"
     },
     {
+      "id": "src_core_content_rules",
+      "label": "content_rules.py",
+      "file_type": "code",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_content_rules_normalized_text",
+      "label": "normalized_text()",
+      "file_type": "code",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L27",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_content_rules_technical_match",
+      "label": "technical_match()",
+      "file_type": "code",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L39",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_core_content_rules_rationale_1",
+      "label": "Deterministic content boundaries shared by context and output validation.",
+      "file_type": "rationale",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
       "id": "src_core_context",
       "label": "context.py",
       "file_type": "code",
@@ -2369,6 +2403,381 @@
       "label": "Names-only questions, graph retrieval, grounded answers, and citation checks.",
       "file_type": "rationale",
       "source_file": "src/selfquiz.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator",
+      "label": "validator.py",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_cleanedoutput",
+      "label": "CleanedOutput",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L34",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_clean_output",
+      "label": "clean_output()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L39",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml",
+      "label": "_TelegramHTML",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L82",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "htmlparser",
+      "label": "HTMLParser",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L99",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_handle_starttag",
+      "label": ".handle_starttag()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L104",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_handle_endtag",
+      "label": ".handle_endtag()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L145",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_handle_startendtag",
+      "label": ".handle_startendtag()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L149",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_handle_data",
+      "label": ".handle_data()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L152",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_handle_comment",
+      "label": ".handle_comment()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L155",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_telegramhtml_handle_decl",
+      "label": ".handle_decl()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L158",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_validationcontext",
+      "label": "ValidationContext",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L163",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_validationcontext_post_init",
+      "label": ".__post_init__()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L175",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_pastpost",
+      "label": "PastPost",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L188",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_validationresult",
+      "label": "ValidationResult",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L194",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_validationresult_accepted",
+      "label": ".accepted()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L201",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_lexical_echo_similarity",
+      "label": "lexical_echo_similarity()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L205",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_outputvalidator",
+      "label": "OutputValidator",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L212",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_outputvalidator_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L213",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_outputvalidator_validate",
+      "label": ".validate()",
+      "file_type": "code",
+      "source_file": "src/validator.py",
+      "source_location": "L216",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_rationale_1",
+      "label": "Three-layer output checks without publication or storage side effects.",
+      "file_type": "rationale",
+      "source_file": "src/validator.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_rationale_83",
+      "label": "Validate standard Bot API HTML, including attributes and balanced tags.",
+      "file_type": "rationale",
+      "source_file": "src/validator.py",
+      "source_location": "L83",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_validator_rationale_206",
+      "label": "Explicit opt-in sequence metric; see TODO(PROMPT-ECHO).",
+      "file_type": "rationale",
+      "source_file": "src/validator.py",
+      "source_location": "L206",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator",
+      "label": "test_context_and_validator.py",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_py_fixture",
+      "label": "fixture",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_validator",
+      "label": "validator()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L17",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_context",
+      "label": "context()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L23",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_strips_fences",
+      "label": "test_validator_strips_fences()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L28",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_py_parametrize",
+      "label": "parametrize",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_cjk",
+      "label": "test_validator_rejects_cjk()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L40",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_cycle",
+      "label": "test_validator_rejects_cycle()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L62",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_artifacts",
+      "label": "test_validator_rejects_artifacts()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L83",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_allows_kaomoji_safe_html_and_technical_cycle",
+      "label": "test_validator_allows_kaomoji_safe_html_and_technical_cycle()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L88",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_structure_empty_and_truncation",
+      "label": "test_validator_rejects_structure_empty_and_truncation()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L95",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_requires_closed_output_mode_and_length",
+      "label": "test_validator_requires_closed_output_mode_and_length()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L106",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_prompt_echo_at_strict_threshold",
+      "label": "test_validator_rejects_prompt_echo_at_strict_threshold()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L117",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_duplicate_against_only_last_thirty",
+      "label": "test_validator_rejects_duplicate_against_only_last_thirty()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L127",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_rejects_offtop_graph_terms",
+      "label": "test_validator_rejects_offtop_graph_terms()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L139",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validator_checks_present_time_and_sleep_facts",
+      "label": "test_validator_checks_present_time_and_sleep_facts()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L147",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_test_validation_context_rejects_naive_time",
+      "label": "test_validation_context_rejects_naive_time()",
+      "file_type": "code",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L164",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_test_context_and_validator_rationale_1",
+      "label": "Output validation contracts, followed by isolated context contracts in step 7.",
+      "file_type": "rationale",
+      "source_file": "tests/test_context_and_validator.py",
       "source_location": "L1",
       "_origin": "ast"
     },
@@ -4947,12 +5356,21 @@
       "_origin": "ast"
     },
     {
+      "id": "docs_todo_output_and_writing_contracts",
+      "label": "Output and writing contracts",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/TODO.md",
+      "source_location": "L147",
+      "_origin": "ast"
+    },
+    {
       "id": "docs_todo_invariants_for_later_delivery_stages",
       "label": "Invariants for later delivery stages",
       "file_type": "document",
       "node_kind": "heading",
       "source_file": "docs/TODO.md",
-      "source_location": "L147",
+      "source_location": "L167",
       "_origin": "ast"
     },
     {
@@ -4998,6 +5416,33 @@
       "node_kind": "heading",
       "source_file": "docs/VALIDATION.md",
       "source_location": "L60",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_writing",
+      "label": "WRITING.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "source_file": "docs/WRITING.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_writing_contexts_writing_and_output_validation",
+      "label": "Contexts, writing, and output validation",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/WRITING.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_writing_output_validator",
+      "label": "Output validator",
+      "file_type": "document",
+      "node_kind": "heading",
+      "source_file": "docs/WRITING.md",
+      "source_location": "L3",
       "_origin": "ast"
     },
     {
@@ -6267,6 +6712,69 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/core/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_content_rules",
+      "target": "re",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_content_rules",
+      "target": "unicodedata",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_content_rules",
+      "target": "src_core_content_rules_normalized_text",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_content_rules",
+      "target": "src_core_content_rules_technical_match",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_content_rules_technical_match",
+      "target": "src_core_content_rules_normalized_text",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/content_rules.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_core_content_rules_rationale_1",
+      "target": "src_core_content_rules",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/core/content_rules.py",
       "source_location": "L1",
       "weight": 1.0,
       "_origin": "ast"
@@ -12396,6 +12904,881 @@
       "_origin": "ast"
     },
     {
+      "source": "src_validator",
+      "target": "html",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "json",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "re",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "unicodedata",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "collections_abc",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "dataclasses",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "datetime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "difflib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "html_parser",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "urllib_parse",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "structlog",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_content_rules",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_pad",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_vectors",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_cleanedoutput",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_clean_output",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_clean_output",
+      "target": "src_validator_cleanedoutput",
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_telegramhtml",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L82",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "htmlparser",
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L82",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_handle_starttag",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L104",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_handle_endtag",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L145",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_handle_startendtag",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L149",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_handle_data",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L152",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_handle_comment",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L155",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml",
+      "target": "src_validator_telegramhtml_handle_decl",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L158",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_validationcontext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L163",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_validationcontext",
+      "target": "src_validator_validationcontext_post_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L175",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_pastpost",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L188",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_validationresult",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L194",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_validationresult",
+      "target": "src_validator_validationresult_accepted",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L201",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_lexical_echo_similarity",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_validator_outputvalidator",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L212",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator",
+      "target": "src_validator_outputvalidator_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L213",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator",
+      "target": "src_validator_outputvalidator_validate",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_validator_validationcontext",
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_validator_pastpost",
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_validator_validationresult",
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_clean_output",
+      "target": "src_validator_cleanedoutput",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L79",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_telegramhtml_init",
+      "target": "src_validator_outputvalidator_init",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L100",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_validator_clean_output",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L223",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_validator_telegramhtml",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L235",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_validator_validationresult",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L319",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_rationale_1",
+      "target": "src_validator",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_rationale_83",
+      "target": "src_validator_telegramhtml",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L83",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_rationale_206",
+      "target": "src_validator_lexical_echo_similarity",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L206",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "datetime",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "unittest_mock",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "numpy",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "pytest",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "src_core_time_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "src_validator",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_validator",
+      "target": "tests_test_context_and_validator_py_fixture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "context": "decorator",
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_validator",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_strips_fences",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_cjk",
+      "target": "tests_test_context_and_validator_py_parametrize",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "context": "decorator",
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_cjk",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_cycle",
+      "target": "tests_test_context_and_validator_py_parametrize",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "context": "decorator",
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_cycle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_artifacts",
+      "target": "tests_test_context_and_validator_py_parametrize",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L67",
+      "weight": 1.0,
+      "context": "decorator",
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_artifacts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L83",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_allows_kaomoji_safe_html_and_technical_cycle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L88",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_structure_empty_and_truncation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_requires_closed_output_mode_and_length",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L106",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_prompt_echo_at_strict_threshold",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L117",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_duplicate_against_only_last_thirty",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L127",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_rejects_offtop_graph_terms",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L139",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validator_checks_present_time_and_sleep_facts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L147",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "tests_test_context_and_validator_test_validation_context_rejects_naive_time",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L164",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_cjk",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_cycle",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L63",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_artifacts",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_allows_kaomoji_safe_html_and_technical_cycle",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L90",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_structure_empty_and_truncation",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L97",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_requires_closed_output_mode_and_length",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L107",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_prompt_echo_at_strict_threshold",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L121",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_duplicate_against_only_last_thirty",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L132",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_offtop_graph_terms",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L141",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_checks_present_time_and_sleep_facts",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L150",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validation_context_rejects_naive_time",
+      "target": "tests_test_context_and_validator_context",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_rationale_1",
+      "target": "tests_test_context_and_validator",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "tests_test_db_and_time",
       "target": "ast",
       "relation": "imports",
@@ -16525,11 +17908,21 @@
     },
     {
       "source": "docs_todo_architecture_questions_and_deferred_contracts",
-      "target": "docs_todo_invariants_for_later_delivery_stages",
+      "target": "docs_todo_output_and_writing_contracts",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/TODO.md",
       "source_location": "L147",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_todo_architecture_questions_and_deferred_contracts",
+      "target": "docs_todo_invariants_for_later_delivery_stages",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/TODO.md",
+      "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -16580,6 +17973,36 @@
       "confidence": "EXTRACTED",
       "source_file": "docs/VALIDATION.md",
       "source_location": "L72",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_writing",
+      "target": "docs_writing_contexts_writing_and_output_validation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/WRITING.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_writing_contexts_writing_and_output_validation",
+      "target": "docs_writing_output_validator",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/WRITING.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "docs_writing",
+      "target": "docs_todo",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/WRITING.md",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -17901,6 +19324,105 @@
       "_origin": "ast"
     },
     {
+      "source": "src_validator",
+      "target": "src_core_content_rules_normalized_text",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_content_rules_technical_match",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_pad_finite",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator",
+      "target": "src_core_vectors_cosine",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "src_validator_outputvalidator",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "src_validator_pastpost",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "src_validator_validationcontext",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator",
+      "target": "src_validator_clean_output",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
       "source": "tests_test_extract_and_quiz",
       "target": "src_core_context_contextbuilder",
       "relation": "imports",
@@ -18711,6 +20233,50 @@
       "confidence": "EXTRACTED",
       "source_file": "src/ingest.py",
       "source_location": "L58",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_lexical_echo_similarity",
+      "target": "src_core_content_rules_normalized_text",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/validator.py",
+      "source_location": "L208",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_context",
+      "target": "src_validator_validationcontext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_strips_fences",
+      "target": "src_validator_clean_output",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_duplicate_against_only_last_thirty",
+      "target": "src_validator_pastpost",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L128",
       "weight": 1.0,
       "_origin": "ast"
     },
@@ -19998,6 +21564,39 @@
       "confidence_score": 0.95,
       "source_file": "src/selfquiz.py",
       "source_location": "L89",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_validator",
+      "target": "src_validator_outputvalidator",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L20",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_test_validator_rejects_duplicate_against_only_last_thirty",
+      "target": "src_validator_pastpost",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L128",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "tests_test_context_and_validator_context",
+      "target": "src_validator_validationcontext",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "tests/test_context_and_validator.py",
+      "source_location": "L25",
       "weight": 0.8,
       "_origin": "ast"
     },
@@ -21558,6 +23157,78 @@
       "confidence_score": 1.0,
       "source_file": "src/selfquiz.py",
       "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_validationcontext_post_init",
+      "target": "src_core_time_utils_require_aware",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/validator.py",
+      "source_location": "L176",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_validationcontext_post_init",
+      "target": "src_core_pad_finite",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/validator.py",
+      "source_location": "L177",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_core_content_rules_normalized_text",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/validator.py",
+      "source_location": "L242",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_core_pad_finite",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/validator.py",
+      "source_location": "L280",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_core_content_rules_technical_match",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/validator.py",
+      "source_location": "L287",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "src_validator_outputvalidator_validate",
+      "target": "src_core_vectors_cosine",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/validator.py",
+      "source_location": "L314",
       "weight": 1.0,
       "_origin": "ast"
     },

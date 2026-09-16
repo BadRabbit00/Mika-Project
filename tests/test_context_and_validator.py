@@ -30,8 +30,10 @@ def test_validator_strips_fences():
     cleaned = clean_output(raw)
     assert cleaned.text == TEXT and cleaned.changes
     assert clean_output(cleaned.text).text == TEXT
-    assert clean_output('«Line one.\nLine two.»').text == 'Line one.\nLine two.'
-    assert clean_output('<|turn>model\n<casual>' + TEXT + '</casual><turn|>').text == TEXT
+    assert clean_output("«Line one.\nLine two.»").text == "Line one.\nLine two."
+    assert (
+        clean_output("<|turn>model\n<casual>" + TEXT + "</casual><turn|>").text == TEXT
+    )
 
 
 @pytest.mark.parametrize("artifact", ["汉", "日", "\U00020000", "&#x4e2d;"])
@@ -41,24 +43,43 @@ async def test_validator_rejects_cjk(validator, artifact):
     validator.llm.embed.assert_not_awaited()
 
 
-@pytest.mark.parametrize("phrase", [
-    "У меня месячные.", "Это ПМС.", "Началась овуляция.", "Лютеиновая фаза.",
-    "Фолликулярная фаза.", "Сегодня критические дни.", "У меня эти дни.",
-    "It is that time of the month.", "My menstrual cycle is affecting me.",
-    "Period cramps are keeping me awake.", "Гормоны опять шалят.",
-])
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "У меня месячные.",
+        "Это ПМС.",
+        "Началась овуляция.",
+        "Лютеиновая фаза.",
+        "Фолликулярная фаза.",
+        "Сегодня критические дни.",
+        "У меня эти дни.",
+        "It is that time of the month.",
+        "My menstrual cycle is affecting me.",
+        "Period cramps are keeping me awake.",
+        "Гормоны опять шалят.",
+    ],
+)
 async def test_validator_rejects_cycle(validator, phrase):
     result = await validator.validate(TEXT + phrase, context())
     assert "cycle" in result.reasons and not result.accepted
 
 
-@pytest.mark.parametrize("artifact, reason", [
-    ("カタカナ", "kana"), ("(カタカナ)", "kana"), ("{{name}}", "jinja"),
-    ("{% for x %}", "jinja"), (r"\frac{a}{b}", "latex"), ("$$x$$", "latex"),
-    ("{missing_name}", "placeholder"), ("<script>alert(1)</script>", "markup"),
-    ("<b>unclosed", "markup"), ("Как языковая модель, я не могу.", "refusal"),
-    ("As an AI language model, I cannot do that.", "refusal"),
-])
+@pytest.mark.parametrize(
+    "artifact, reason",
+    [
+        ("カタカナ", "kana"),
+        ("(カタカナ)", "kana"),
+        ("{{name}}", "jinja"),
+        ("{% for x %}", "jinja"),
+        (r"\frac{a}{b}", "latex"),
+        ("$$x$$", "latex"),
+        ("{missing_name}", "placeholder"),
+        ("<script>alert(1)</script>", "markup"),
+        ("<b>unclosed", "markup"),
+        ("Как языковая модель, я не могу.", "refusal"),
+        ("As an AI language model, I cannot do that.", "refusal"),
+    ],
+)
 async def test_validator_rejects_artifacts(validator, artifact, reason):
     result = await validator.validate(TEXT + artifact, context())
     assert reason in result.reasons
@@ -72,10 +93,14 @@ async def test_validator_allows_kaomoji_safe_html_and_technical_cycle(validator)
 
 
 async def test_validator_rejects_structure_empty_and_truncation(validator):
-    assert "structure" in (await validator.validate('{"text":"value"}', context())).reasons
+    assert (
+        "structure" in (await validator.validate('{"text":"value"}', context())).reasons
+    )
     assert "empty" in (await validator.validate("Short.", context())).reasons
     assert "truncated" in (await validator.validate(TEXT + ",", context())).reasons
-    assert "truncated" in (await validator.validate(TEXT, context(complete=False))).reasons
+    assert (
+        "truncated" in (await validator.validate(TEXT, context(complete=False))).reasons
+    )
 
 
 async def test_validator_requires_closed_output_mode_and_length(validator):
@@ -83,14 +108,18 @@ async def test_validator_requires_closed_output_mode_and_length(validator):
     assert (await validator.validate("<casual>" + TEXT + "</casual>", ctx)).accepted
     for raw in (TEXT, "<casual>" + TEXT, "<result>" + TEXT + "</result>"):
         assert "mode" in (await validator.validate(raw, ctx)).reasons
-    assert "length" in (await validator.validate(
-        "<casual>" + TEXT * 2 + "</casual>", ctx
-    )).reasons
+    assert (
+        "length"
+        in (await validator.validate("<casual>" + TEXT * 2 + "</casual>", ctx)).reasons
+    )
 
 
 async def test_validator_rejects_prompt_echo_at_strict_threshold(validator):
     validator.echo_similarity = lambda left, right: 0.8001
-    assert "prompt_echo" in (await validator.validate(TEXT, context(prompt="source"))).reasons
+    assert (
+        "prompt_echo"
+        in (await validator.validate(TEXT, context(prompt="source"))).reasons
+    )
     validator.echo_similarity = lambda left, right: 0.8
     assert (await validator.validate(TEXT, context(prompt="source"))).accepted
 
@@ -116,10 +145,20 @@ async def test_validator_rejects_offtop_graph_terms(validator):
 
 
 async def test_validator_checks_present_time_and_sleep_facts(validator):
-    assert "time_conflict" in (await validator.validate(TEXT + " Доброе утро!", context())).reasons
+    assert (
+        "time_conflict"
+        in (await validator.validate(TEXT + " Доброе утро!", context())).reasons
+    )
     assert (await validator.validate(TEXT + " Утром было холодно.", context())).accepted
-    assert "sleep_conflict" in (await validator.validate(TEXT + " Я выспалась.", context(sleep_debt=5))).reasons
-    assert (await validator.validate(TEXT + " Я не выспалась.", context(sleep_debt=5))).accepted
+    assert (
+        "sleep_conflict"
+        in (
+            await validator.validate(TEXT + " Я выспалась.", context(sleep_debt=5))
+        ).reasons
+    )
+    assert (
+        await validator.validate(TEXT + " Я не выспалась.", context(sleep_debt=5))
+    ).accepted
 
 
 def test_validation_context_rejects_naive_time():
