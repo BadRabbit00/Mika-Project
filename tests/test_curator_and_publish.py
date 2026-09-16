@@ -57,7 +57,7 @@ async def test_outbox_worker_restart_does_not_duplicate_telegram(database):
     transport.send.side_effect = [100, 101]
     worker = OutboxWorker(database, transport)
     assert await worker.run_once(at=AT) == "sent"
-    assert await worker.run_once(at=AT) == "sent"
+    assert await worker.run_once(at=AT + timedelta(seconds=4)) == "sent"
     assert await OutboxWorker(database, transport).run_once(at=AT) == "idle"
     assert transport.send.await_count == 2
     assert all(row["sent_at"].endswith("Z") for row in rows(database))
@@ -522,7 +522,7 @@ async def test_dependent_pin_waits_for_message_receipt(database):
     transport.send.side_effect = [77, 77]
     worker = OutboxWorker(database, transport)
     assert await worker.run_once(at=AT) == "sent"
-    assert await worker.run_once(at=AT) == "sent"
+    assert await worker.run_once(at=AT + timedelta(seconds=4)) == "sent"
     assert transport.send.call_args.args[0]["message_id"] == 77
 
 

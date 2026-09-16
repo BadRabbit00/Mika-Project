@@ -279,11 +279,11 @@ async def test_reasoning_hidden_from_machine_attachment(request_data):
     mirror.emit(
         logging.LogRecord("blogai.llm_local", logging.INFO, "", 0, event, (), None)
     )
-    await mirror.drain()
-    attachment = publisher.enqueue_operation.call_args.kwargs["content"]
+    await mirror.drain(force=True)
+    attachment = publisher.enqueue_operations.call_args.args[0][1]["content"]
     assert server.thought not in attachment
-    assert json.loads(attachment)["output"] == server.answer
-    assert "tokens" not in json.loads(attachment)["response"]
+    assert json.loads(attachment)["events"][0]["output"] == server.answer
+    assert "tokens" not in json.loads(attachment)["events"][0]["response"]
 
 
 def test_reasoning_grammar_preserves_literals_and_recursive_rules():

@@ -332,6 +332,10 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "CHECK (origin IN ('observed','scheduled','override'))",
         f"ALTER TABLE sleep_log ADD COLUMN {_utc('override_until')}",
     ),
+    (
+        "CREATE TABLE telegram_delivery_limits ("
+        f"scope TEXT PRIMARY KEY NOT NULL, {_utc('next_at')} NOT NULL)",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 
@@ -446,15 +450,22 @@ class Database:
                 if retry == 5:
                     log.exception("db_lock_retries_exhausted", database=str(self.path))
                     raise
-                log.warning("db_locked_retry", retry=retry + 1, delay_seconds=0.2)
+                log.debug("db_locked_retry", retry=retry + 1, delay_seconds=0.2)
                 time.sleep(0.2)
         raise AssertionError("Unreachable retry state")
 
     @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
+    def connection(self, *, readonly: bool = False) -> Iterator[sqlite3.Connection]:
         """Open, configure, and close a connection; never implicitly commit."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        connection = sqlite3.connect(self.path, timeout=0, autocommit=True)
+        if not readonly:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+        # Let SQLite wait for brief competing writes before the bounded retries.
+        connection = sqlite3.connect(
+            self.path.resolve().as_uri() + "?mode=ro" if readonly else self.path,
+            uri=readonly,
+            timeout=1.0,
+            autocommit=True,
+        )
         try:
             connection.row_factory = sqlite3.Row
             connection.create_function(
@@ -464,14 +475,21 @@ class Database:
                 "is_calendar_date", 1, _is_calendar_date, deterministic=True
             )
             mode = self._retry(
-                lambda: connection.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+                lambda: connection.execute("PRAGMA journal_mode").fetchone()[0]
             )
+            if mode != "wal" and not readonly:
+                mode = self._retry(
+                    lambda: connection.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+                )
             if mode != "wal":
                 raise RuntimeError(f"SQLite did not enable WAL: {mode}")
             connection.execute("PRAGMA foreign_keys=ON")
             if connection.execute("PRAGMA foreign_keys").fetchone()[0] != 1:
                 raise RuntimeError("SQLite did not enable foreign keys")
-            _install_audit_triggers(connection)
+            if readonly:
+                connection.execute("PRAGMA query_only=ON")
+            else:
+                _install_audit_triggers(connection)
             log.debug(
                 "db_connection_opened", database=str(self.path), journal_mode=mode
             )

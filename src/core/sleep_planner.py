@@ -47,12 +47,12 @@ class ScheduledSleepProvider:
         self.database.run_transaction(adopt)
 
     def _row(self, day):
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             row = c.execute("SELECT * FROM sleep_log WHERE night=?", (day,)).fetchone()
         return dict(row) if row else None
 
     def _facts(self, at):
-        with self.database.connection() as c:
+        with self.database.connection(readonly=True) as c:
             events = [
                 dict(row)
                 for row in c.execute(
@@ -214,7 +214,7 @@ class ScheduledSleepProvider:
                         origin="override",
                         until=inputs.valid_until,
                     )
-            with self.database.connection() as c:
+            with self.database.connection(readonly=True) as c:
                 latest = c.execute(
                     "SELECT max(night) FROM sleep_log "
                     "WHERE night<=? AND (origin!='override' OR debt_applied=1)",

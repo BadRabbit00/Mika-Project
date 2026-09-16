@@ -26,7 +26,7 @@ class SQLiteSettingsStore:
 
     def __init__(self, database):
         self.database = database
-        with database.connection() as connection:
+        with database.connection(readonly=True) as connection:
             columns = {
                 row[1]
                 for row in connection.execute("PRAGMA table_info(settings_overrides)")
@@ -40,7 +40,7 @@ class SQLiteSettingsStore:
             )
 
     def get(self, key):
-        with self.database.connection() as connection:
+        with self.database.connection(readonly=True) as connection:
             row = connection.execute(
                 "SELECT * FROM settings_overrides WHERE key=?", (key,)
             ).fetchone()
