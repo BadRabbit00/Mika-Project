@@ -39,7 +39,7 @@ PY
    For the detailed-world revision, retain `topics.state: 1266` in that private
    YAML. The prior seven-topic parser does not accept this optional eighth entry;
    select the matching new code before restarting. The ops bot needs permission
-   to post documents and pin/edit its own message in that topic.
+   to post photos/documents and pin/edit its own message in that topic.
 5. Apply additive migrations to that same database:
 
 ```sh
@@ -65,7 +65,9 @@ It does not reset stored mood, sleep or resources. An empty library is supported
    jobs remain ephemeral. No test database should enter the deployment directory.
    Migration 16 preserves existing saved days. Revised morning, productivity and
    outing rules apply when a future day is first planned. Check that the state
-   topic contains one pinned document and later changes edit the same message.
+   topic contains one pinned PAD photo and later changes edit the same message.
+   An existing state document is converted to a photo while retaining its ID;
+   `/state` exports the complete world snapshot.
 
 For rollback, stop the upgraded process before restoring the matched old revision
 and its database backup. Review receipts received since the backup before any
