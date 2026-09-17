@@ -156,11 +156,14 @@ scenarios:
     entry: invite
     nodes:
       invite:
+        publication: latest
+        label: пишу приглашение на встречу
         minutes:
         - 2
         - 4
         outcomes:
         - id: sent
+          social_plan: {person: dasha, status: waiting}
           facts: 'Написала Даше: предложила встретиться, но ответа и договорённости
             ещё нет.'
           next: reply
@@ -172,6 +175,7 @@ scenarios:
         - 35
         outcomes:
         - id: busy
+          social_plan: {person: dasha, status: declined_busy}
           facts: 'Даша ответила: сейчас занята своими делами и сегодня встретиться
             не получится. Мне стало немного грустно.'
           next: alternative
@@ -183,6 +187,7 @@ scenarios:
             social_disappointment: 1
           contact: dasha
         - id: tired
+          social_plan: {person: dasha, status: declined_tired}
           facts: 'В ответе на приглашение попросили сегодня обойтись без встречи:
             нет сил на общение. Мне грустно, но это не означает разрыв отношений.'
           next: alternative
@@ -193,6 +198,8 @@ scenarios:
           contact: dasha
           mood: life_uncertainty
         - id: free
+          publication: latest
+          social_plan: {person: dasha, status: negotiating}
           facts: Даша ответила и готова обсудить свободное время. Встреча ещё не
             назначена.
           next: agree
@@ -201,11 +208,13 @@ scenarios:
           contact: dasha
         passive: true
       agree:
+        label: согласовываю время встречи
         minutes:
         - 5
         - 10
         outcomes:
         - id: reserved
+          social_plan: {person: dasha, status: scheduled}
           facts: Согласовали время и место встречи с Дашей; я записала
             договорённость, сама встреча ещё впереди.
           next: attend
@@ -215,16 +224,19 @@ scenarios:
             minutes: 35
           mood: life_warmth
         - id: no_window
+          social_plan: {person: dasha, status: no_window}
           facts: Сравнили планы и не нашли подходящего общего окна. Решили
             попробовать в другой день.
           next: alternative
           mood: life_uncertainty
       attend:
+        label: общаюсь на встрече
         minutes:
         - 10
         - 15
         outcomes:
         - id: met
+          social_plan: {person: dasha, status: met}
           facts: Встретились с Дашей в согласованном месте и поговорили; встреча
             действительно состоялась.
           next: remember
@@ -240,11 +252,13 @@ scenarios:
         - park_rest
         - rest
       alternative:
+        label: домашние дела вместо встречи
         minutes:
         - 15
         - 25
         outcomes:
         - id: home
+          social_plan: {person: dasha, status: home_alternative}
           facts: Вместо несостоявшейся встречи решила спокойно заняться
             домашними делами. Отказ не означает ссору.
           next: remember
@@ -257,6 +271,8 @@ scenarios:
         - drawing
         - movie
       remember:
+        passive: true
+        publication: silent
         minutes:
         - 8
         - 15
@@ -282,11 +298,14 @@ scenarios:
     entry: invite
     nodes:
       invite:
+        publication: latest
+        label: пишу приглашение на встречу
         minutes:
         - 2
         - 4
         outcomes:
         - id: sent
+          social_plan: {person: aika, status: waiting}
           facts: 'Написала Айке: предложила встретиться, но ответа и договорённости
             ещё нет.'
           next: reply
@@ -298,6 +317,7 @@ scenarios:
         - 35
         outcomes:
         - id: busy
+          social_plan: {person: aika, status: declined_busy}
           facts: 'Айка ответила: сейчас занята своими делами и сегодня встретиться
             не получится. Мне стало немного грустно.'
           next: alternative
@@ -309,6 +329,7 @@ scenarios:
             social_disappointment: 1
           contact: aika
         - id: tired
+          social_plan: {person: aika, status: declined_tired}
           facts: 'В ответе на приглашение попросили сегодня обойтись без встречи:
             нет сил на общение. Мне грустно, но это не означает разрыв отношений.'
           next: alternative
@@ -319,6 +340,8 @@ scenarios:
           contact: aika
           mood: life_uncertainty
         - id: free
+          publication: latest
+          social_plan: {person: aika, status: negotiating}
           facts: Айка ответила и готова обсудить свободное время. Встреча ещё не
             назначена.
           next: agree
@@ -327,11 +350,13 @@ scenarios:
           contact: aika
         passive: true
       agree:
+        label: согласовываю время встречи
         minutes:
         - 5
         - 10
         outcomes:
         - id: reserved
+          social_plan: {person: aika, status: scheduled}
           facts: Согласовали время и место встречи с Айкой; я записала
             договорённость, сама встреча ещё впереди.
           next: attend
@@ -341,16 +366,19 @@ scenarios:
             minutes: 35
           mood: life_warmth
         - id: no_window
+          social_plan: {person: aika, status: no_window}
           facts: Сравнили планы и не нашли подходящего общего окна. Решили
             попробовать в другой день.
           next: alternative
           mood: life_uncertainty
       attend:
+        label: общаюсь на встрече
         minutes:
         - 10
         - 15
         outcomes:
         - id: met
+          social_plan: {person: aika, status: met}
           facts: Встретились с Айкой в согласованном месте и поговорили; встреча
             действительно состоялась.
           next: remember
@@ -366,11 +394,13 @@ scenarios:
         - park_rest
         - rest
       alternative:
+        label: домашние дела вместо встречи
         minutes:
         - 15
         - 25
         outcomes:
         - id: home
+          social_plan: {person: aika, status: home_alternative}
           facts: Вместо несостоявшейся встречи решила спокойно заняться
             домашними делами. Отказ не означает ссору.
           next: remember
@@ -383,6 +413,8 @@ scenarios:
         - drawing
         - movie
       remember:
+        passive: true
+        publication: silent
         minutes:
         - 8
         - 15
@@ -408,11 +440,14 @@ scenarios:
     entry: invite
     nodes:
       invite:
+        publication: latest
+        label: пишу приглашение на встречу
         minutes:
         - 2
         - 4
         outcomes:
         - id: sent
+          social_plan: {person: timur, status: waiting}
           facts: 'Написала Тимуру: предложила встретиться, но ответа и договорённости
             ещё нет.'
           next: reply
@@ -424,6 +459,7 @@ scenarios:
         - 35
         outcomes:
         - id: busy
+          social_plan: {person: timur, status: declined_busy}
           facts: 'Тимур ответил: сейчас занят своими делами и сегодня встретиться
             не получится. Мне стало немного грустно.'
           next: alternative
@@ -435,6 +471,7 @@ scenarios:
             social_disappointment: 1
           contact: timur
         - id: tired
+          social_plan: {person: timur, status: declined_tired}
           facts: 'В ответе на приглашение попросили сегодня обойтись без встречи:
             нет сил на общение. Мне грустно, но это не означает разрыв отношений.'
           next: alternative
@@ -445,6 +482,8 @@ scenarios:
           contact: timur
           mood: life_uncertainty
         - id: free
+          publication: latest
+          social_plan: {person: timur, status: negotiating}
           facts: Тимур ответил и готов обсудить свободное время. Встреча ещё не
             назначена.
           next: agree
@@ -453,11 +492,13 @@ scenarios:
           contact: timur
         passive: true
       agree:
+        label: согласовываю время встречи
         minutes:
         - 5
         - 10
         outcomes:
         - id: reserved
+          social_plan: {person: timur, status: scheduled}
           facts: Согласовали время и место встречи с Тимуром; я записала
             договорённость, сама встреча ещё впереди.
           next: attend
@@ -467,16 +508,19 @@ scenarios:
             minutes: 35
           mood: life_warmth
         - id: no_window
+          social_plan: {person: timur, status: no_window}
           facts: Сравнили планы и не нашли подходящего общего окна. Решили
             попробовать в другой день.
           next: alternative
           mood: life_uncertainty
       attend:
+        label: общаюсь на встрече
         minutes:
         - 10
         - 15
         outcomes:
         - id: met
+          social_plan: {person: timur, status: met}
           facts: Встретились с Тимуром в согласованном месте и поговорили;
             встреча действительно состоялась.
           next: remember
@@ -492,11 +536,13 @@ scenarios:
         - park_rest
         - rest
       alternative:
+        label: домашние дела вместо встречи
         minutes:
         - 15
         - 25
         outcomes:
         - id: home
+          social_plan: {person: timur, status: home_alternative}
           facts: Вместо несостоявшейся встречи решила спокойно заняться
             домашними делами. Отказ не означает ссору.
           next: remember
@@ -509,6 +555,8 @@ scenarios:
         - drawing
         - movie
       remember:
+        passive: true
+        publication: silent
         minutes:
         - 8
         - 15

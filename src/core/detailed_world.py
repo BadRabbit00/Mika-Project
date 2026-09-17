@@ -29,14 +29,183 @@ class DetailedWorld:
             if spec["entry"] not in spec["nodes"] or not 0 <= spec["chance"] <= 1:
                 raise ValueError(f"Invalid scenario entry or chance: {name}")
             for node in spec["nodes"].values():
+                if node.get("publication", "event") not in {
+                    "event",
+                    "silent",
+                    "latest",
+                }:
+                    raise ValueError(f"Invalid publication policy: {name}")
                 if not 0 < node["minutes"][0] <= node["minutes"][1]:
                     raise ValueError(f"Invalid action duration: {name}")
                 for outcome in node["outcomes"]:
+                    if outcome.get("publication", "event") not in {
+                        "event",
+                        "silent",
+                        "latest",
+                    }:
+                        raise ValueError(f"Invalid outcome publication policy: {name}")
                     if (
                         outcome.get("next") is not None
                         and outcome["next"] not in spec["nodes"]
                     ):
                         raise ValueError(f"Unknown scenario branch: {name}")
+
+    @staticmethod
+    def _social_decision(state, effect, identity, at, facts, activity_id):
+        person = effect["person"]
+        plans = state.setdefault("social_plans", {})
+        previous = plans.get(person)
+        if previous and from_utc_iso(previous["at"]) >= at:
+            return
+        plans[person] = effect | {
+            "event_id": identity,
+            "at": to_utc_iso(at),
+            "facts": facts,
+            "activity_id": activity_id,
+        }
+        if (
+            effect["status"] != "waiting"
+            and state["world_flags"].get("social_waiting") == person
+        ):
+            state["world_flags"]["social_waiting"] = None
+
+    def recover(self):
+        """Upgrade annotations, preserving saved branches, clocks and effects."""
+
+        def save(c):
+            for row in c.execute(
+                "SELECT * FROM world_runs WHERE status='running'"
+            ).fetchall():
+                current = self.catalogue.get(row["scenario"], {})
+                payload = json.loads(row["payload"])
+                for name, node in payload["spec"]["nodes"].items():
+                    updated = current.get("nodes", {}).get(name, {})
+                    for key in ("publication", "label", "passive"):
+                        if key in updated:
+                            node[key] = updated[key]
+                    choices = {o["id"]: o for o in updated.get("outcomes", [])}
+                    for choice in node["outcomes"]:
+                        for key in ("social_plan", "publication"):
+                            if key in choices.get(choice["id"], {}):
+                                choice[key] = choices[choice["id"]][key]
+                if packed(payload) != row["payload"]:
+                    c.execute(
+                        "UPDATE world_runs SET payload=? WHERE id=?",
+                        (packed(payload), row["id"]),
+                    )
+            state = self.engine._state(c)
+            for row in c.execute(
+                "SELECT e.*,r.scenario,s.node FROM world_steps s "
+                "JOIN world_runs r ON r.id=s.run_id "
+                "JOIN life_events e ON e.id=s.event_id ORDER BY e.at DESC,e.rowid DESC"
+            ).fetchall():
+                node = (
+                    self.catalogue.get(row["scenario"], {})
+                    .get("nodes", {})
+                    .get(row["node"], {})
+                )
+                event = json.loads(row["payload"])
+                choice = next(
+                    (
+                        o
+                        for o in node.get("outcomes", [])
+                        if o["id"] == event["outcome"]
+                    ),
+                    {},
+                )
+                if effect := choice.get("social_plan"):
+                    self._social_decision(
+                        state,
+                        effect,
+                        row["id"],
+                        from_utc_iso(row["at"]),
+                        event["facts"],
+                        row["activity_id"],
+                    )
+                publication = choice.get(
+                    "publication", node.get("publication", "event")
+                )
+                if publication != event.get("world", {}).get("publication", "event"):
+                    c.execute(
+                        "UPDATE life_events SET payload="
+                        "json_set(payload,'$.world.publication',?) WHERE id=?",
+                        (publication, row["id"]),
+                    )
+                if publication == "silent":
+                    c.execute(
+                        "UPDATE life_events SET publication_status='silent' "
+                        "WHERE id=? AND publication_status IN "
+                        "('pending','generating','draft','queued')",
+                        (row["id"],),
+                    )
+            updated_at = c.execute(
+                "SELECT updated_at FROM life_state WHERE key='life.resources'"
+            ).fetchone()[0]
+            self.engine._save(c, state, from_utc_iso(updated_at))
+            self.retire_obsolete(c)
+
+        self.database.run_transaction(save)
+
+    @staticmethod
+    def retire_obsolete(c):
+        """A pending wait ends on reply; delivered consequences retire older drafts."""
+        c.execute(
+            "UPDATE life_events SET publication_status='expired',"
+            "error='newer_scenario_step' "
+            "WHERE publication_status IN ('pending','generating','draft','queued') "
+            "AND EXISTS (SELECT 1 FROM world_steps step "
+            "JOIN world_steps later ON later.run_id=step.run_id "
+            "AND later.rowid>step.rowid "
+            "JOIN life_events successor ON successor.id=later.event_id "
+            "WHERE step.event_id=life_events.id AND "
+            "(json_extract(life_events.payload,'$.world.publication')='latest' "
+            "OR successor.publication_status='published'))"
+        )
+
+    def publishable(self, event_id):
+        """Reject silent notes and late drafts behind an already delivered step."""
+        with self.database.connection(readonly=True) as c:
+            row = c.execute(
+                "SELECT e.publication_status,e.payload,r.scenario,s.node,s.run_id,"
+                "s.rowid AS sequence FROM life_events e "
+                "LEFT JOIN world_steps s ON s.event_id=e.id "
+                "LEFT JOIN world_runs r ON r.id=s.run_id WHERE e.id=?",
+                (event_id,),
+            ).fetchone()
+            if row is None or row["publication_status"] in {
+                "silent",
+                "expired",
+                "killed",
+            }:
+                return False
+            node = (
+                self.catalogue.get(row["scenario"], {})
+                .get("nodes", {})
+                .get(row["node"], {})
+            )
+            event = json.loads(row["payload"])
+            choice = next(
+                (
+                    o
+                    for o in node.get("outcomes", [])
+                    if o["id"] == event.get("outcome")
+                ),
+                {},
+            )
+            publication = choice.get(
+                "publication",
+                node.get(
+                    "publication", event.get("world", {}).get("publication", "event")
+                ),
+            )
+            if publication == "silent":
+                return False
+            return not c.execute(
+                "SELECT 1 FROM world_steps s JOIN life_events e ON e.id=s.event_id "
+                "WHERE s.run_id=? AND s.rowid>? "
+                "AND (?='latest' OR e.publication_status='published')",
+                (row["run_id"], row["sequence"], publication),
+            ).fetchone()
 
     @staticmethod
     def _place(spec, activity, at):
@@ -387,6 +556,10 @@ class DetailedWorld:
         return choices
 
     def _effects(self, c, state, choice, identity, at, payload, activity):
+        if effect := choice.get("social_plan"):
+            self._social_decision(
+                state, effect, identity, at, choice["facts"], activity.id
+            )
         if effect := choice.get("food"):
             from src.core.nutrition import Nutrition
 
@@ -582,6 +755,7 @@ class DetailedWorld:
                 activity=activity,
                 mood=choice.get("mood"),
                 outcome=choice["id"],
+                silent=choice.get("publication", node.get("publication")) == "silent",
             )
             self._effects(c, state, choice, identity, at, payload, activity)
             changes = {
@@ -596,6 +770,9 @@ class DetailedWorld:
                 "changes": changes,
                 "parent_activity_id": payload["activity_id"],
                 "pay": payload.get("pay"),
+                "publication": choice.get(
+                    "publication", node.get("publication", "event")
+                ),
             }
             c.execute(
                 "INSERT INTO world_steps VALUES (?,?,?,?,?,?,?)",
@@ -646,6 +823,7 @@ class DetailedWorld:
                 ),
             )
             self.engine._save(c, state, at)
+            self.retire_obsolete(c)
 
         self.database.run_transaction(save)
 
