@@ -1,0 +1,194 @@
+# Fictional venues, menus and body-clock calibration, not real business listings.
+# Hunger uses 0 = sated and 100 = very hungry. It is not a medical model.
+hunger:
+  initial: 25
+  awake_per_hour: 7
+  asleep_per_hour: 2
+  active_extra_per_hour: 2
+  want_meal: 30
+  irritable: 40
+  urgent: 75
+  large_portion: 65
+  bands: {sated: сыта, peckish: начинает хотеться есть, hungry: голодная и более раздражительная, very_hungry: сильно проголодалась}
+  mood_cooldown_hours: 4
+  home_satiety: 60
+  home_large_satiety: 90
+  home_minutes: [15, 20]
+  home_large_minutes: [22, 28]
+  early_dinner_from: 17
+  early_dinner_hunger: 55
+  minimum_meal_gap_hours: 3
+  meals: {breakfast: [7, 11], lunch: [12, 16], dinner: [18, 20]}
+choices:
+  eat_out_chance: 0.65
+  postpone_lunch_chance: 0.18
+  walk_before_meal_minutes: [35, 50]
+  home_after_meal_stay_chance: 0.3
+  home_after_meal_tired_bonus: 0.3
+  skip_meal_chance: {breakfast: 0.08, lunch: 0.12, dinner: 0.08}
+  tired_skip_bonus: {breakfast: 0.45, lunch: 0.05, dinner: 0.35}
+  meal_visit_minutes: 40
+  meal_visit_large_minutes: 50
+  queue_minutes: [4, 7]
+  store_visit_minutes: 22
+  reserve_cash: 3000
+  optional_spend_fraction: 0.15
+  snack_cooldown_hours: 6
+  craving_window_hours: 3
+  craving_chance: 0.28
+  craving_lifetime_hours: 6
+  cravings: [chocolate, chips, gum, ice_cream, apple, banana, juice, pastry, nuts]
+  snack_kinds: [rest, park_rest, cafe, dining, shop, movie, drawing, break]
+  home_trip_kinds: [rest, drawing, movie]
+  legacy_venues: {кофейня: pause, магазин: corner_shop}
+facts:
+  meal_start: Наступило запланированное время поесть; ещё выбираю еду и не закончила приём пищи.
+  cafe_start: Зашла в кофейню; заказ ещё не оплачен и не съеден.
+  dining_start: "Сейчас нахожусь в {venue}, собираюсь поесть; заказ ещё не оплачен и не съеден."
+  home_meal: Поела дома готовую домашнюю еду. Порция взята из реального запаса.
+  home_large: Из-за сильного голода поела дома и взяла две порции вместо одной.
+  hunger: Давно не ела, голод начинает раздражать и мешать сосредоточиться.
+  very_hungry: Сильно проголодалась; поесть стало важнее необязательных дел.
+  want: "Захотелось небольшого удовольствия: {name}. Пока ничего не покупала."
+  unaffordable: "Сейчас не покупаю {name}: после обязательных расходов денег на это мало."
+  bought: "Оплатила покупку: {name}, {price} тенге, место — {venue}. Ещё не съела и не выпила."
+  consumed: "Ранее купила еду или напиток: {name}. Теперь закончила перекус или приём пищи."
+  gum: Ранее купила жвачку, теперь взяла её из своего запаса. Чуть приятнее, но голод не прошёл.
+  expired: Часть купленных перекусов испортилась; выбросила их, есть уже нельзя.
+  postpone: Решила сначала немного погулять после пар. Обед пока отложен; голод никуда не делся.
+  meal_first: Сильно проголодалась и отложила прогулку перед обедом. После пар направлюсь сразу поесть в уже выбранное заведение.
+  stay_home: После домашнего обеда передумала выходить на необязательную прогулку; остаюсь дома.
+  early_dinner: Проголодалась после отложенного обеда и перенесла ужин на более раннее время.
+  skipped_meal: Сейчас ещё сыта после недавней еды; второй обед или ужин подряд не нужен.
+  chose_to_skip: Отложила приём пищи ради отдыха или другого занятия. Пока не поела, голод сохранится.
+  no_food: Голодная, но готовой еды нет; нужно приготовить из имеющихся продуктов или сначала купить продукты.
+  ordering: выбор и оплата еды
+  eating: приём пищи
+  snacking: небольшой перекус
+  home_eating: домашний приём пищи
+  craving_trip: поход за небольшим перекусом
+  food_travel: дорога за едой
+  food_shopping: покупка продуктов для домашней еды
+  cooking_meal: готовка и домашний приём пищи
+  cooked: Домашняя еда приготовлена из имеющихся ингредиентов; теперь можно поесть.
+  meal_visit: обед в заведении
+  walk_before_meal: прогулка перед отложенным обедом
+  homecoming: дорога домой
+products:
+  rice_bowl: {name: рис с курицей и овощами, kind: meal, satiety: 48, minutes: [18, 23], shelf_hours: 4}
+  soup_bread: {name: суп с хлебом, kind: meal, satiety: 40, minutes: [17, 22], shelf_hours: 4}
+  pasta: {name: паста, kind: meal, satiety: 50, minutes: [20, 25], shelf_hours: 4}
+  dumplings: {name: манты, kind: meal, satiety: 55, minutes: [22, 27], shelf_hours: 4}
+  fish_plate: {name: рыба с гарниром, kind: meal, satiety: 50, minutes: [20, 25], shelf_hours: 4}
+  salad: {name: овощной салат, kind: meal, satiety: 28, minutes: [15, 20], shelf_hours: 4}
+  sandwich: {name: сэндвич, kind: meal, satiety: 32, minutes: [12, 16], shelf_hours: 8}
+  wrap: {name: донер с курицей, kind: meal, satiety: 42, minutes: [15, 20], shelf_hours: 4}
+  burger: {name: бургер, kind: meal, satiety: 38, minutes: [15, 20], shelf_hours: 4}
+  fries: {name: маленькая картошка фри, kind: snack, satiety: 14, minutes: [8, 12], shelf_hours: 2}
+  coffee: {name: кофе, kind: drink, satiety: 0, minutes: [10, 15], shelf_hours: 2}
+  tea: {name: чай, kind: drink, satiety: 0, minutes: [10, 15], shelf_hours: 2}
+  water: {name: питьевая вода, kind: drink, satiety: 0, minutes: [3, 5], shelf_hours: 48}
+  juice: {name: фруктовый сок, kind: snack, satiety: 4, minutes: [5, 8], shelf_hours: 24}
+  chocolate: {name: маленькая шоколадка, kind: snack, satiety: 8, minutes: [5, 8], shelf_hours: 720}
+  chips: {name: маленькая пачка чипсов, kind: snack, satiety: 10, minutes: [8, 12], shelf_hours: 168}
+  gum: {name: жвачка, kind: snack, satiety: 0, minutes: [3, 5], shelf_hours: 720}
+  ice_cream: {name: мороженое, kind: snack, satiety: 7, minutes: [7, 10], shelf_hours: 1}
+  apple: {name: яблоко, kind: snack, satiety: 7, minutes: [5, 8], shelf_hours: 96}
+  banana: {name: банан, kind: snack, satiety: 9, minutes: [5, 8], shelf_hours: 72}
+  nuts: {name: горсть орехов, kind: snack, satiety: 12, minutes: [7, 10], shelf_hours: 168}
+  pastry: {name: булочка, kind: snack, satiety: 16, minutes: [8, 12], shelf_hours: 24}
+  yogurt: {name: йогурт, kind: snack, satiety: 9, minutes: [5, 8], shelf_hours: 8}
+  cookies: {name: овсяное печенье, kind: snack, satiety: 10, minutes: [7, 10], shelf_hours: 168}
+  cotton_candy: {name: сладкая вата, kind: snack, satiety: 6, minutes: [8, 12], shelf_hours: 8}
+venues:
+  campus_cafe:
+    name: Кафе «Тёплая тарелка»
+    category: cafe
+    opens: "08:00"
+    closes: "20:00"
+    routes: {home: 18, university: 8, park: 15}
+    menu: {rice_bowl: 1400, soup_bread: 1100, salad: 1000, tea: 250, pastry: 400}
+  courtyard:
+    name: Кафе «Дворик»
+    category: cafe
+    opens: "10:00"
+    closes: "22:00"
+    routes: {home: 15, university: 15, park: 10}
+    menu: {pasta: 2300, dumplings: 2500, salad: 1600, tea: 450, juice: 650}
+  pause:
+    name: Кофейня «Пауза»
+    category: coffee_shop
+    opens: "08:00"
+    closes: "22:00"
+    routes: {home: 15, university: 10, park: 12}
+    menu: {coffee: 1200, tea: 700, sandwich: 1700, pastry: 800, chocolate: 550}
+  grains:
+    name: Кофейня «Зёрна»
+    category: coffee_shop
+    opens: "09:00"
+    closes: "23:00"
+    routes: {home: 20, university: 18, park: 8}
+    menu: {coffee: 1500, tea: 850, sandwich: 2100, pastry: 1000, ice_cream: 900}
+  samal:
+    name: Ресторан «Самал»
+    category: restaurant
+    opens: "12:00"
+    closes: "23:00"
+    routes: {home: 25, university: 22, park: 18}
+    menu: {fish_plate: 4800, pasta: 3900, dumplings: 3800, salad: 2800, tea: 900}
+  uyut:
+    name: Ресторан «Уют»
+    category: restaurant
+    opens: "11:00"
+    closes: "22:00"
+    routes: {home: 22, university: 25, park: 15}
+    menu: {rice_bowl: 2900, soup_bread: 2400, pasta: 3400, salad: 2200, juice: 1100}
+  lavash:
+    name: «Быстрый лаваш»
+    category: fast_food
+    opens: "09:00"
+    closes: "23:00"
+    routes: {home: 12, university: 5, park: 15}
+    menu: {wrap: 1200, fries: 650, juice: 400, water: 250}
+  burger_corner:
+    name: «Бургерная на углу»
+    category: fast_food
+    opens: "10:00"
+    closes: "23:00"
+    routes: {home: 18, university: 8, park: 10}
+    menu: {burger: 1600, fries: 800, ice_cream: 550, juice: 450}
+  corner_shop:
+    name: Магазин «У дома»
+    category: shop
+    opens: "08:00"
+    closes: "23:00"
+    routes: {home: 5, university: 30, park: 20}
+    menu: {chocolate: 450, chips: 550, gum: 200, ice_cream: 350, water: 200, juice: 350, yogurt: 400, cookies: 450}
+  student_shop:
+    name: Магазин «Студенческий»
+    category: shop
+    opens: "07:30"
+    closes: "21:00"
+    routes: {home: 25, university: 4, park: 20}
+    menu: {sandwich: 800, pastry: 300, chocolate: 400, gum: 180, chips: 500, juice: 300, water: 180}
+  minimarket:
+    name: «Минимаркет 24»
+    category: shop
+    opens: "00:00"
+    closes: "24:00"
+    routes: {home: 8, university: 22, park: 18}
+    menu: {chocolate: 500, chips: 650, gum: 250, ice_cream: 450, yogurt: 450, juice: 400, water: 250, nuts: 700}
+  fruit_shop:
+    name: «Фруктовая лавка»
+    category: shop
+    opens: "09:00"
+    closes: "20:00"
+    routes: {home: 7, university: 25, park: 12}
+    menu: {apple: 200, banana: 250, nuts: 600, juice: 450, water: 200}
+  sweet_shelf:
+    name: «Сладкая полка»
+    category: shop
+    opens: "10:00"
+    closes: "22:00"
+    routes: {home: 12, university: 20, park: 5}
+    menu: {chocolate: 650, pastry: 550, ice_cream: 500, gum: 220, cookies: 600, juice: 400}

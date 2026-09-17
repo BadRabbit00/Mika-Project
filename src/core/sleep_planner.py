@@ -192,11 +192,74 @@ class ScheduledSleepProvider:
         wake = self.history.schedule.resolve_wake(
             local_day, rng=rng, trigger_states=triggers
         )
+        wake_at, reason = wake.at, wake.reason
+        details = getattr(self, "life_details", None)
+        if details and wake.reason in {"alarm", "free"}:
+            with self.database.connection(readonly=True) as c:
+                debt_row = c.execute(
+                    "SELECT debt_after FROM sleep_log WHERE debt_applied=1 "
+                    "AND wake_at<=? ORDER BY wake_at DESC LIMIT 1",
+                    (reference,),
+                ).fetchone()
+                resources = c.execute(
+                    "SELECT value FROM life_state WHERE key='life.resources'"
+                ).fetchone()
+            debt = debt_row[0] if debt_row else self.initial.initial_sleep_debt
+            cfg = details["morning"]
+            lessons = self.history.schedule.classes(local_day)
+            if wake.reason == "alarm" and debt < cfg["tired_debt_hours"] and lessons:
+                preparation = sum(cfg["mandatory"].values()) + sum(
+                    cfg["optional"].values()
+                )
+                wake_at = min(
+                    wake_at,
+                    lessons[0].start
+                    - timedelta(
+                        minutes=preparation
+                        + cfg["arrival_buffer_minutes"]
+                        + self.history.schedule._data["commute_minutes"]
+                    ),
+                )
+            if debt >= cfg["tired_debt_hours"]:
+                extra = rng.randint(*cfg["sleep_extension_minutes"])
+                lessons = self.history.schedule.classes(local_day)
+                transport = self.history.schedule._data["commute_minutes"]
+                taxi = bool(
+                    lessons
+                    and debt >= cfg["severe_debt_hours"]
+                    and resources
+                    and json.loads(resources[0])["cash"] >= cfg["taxi_cost"] + 3000
+                    and rng.random() < cfg["taxi_chance"]
+                )
+                if taxi:
+                    transport = cfg["taxi_minutes"]
+                mandatory = sum(cfg["mandatory"].values())
+                latest = (
+                    lessons[0].start
+                    - timedelta(
+                        minutes=transport + mandatory + cfg["arrival_buffer_minutes"]
+                    )
+                    if lessons
+                    else wake.at + timedelta(minutes=extra)
+                )
+                wake_at = max(wake.at, min(wake.at + timedelta(minutes=extra), latest))
+                reason = "debt_taxi" if taxi else "debt_rest"
+                decision = {
+                    "taxi": taxi,
+                    "extra_minutes": int((wake_at - wake.at).total_seconds() / 60),
+                    "debt": round(debt, 4),
+                }
+                self.database.run_transaction(
+                    lambda c: c.execute(
+                        "INSERT OR IGNORE INTO life_state VALUES (?,?,?)",
+                        ("morning:" + str(day), json.dumps(decision), reference),
+                    )
+                )
         if only_if_started and bedtime > at:
             return
         self._save(
-            SleepWindow(bedtime, wake.at),
-            reason=wake.reason,
+            SleepWindow(bedtime, wake_at),
+            reason=reason,
             planned=bedtime,
             origin="scheduled",
         )

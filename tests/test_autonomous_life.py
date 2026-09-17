@@ -80,6 +80,15 @@ async def test_sleep_keeps_incoming_unread_and_session_open(database):
     try:
         assert await inbox.accept("dm", "Hello", "input-1", received_at=at)
         await inbox.tick()
+        from structlog.testing import capture_logs
+
+        with capture_logs() as events:
+            await inbox.tick()
+            await inbox.tick()
+        assert not any(
+            e.get("table") == "chat_inbox" and e.get("event") == "db_row_change"
+            for e in events
+        )
         service.reply.assert_not_awaited()
         with database.connection(readonly=True) as c:
             row = c.execute("SELECT * FROM chat_inbox WHERE id='input-1'").fetchone()

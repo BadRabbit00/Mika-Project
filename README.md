@@ -101,10 +101,18 @@ checks reject stale drafts, and only confirmed replies enter dialogue history.
 See the [implementation checklist](docs/LIFE_IMPLEMENTATION.md),
 [runtime guide](docs/AUTONOMOUS_LIFE_WORK.md),
 [mandatory activity transitions](docs/ACTIVITY_TRANSITIONS.md),
-[simulation report](docs/LIFE_SIMULATION.md) and
-[remaining authoring scope](docs/LIFE_GAPS.md). Configuration lives in
-`config/life_simulation.yaml`, `config/life_chains.yaml` and
-`config/activity_transitions.yaml`.
+[detailed event trees](docs/DETAILED_WORLD.md),
+[hunger and food choices](docs/NUTRITION.md),
+[multi-day simulation](docs/DEEP_WORLD_SIMULATION.md) and
+[modeling boundaries](docs/LIFE_GAPS.md). Configuration lives in
+`config/life_simulation.yaml`, `config/life_chains.yaml`,
+`config/activity_transitions.yaml`, `config/world_details.yaml`,
+`config/world_scenarios.yaml` and `config/nutrition.yaml`.
+
+Saved NPC calendars, appointments, food, money and productivity influence future
+activities. Breakfast, lunch and dinner are optional opportunities; skipped meals
+preserve hunger. The private Telegram YAML can include `topics.state` for one
+pinned, editable state document, separate from the machine-topic change log.
 
 Run the offline simulation on temporary storage:
 

@@ -31,8 +31,13 @@ def packed(value):
 class LifeEngine:
     def __init__(self, database, config, config_dir):
         self.database, self.config = database, config
+        self.config_dir = Path(config_dir)
         self.rules = YAML(typ="safe").load(Path(config_dir) / "life_chains.yaml")
         self.life = YAML(typ="safe").load(Path(config_dir) / "life.yaml")
+        self.details = YAML(typ="safe").load(Path(config_dir) / "world_details.yaml")
+        self.details["nutrition"] = YAML(typ="safe").load(
+            Path(config_dir) / "nutrition.yaml"
+        )
         self.schedule = Schedule.from_config(config_dir)
 
     @staticmethod
@@ -46,16 +51,18 @@ class LifeEngine:
 
     @staticmethod
     def _save(c, state, at):
+        value = packed(state)
         c.execute(
-            "UPDATE life_state SET value=?,updated_at=? WHERE key='life.resources'",
-            (packed(state), at),
+            "UPDATE life_state SET value=?,updated_at=? WHERE key='life.resources' "
+            "AND value!=?",
+            (value, at, value),
         )
 
     def state(self):
         with self.database.connection(readonly=True) as c:
             return self._state(c)
 
-    def public_state(self):
+    def public_state(self, at=None):
         state = self.state()
         keys = {
             "cash",
@@ -71,10 +78,23 @@ class LifeEngine:
             "gym_visits",
         }
         with self.database.connection(readonly=True) as c:
+            action = None
+            if at is not None:
+                from src.core.detailed_world import DetailedWorld
+
+                require_aware(at)
+                activity = c.execute(
+                    "SELECT id FROM life_activities WHERE state='active' "
+                    "AND starts_at<=? AND ends_at>?",
+                    (at, at),
+                ).fetchone()
+                if activity:
+                    action = DetailedWorld.active_action(c, activity[0], at)
             events = [
                 dict(at=row["at"], facts=json.loads(row["payload"])["facts"])
                 for row in c.execute(
-                    "SELECT at,payload FROM life_events WHERE kind!='need' ORDER BY "
+                    "SELECT at,payload FROM life_events WHERE kind!='need' "
+                    "AND json_extract(payload,'$.facts')!='' ORDER BY "
                     "at DESC LIMIT 6"
                 )
             ]
@@ -86,9 +106,24 @@ class LifeEngine:
                 )
             ]
         return {key: state[key] for key in keys} | {
+            "food": self.food_view(at) if at is not None else None,
             "recent_events": events,
+            "ongoing_activity": {
+                "label": action["label"],
+                "until": to_utc_iso(action["until"]),
+            }
+            if action
+            else None,
             "commitments": pending,
+            "ingredients": state.get("ingredients", []),
+            "devices": state.get("devices", {}),
+            "world_flags": state.get("world_flags", {}),
         }
+
+    def food_view(self, at):
+        from src.core.nutrition import Nutrition
+
+        return Nutrition(self).view(at)
 
     def observe_weather(self, weather, at):
         at = require_aware(at)
@@ -209,6 +244,15 @@ class LifeEngine:
                 "('life.resources',?,?)",
                 (packed(state), at),
             )
+            from src.core.household import Household
+            from src.core.nutrition import Nutrition
+            from src.core.world_people import WorldPeople
+
+            adopted = self._state(c)
+            Household(self).ensure(adopted, at)
+            Nutrition(self).ensure(adopted, at)
+            WorldPeople(self).ensure(adopted, at)
+            self._save(c, adopted, at)
 
         self.database.run_transaction(save)
 
@@ -254,16 +298,33 @@ class LifeEngine:
         state["npc"][person] = value
         return value
 
+    def _contact_person(self, c, state, person, at):
+        from src.core.world_people import WorldPeople
+
+        value = self._person(state, person, at)
+        if value.get("observed_day") != str(at.date()):
+            people = WorldPeople(self)
+            value["busy"] = not people.available(c, person, at)
+            value["activity"] = people.occupation(c, person, at)
+        return value
+
     def ready(self, task, at, activity):
         spec = json.loads(task["payload"])
-        if self.state()["ill_until"] and task["kind"] not in {
+        from src.core.life_dynamics import illness_stage
+
+        stage = illness_stage(self.state(), at)
+        allowed_while_ill = {
             "recover",
             "groceries",
             "cat_care",
             "mother_contact",
             "mother_followup",
             "dasha_loan",
-        }:
+            "prepare_meal",
+        }
+        if stage == "recovering":
+            allowed_while_ill.update({"coursework", "aika_notes", "series"})
+        if stage != "well" and task["kind"] not in allowed_while_ill:
             return False
         if (
             task["status"] != "pending"
@@ -281,6 +342,7 @@ class LifeEngine:
         if (
             "cost" in spec
             and self.state()["cash"]
+            + (self.state()["savings"] if task["kind"] == "coffee_replace" else 0)
             < self.config["money"]["prices"][spec["cost"]]
             + self.config["money"]["essentials_reserve"]
         ):
@@ -301,7 +363,7 @@ class LifeEngine:
         def save(c):
             state = self._state(c)
             value = self._person(state, person, at)
-            value.update(mood=mood, busy=busy)
+            value.update(mood=mood, busy=busy, observed_day=str(at.date()))
             self._save(c, state, at)
 
         self.database.run_transaction(save)
@@ -311,7 +373,7 @@ class LifeEngine:
 
         def save(c):
             state = self._state(c)
-            value = self._person(state, person, at)
+            value = self._contact_person(c, state, person, at)
             self._save(c, state, at)
             return value
 
@@ -451,10 +513,20 @@ class LifeEngine:
 
     def needs(self, at=None):
         state = self.state()
-        return {
+        from src.core.household import Household
+
+        can_cook = bool(
+            at
+            and any(
+                Household(self).ingredients_for(state, recipe, at)
+                for recipe in self.details["food"]["recipes"]
+            )
+        )
+        result = {
             "cash": state["cash"],
             "economize": bool(at and self.shortfall(at, state) > 0),
-            "groceries": state["pantry"] <= self.config["food"]["low_portions"],
+            "groceries": state["pantry"] <= self.config["food"]["low_portions"]
+            and not can_cook,
             "ill": state["ill_until"] is not None,
             "rain": bool(
                 at
@@ -467,6 +539,88 @@ class LifeEngine:
             and from_utc_iso(state["coursework_due"]) - require_aware(at)
             < timedelta(days=2),
         }
+        if at is not None:
+            from src.core.life_dynamics import illness_stage, productivity, urgency
+            from src.core.nutrition import Nutrition
+
+            hunger = Nutrition(self).hunger(at)
+            result.update(
+                hunger=hunger,
+                hungry=hunger >= self.details["nutrition"]["hunger"]["want_meal"],
+                stay_home_after_meal=state.get("stay_home_after_meal")
+                == str(at.date()),
+            )
+
+            with self.database.connection(readonly=True) as c:
+                mood = c.execute(
+                    "SELECT p,a,d FROM mood WHERE at<=? ORDER BY at DESC LIMIT 1", (at,)
+                ).fetchone()
+                debt = c.execute(
+                    "SELECT debt_after FROM sleep_log WHERE debt_applied=1 "
+                    "AND wake_at<=? ORDER BY wake_at DESC LIMIT 1",
+                    (at,),
+                ).fetchone()
+            stage = illness_stage(state, at)
+            result["ill"] = stage != "well"
+            lessons = self.schedule.classes(at)
+            workload = (
+                0
+                if result["ill"]
+                else sum(
+                    (lesson.end - lesson.start).total_seconds() / 3600
+                    for lesson in lessons
+                )
+            )
+            value = productivity(
+                self.details,
+                mood=dict(zip(("P", "A", "D"), mood or (0, 0, 0), strict=True)),
+                debt=debt[0] if debt else 0,
+                stage=stage,
+                hungry=hunger >= self.details["nutrition"]["hunger"]["irritable"],
+                workload_hours=workload,
+            )
+            result.update(productivity=value, health_stage=stage)
+            result["sleep_debt"] = debt[0] if debt else 0
+            with self.database.connection(readonly=True) as c:
+                result["errands"] = any(
+                    "магазин"
+                    in json.loads(row["payload"])["spec"]["nodes"][row["node"]].get(
+                        "places", []
+                    )
+                    for row in c.execute(
+                        "SELECT node,payload FROM world_runs WHERE status='running'"
+                    )
+                )
+            last = from_utc_iso(state.get("last_groceries_at", state["started_at"]))
+            pressure = urgency(
+                (at - last).total_seconds() / 86400,
+                self.details["free_time"]["due_days"]["groceries"],
+                self.details["free_time"]["urgency_exponent"],
+            )
+            result["groceries"] |= Random(f"groceries:{at.date()}").random() < pressure
+            result["clinic_due"] = bool(
+                state.get("ill_until")
+                and stage == "recovering"
+                and not state.get("ill_certificate")
+                and from_utc_iso(state["ill_until"]) - at
+                < timedelta(
+                    hours=self.details["health"]["certificate_before_end_hours"]
+                )
+            )
+            for kind in ("laundry", "clinic"):
+                last = from_utc_iso(
+                    state.get("last_" + kind + "_at", state["started_at"])
+                )
+                pressure = urgency(
+                    (at - last).total_seconds() / 86400,
+                    self.details["free_time"]["due_days"][kind],
+                    self.details["free_time"]["urgency_exponent"],
+                )
+                result[kind + "_due"] = result.get(kind + "_due", False) or (
+                    not result["ill"]
+                    and Random(f"{kind}:{at.date()}").random() < pressure
+                )
+        return result
 
     def notice(self, at):
         at = require_aware(at)
@@ -496,7 +650,15 @@ class LifeEngine:
             if self.shortfall(at, state) > 0:
                 requirements.append(("mother_contact", "low_money"))
             if state["pantry"] <= self.config["food"]["low_portions"]:
-                requirements.append(("groceries", "hunger"))
+                from src.core.household import Household
+
+                can_cook = any(
+                    Household(self).ingredients_for(state, recipe, at)
+                    for recipe in self.details["food"]["recipes"]
+                )
+                requirements.append(
+                    ("prepare_meal" if can_cook else "groceries", "hunger")
+                )
             if state["coursework"] < 5:
                 requirements.append(("coursework", "deadline"))
             elif not state["coursework_submitted"]:
@@ -619,11 +781,12 @@ class LifeEngine:
             } and activity.kind not in spec.get("activities", ()):
                 return None
             money, change, outcome = 0, {}, kind
+            npc_transfer = None
             followup = spec.get("followup")
             mood, facts = spec.get("mood"), spec.get("facts")
             cfg = self.config["money"]
             if kind in {"mother_contact", "mother_followup"}:
-                person = self._person(state, "mother", at)
+                person = self._contact_person(c, state, "mother", at)
                 # A retry uses the next day's persisted availability.
                 month = at.strftime("%Y-%m")
                 used = state["mother_extra"].get(month, 0)
@@ -631,6 +794,11 @@ class LifeEngine:
                     cfg["mother_request_limit"],
                     cfg["mother_monthly_extra_limit"] - used,
                     self.shortfall(at, state),
+                    max(
+                        0,
+                        state["npc_accounts"]["mother"]["balance"]
+                        - self.details["people"]["mother"]["reserve"],
+                    ),
                 )
                 outcome = (
                     "delay"
@@ -649,6 +817,7 @@ class LifeEngine:
                 }[outcome]
                 if outcome in {"help", "lecture"}:
                     money = amount
+                    npc_transfer = "mother"
                     state["mother_extra"][month] = used + amount
                     state["mother_tension"] += 1 if outcome == "lecture" else -1
                     state["expected_transfer"] = None
@@ -675,8 +844,16 @@ class LifeEngine:
                 money = (
                     0
                     if overdue or state["dasha_trust"] < 0
-                    else max(0, cfg["loan_limit"] - state["debt"])
+                    else min(
+                        max(0, cfg["loan_limit"] - state["debt"]),
+                        max(
+                            0,
+                            state["npc_accounts"]["dasha"]["balance"]
+                            - self.details["people"]["dasha"]["reserve"],
+                        ),
+                    )
                 )
+                npc_transfer = "dasha"
                 state["debt"] += money
                 if money:
                     next_income = self._next_income(at)
@@ -688,11 +865,11 @@ class LifeEngine:
                 facts = self.rules["facts"][outcome]
             elif kind == "groceries":
                 money = -cfg["prices"]["groceries"]
-                change = {"pantry": {"add": self.config["food"]["basket_portions"]}}
-                mood, facts = "life_relief", self.rules["facts"]["groceries"]
+                change = {"last_groceries_at": to_utc_iso(at)}
+                mood, facts = "life_relief", self.details["facts"]["groceries"]
             else:
                 if "person" in spec:
-                    person = self._person(state, spec["person"], at)
+                    person = self._contact_person(c, state, spec["person"], at)
                     if person["busy"]:
                         c.execute(
                             "UPDATE life_tasks SET earliest_at=? WHERE id=?",
@@ -709,7 +886,15 @@ class LifeEngine:
                     )
                 money = -cfg["prices"][spec["cost"]] if "cost" in spec else 0
                 change = spec.get("effects", {})
-            if state["cash"] + money < (
+            savings_used = (
+                min(
+                    state["savings"],
+                    max(0, -money + cfg["essentials_reserve"] - state["cash"]),
+                )
+                if kind == "coffee_replace"
+                else 0
+            )
+            if state["cash"] + savings_used + money < (
                 cfg["essentials_reserve"] if kind == "coffee_replace" else 0
             ):
                 return None
@@ -728,8 +913,46 @@ class LifeEngine:
                 outcome=outcome,
             )
             self._effects(state, change, at)
+            if savings_used:
+                self._money(
+                    c,
+                    state,
+                    identity,
+                    at,
+                    -savings_used,
+                    "replacement-savings",
+                    "savings",
+                )
+                self._money(c, state, identity, at, savings_used, "replacement-funds")
             if money:
                 self._money(c, state, identity, at, money, kind)
+                if npc_transfer:
+                    from src.core.world_people import WorldPeople
+
+                    WorldPeople(self).move_money(
+                        c, state, npc_transfer, -money, identity, at, kind
+                    )
+            if kind == "groceries":
+                from src.core.household import Household
+
+                Household(self).add_basket(state, at)
+            elif kind == "prepare_meal":
+                from src.core.household import Household
+
+                household = Household(self)
+                recipe = next(
+                    (
+                        recipe
+                        for recipe in self.details["food"]["recipes"]
+                        if household.ingredients_for(state, recipe, at)
+                    ),
+                    None,
+                )
+                if recipe is None:
+                    raise ValueError(
+                        "Cooking requires available ingredients at completion"
+                    )
+                household.cook_in(state, recipe, at)
             if followup:
                 self._task(
                     c,
@@ -814,6 +1037,7 @@ class LifeEngine:
                     ]
                 if day.day == cfg["mobile_day"]:
                     operations.append(("mobile", -cfg["mobile"]))
+                state["last_income_at"] = to_utc_iso(day)
                 if not operations:
                     continue
                 identity = "income:" + str(day.date())
@@ -845,11 +1069,15 @@ class LifeEngine:
                 )
                 if repayment:
                     self._money(c, state, identity, day, -repayment, "repayment")
+                    from src.core.world_people import WorldPeople
+
+                    WorldPeople(self).move_money(
+                        c, state, "dasha", repayment, identity, day, "repayment"
+                    )
                     state["debt"] -= repayment
                     state["dasha_trust"] += int(state["debt"] == 0)
                     if state["debt"] == 0:
                         state["debt_due"] = None
-            state["last_income_at"] = to_utc_iso(at)
             self._save(c, state, at)
 
         self.database.run_transaction(save)
@@ -872,6 +1100,7 @@ class LifeEngine:
                 "lunch": "meal",
                 "dinner": "meal",
                 "food_break": "meal",
+                "early_dinner": "meal",
                 "travel": "journey",
             }.get(activity.kind, activity.kind)
             signature = [
@@ -890,14 +1119,17 @@ class LifeEngine:
             money, mood = 0, None
             changes = {}
             if key == "meal":
-                if state["pantry"]:
-                    changes = {"pantry": {"add": -1}}
-                    mood = "life_meal"
-                else:
-                    facts, mood = self.rules["facts"]["hunger"], "life_hunger"
+                facts = self.details["nutrition"]["facts"]["meal_start"]
             if key == "journey":
-                if activity.label == self.config["itinerary"]["labels"]["travel"]:
-                    cost = self.config["money"]["prices"]["transport"]
+                if activity.label in {
+                    self.config["itinerary"]["labels"]["travel"],
+                    "Поездка на такси в университет",
+                }:
+                    cost = (
+                        self.details["morning"]["taxi_cost"]
+                        if activity.label == "Поездка на такси в университет"
+                        else self.config["money"]["prices"]["transport"]
+                    )
                     if state["cash"] < cost:
                         raise ValueError(
                             "A paid journey requires enough money before departure"
@@ -906,13 +1138,15 @@ class LifeEngine:
                 else:
                     facts = self.rules["facts"]["walking_journey"]
             if key == "cafe":
-                cost = self.config["money"]["prices"]["coffee"]
-                if state["cash"] < cost:
-                    facts = self.rules["facts"]["low_money"]
-                else:
-                    money, mood = -cost, "life_rest"
+                facts = self.details["nutrition"]["facts"]["cafe_start"]
+            if key == "dining":
+                facts = self.details["nutrition"]["facts"]["dining_start"].format(
+                    venue=activity.location
+                )
             if activity.kind in {"tea_break", "short_rest"}:
                 mood = "life_rest"
+            if activity.kind == "clinic":
+                facts = self.details["facts"]["clinic_wait"]
             event = self._event(
                 c,
                 state,
@@ -946,6 +1180,19 @@ class LifeEngine:
         def save(c):
             state = self._state(c)
             for name, spec in self.rules["seeds"].items():
+                if name == "illness":
+                    cfg = self.details["health"]
+                    days = Random(f"illness:{at.date()}:{self.config['seed']}").choices(
+                        cfg["duration_days"], cfg["duration_weights"], k=1
+                    )[0]
+                    spec = spec | {
+                        "effects": {
+                            "ill_until": {"after_hours": days * 24},
+                            "ill_started": to_utc_iso(at),
+                            "ill_certificate": False,
+                        },
+                        "followup": {"kind": "recover", "hours": days * 24},
+                    }
                 marker = f"story:{at.date()}:{name}"
                 if c.execute(
                     "SELECT 1 FROM life_state WHERE key=?", (marker,)

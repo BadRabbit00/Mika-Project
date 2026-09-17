@@ -112,6 +112,11 @@ class Publisher:
                 "UPDATE posts SET state='queued' WHERE id=? AND state='draft'",
                 (post_id,),
             )
+            connection.execute(
+                "UPDATE life_events SET publication_status='queued' WHERE post_id=? "
+                "AND publication_status='draft'",
+                (post_id,),
+            )
             return ids
 
         with structlog.contextvars.bound_contextvars(trace_id=trace_id):
@@ -144,7 +149,10 @@ class Publisher:
     @staticmethod
     def _operation(key, destination, *, trace_id, method, at=None, **data):
         at = require_aware(now() if at is None else at)
-        if method not in {"message", "document", "edit", "pin"} or not trace_id:
+        if (
+            method not in {"message", "document", "edit", "edit_document", "pin"}
+            or not trace_id
+        ):
             raise ValueError("Unsupported Telegram operation or missing trace")
         if {"method", "destination", "trace_id", "post_id"} & data.keys():
             raise ValueError("Reserved delivery fields cannot be overridden")
@@ -324,6 +332,15 @@ class OutboxWorker:
                 event = connection.execute(
                     "SELECT * FROM life_events WHERE post_id=?", (payload["post_id"],)
                 ).fetchone()
+                if event and (
+                    gap := json.loads(event["payload"]).get("post_gap_minutes")
+                ):
+                    connection.execute(
+                        "INSERT INTO life_state VALUES ('life.next_post',?,?) "
+                        "ON CONFLICT(key) DO UPDATE SET value=excluded.value,"
+                        "updated_at=excluded.updated_at",
+                        (json.dumps(to_utc_iso(add_elapsed(at, minutes=gap))), at),
+                    )
                 if event is not None and event["journal_id"] is None:
                     parent = connection.execute(
                         "SELECT journal_id FROM life_events WHERE id=?",

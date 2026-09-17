@@ -48,6 +48,10 @@ class StudyGate:
         ).fetchone()
         if row is None:
             raise StudyDeferred("Waiting for an awake home-study interval")
+        from src.core.detailed_world import DetailedWorld
+
+        if DetailedWorld.occupied(connection, at):
+            raise StudyDeferred("A physical world action is still in progress")
         if connection.execute(
             "SELECT 1 FROM sleep_log WHERE actual_bedtime<=? AND wake_at>? "
             "AND (origin!='override' OR override_until>? OR override_until IS NULL)",

@@ -55,6 +55,23 @@ class OpsMirror(logging.Handler):
             "outbox",
             "runs",
             "telegram_delivery_limits",
+            "chat_inbox",
+            "life_state",
+            "world_calendars",
+            "world_runs",
+            "world_steps",
+            "world_changes",
+            "world_plans",
+            "world_appointments",
+            "life_events",
+            "life_tasks",
+            "life_effects",
+            "life_activities",
+            "life_days",
+            "life_breaks",
+            "activity_transitions",
+            "money_ledger",
+            "mood",
         }
         if not (
             domain_change

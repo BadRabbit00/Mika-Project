@@ -13,6 +13,7 @@ topics:
   library: 0    # Библиотека
   machine: 0    # Машинное
   control: 0    # Управление
+  # state: 1266  # Optional pinned simulation state; requires the detailed-world revision.
 
 bots:
   mika: MIKA_BOT_TOKEN

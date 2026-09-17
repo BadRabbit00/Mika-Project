@@ -125,10 +125,13 @@ class ChatInbox:
                 await asyncio.to_thread(self._receipt, row)
                 continue
             if not blocks["day"].chat_allowed:
+                if row["deferred_reason"] == "sleep":
+                    continue
                 await asyncio.to_thread(
                     self.database.run_transaction,
                     lambda c, identity=row["id"]: c.execute(
-                        "UPDATE chat_inbox SET deferred_reason='sleep' WHERE id=?",
+                        "UPDATE chat_inbox SET deferred_reason='sleep' WHERE id=? "
+                        "AND deferred_reason IS NOT 'sleep'",
                         (identity,),
                     ),
                 )

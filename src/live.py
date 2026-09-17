@@ -183,6 +183,7 @@ class LiveApplication(LearningApplication):
             snapshot = WritingSnapshot.decode(row["context_snapshot"])
             if snapshot.day.activity_id and (
                 snapshot.day.activity_id != day.activity_id
+                or snapshot.day.world_action_id != day.world_action_id
                 or snapshot.day.location != day.location
                 or snapshot.day.activity_until
                 and at >= snapshot.day.activity_until
@@ -263,7 +264,9 @@ async def assemble_live(args, service, jobs):
             state = await asyncio.to_thread(store.state)
             return blocks | {
                 "topic": state.topic or catalogue.start,
-                "life_state": await asyncio.to_thread(providers.life.public_state),
+                "life_state": await asyncio.to_thread(
+                    providers.life.public_state, blocks["day"].at
+                ),
             }
 
         service.chat_gateway = ChatGateway(
@@ -386,6 +389,10 @@ async def assemble_live(args, service, jobs):
                 service.publisher,
                 service.layout.publication_destinations(),
                 weather_enabled=True,
+                log_destination=service.layout.destination("machine"),
+                state_destination=service.layout.destination("state")
+                if "state" in service.layout.topics
+                else None,
             ),
         )
     except BaseException:

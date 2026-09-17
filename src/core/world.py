@@ -25,6 +25,7 @@ class DayContext:
     available_objects: tuple[str, ...]
     blackout: Blackout
     activity_id: str | None = None
+    world_action_id: str | None = None
     activity_kind: str | None = None
     activity_label: str | None = None
     subject: str | None = None

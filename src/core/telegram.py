@@ -9,7 +9,7 @@ from aiogram.exceptions import (
     TelegramForbiddenError,
     TelegramRetryAfter,
 )
-from aiogram.types import BufferedInputFile
+from aiogram.types import BufferedInputFile, InputMediaDocument
 from dotenv import dotenv_values
 from pydantic import (
     AliasChoices,
@@ -38,6 +38,7 @@ TOPIC_ROLES = {
     "library": Role("ops", "ingest"),
     "machine": Role("ops", None),
     "control": Role("ops", "commands"),
+    "state": Role("ops", None),
 }
 
 
@@ -65,11 +66,15 @@ class TelegramLayout(BaseModel):
     @model_validator(mode="after")
     def validate_topics(self):
         if (
-            set(self.topics) != TOPIC_ROLES.keys()
-            or len(set(self.topics.values())) != 7
+            not (TOPIC_ROLES.keys() - {"state"}) <= self.topics.keys()
+            or not self.topics.keys() <= TOPIC_ROLES.keys()
+            or len(set(self.topics.values())) != len(self.topics)
             or any(value <= 0 for value in self.topics.values())
         ):
-            raise ValueError("Seven distinct positive topic IDs are required")
+            raise ValueError(
+                "Seven required topics and an optional state topic need "
+                "distinct positive IDs"
+            )
         if self.channel_id is not None and self.channel_id >= 0:
             raise ValueError("A public channel must have a negative chat ID")
         if (
@@ -192,6 +197,18 @@ class TelegramTransport:
                         disable_notification=True,
                     )
                     return payload["message_id"]
+                case "edit_document":
+                    result = await bot.edit_message_media(
+                        chat_id=destination.chat_id,
+                        message_id=payload["message_id"],
+                        media=InputMediaDocument(
+                            media=BufferedInputFile(
+                                payload["content"].encode("utf-8"),
+                                filename=payload["filename"],
+                            ),
+                            caption=payload.get("caption"),
+                        ),
+                    )
                 case _:
                     raise ValueError("Unknown delivery method")
         except TelegramRetryAfter as error:
