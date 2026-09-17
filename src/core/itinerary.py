@@ -58,9 +58,15 @@ class Activity:
             "travel",
             "prepare",
             "shop",
+            "food_shop",
             "gym",
             "walk",
             "study",
+            "side_job",
+            "cooking",
+            "clinic",
+            "hygiene",
+            "packing",
         }
 
     @classmethod
@@ -82,9 +88,10 @@ def _continuous(items):
 
 
 class Itinerary:
-    def __init__(self, database, schedule, config, *, transitions=None):
+    def __init__(self, database, schedule, config, *, transitions=None, details=None):
         self.database, self.schedule, self.config = database, schedule, config
         self.transitions = transitions
+        self.details = details
 
     def day(self, at):
         key = require_aware(at).date().isoformat()
@@ -154,7 +161,14 @@ class Itinerary:
                 (
                     day,
                     self.config["seed"],
-                    json.dumps(self.config, ensure_ascii=False),
+                    json.dumps(
+                        self.config
+                        | {
+                            "world_details": self.details,
+                            "planning_inputs": needs or {},
+                        },
+                        ensure_ascii=False,
+                    ),
                     at,
                 ),
             )
@@ -194,7 +208,7 @@ class Itinerary:
                     target,
                     location,
                     kind,
-                    fields.pop("label", cfg["labels"][kind]),
+                    fields.pop("label") if "label" in fields else cfg["labels"][kind],
                     **fields,
                 )
             )
@@ -222,6 +236,32 @@ class Itinerary:
                 ],
             )
 
+        def university_journey(origin, destination, duration, *, by_taxi=False):
+            if not self.details or walking or by_taxi:
+                journey(destination, duration, origin)
+                if by_taxi:
+                    items[-1] = replace(
+                        items[-1], label="Поездка на такси в университет"
+                    )
+                return
+            walk = self.details["morning"]["stop_walk_minutes"]
+            wait = self.details["morning"]["bus_wait_minutes"]
+            bus = duration - 2 * walk - wait
+            if bus <= 0:
+                raise ValueError("The commute must include both walks and a bus ride")
+            departure_stop, arrival_stop = (
+                (places["home_stop"], places["university_stop"])
+                if origin == home
+                else (places["university_stop"], places["home_stop"])
+            )
+            journey(departure_stop, walk, origin)
+            items[-1] = replace(items[-1], label=cfg["labels"]["walk_travel"])
+            minutes(wait, departure_stop, "bus_wait")
+            journey(arrival_stop, bus, departure_stop)
+            items[-1] = replace(items[-1], label=cfg["labels"]["travel"])
+            journey(destination, walk, arrival_stop)
+            items[-1] = replace(items[-1], label=cfg["labels"]["walk_travel"])
+
         until(sleep.bedtime, home, "rest")
         until(sleep.wake, home, "sleep")
         lessons = () if needs.get("ill") else self.schedule.classes(start)
@@ -234,30 +274,134 @@ class Itinerary:
             if walking
             else self.schedule._data["commute_minutes"]
         )
+        taxi = False
+        ate_out = False
+        if self.details:
+            with self.database.connection(readonly=True) as c:
+                decision = c.execute(
+                    "SELECT value FROM life_state WHERE key=?",
+                    ("morning:" + str(start.date()),),
+                ).fetchone()
+            taxi = bool(
+                decision
+                and json.loads(decision[0])["taxi"]
+                and needs.get("cash", 0)
+                >= self.details["morning"]["taxi_cost"]
+                + self.config["money"]["essentials_reserve"]
+            )
+            if taxi:
+                commute = self.details["morning"]["taxi_minutes"]
         if lessons and cursor < lessons[-1].end:
             departure = lessons[0].start - timedelta(
                 minutes=commute + cfg["arrival_buffer_minutes"]
             )
             available = max(0, (departure - cursor).total_seconds() / 60)
             minimum = cfg["minimum_preparation_minutes"]
-            breakfast = min(cfg["breakfast_minutes"], max(0, available - minimum))
-            minutes(breakfast, home, "breakfast")
-            until(max(departure, cursor + timedelta(minutes=minimum)), home, "prepare")
-            journey(university, commute, home)
+            if self.details:
+                morning = self.details["morning"]
+                options = dict(morning["optional"])
+                mandatory = sum(morning["mandatory"].values())
+                for key in morning["skip_order"]:
+                    if sum(options.values()) + mandatory <= available:
+                        break
+                    if rng.random() < morning["skip_chance"]:
+                        options.pop(key, None)
+                for key in morning["skip_order"]:
+                    if sum(options.values()) + mandatory > available:
+                        options.pop(key, None)
+                for kind, duration in morning["mandatory"].items():
+                    minutes(duration, home, kind)
+                for kind, duration in options.items():
+                    minutes(duration, home, kind if kind != "phone" else "rest")
+                until(max(departure, cursor), home, "prepare")
+            else:
+                breakfast = min(cfg["breakfast_minutes"], max(0, available - minimum))
+                minutes(breakfast, home, "breakfast")
+                until(
+                    max(departure, cursor + timedelta(minutes=minimum)), home, "prepare"
+                )
+            university_journey(home, university, commute, by_taxi=taxi)
+            if taxi:
+                commute = self.schedule._data["commute_minutes"]
             for lesson in lessons:
                 until(lesson.start, university, "break")
                 until(lesson.end, university, "class", subject=lesson.subject)
-            journey(home, commute, university)
+            food_route = ()
+            if self.details and "nutrition" in self.details:
+                from src.core.food_plan import after_classes
+
+                breakfast = next(
+                    (item for item in items if item.kind == "breakfast"), None
+                )
+                hunger_cfg = self.details["nutrition"]["hunger"]
+                projected = min(
+                    100,
+                    max(
+                        0,
+                        (
+                            cursor - (breakfast.ends_at if breakfast else sleep.wake)
+                        ).total_seconds(),
+                    )
+                    / 3600
+                    * hunger_cfg["awake_per_hour"]
+                    + (0 if breakfast else needs.get("hunger", 25)),
+                )
+                food_route = after_classes(
+                    cursor,
+                    min(awake_end, local_clock(start, cfg["dinner_start"])),
+                    rng,
+                    self.config,
+                    self.details,
+                    needs
+                    | {
+                        "hunger": projected,
+                        "hungry": projected >= hunger_cfg["want_meal"],
+                        "cash": needs.get("cash", self.config["money"]["initial_cash"]),
+                    },
+                )
+            if food_route:
+                for part in food_route:
+                    minutes(
+                        part["minutes"],
+                        part["location"],
+                        part["kind"],
+                        label=part["label"],
+                        origin=part["origin"],
+                        destination=part["destination"],
+                    )
+                ate_out = True
+            else:
+                university_journey(university, home, commute)
         else:
+            if self.details:
+                minutes(
+                    self.details["morning"]["mandatory"]["hygiene"], home, "hygiene"
+                )
             minutes(cfg["breakfast_minutes"], home, "breakfast")
-        minutes(cfg["lunch_minutes"], home, "lunch") if lessons else until(
+        minutes(
+            cfg["lunch_minutes"], home, "rest" if ate_out else "lunch"
+        ) if lessons else until(
             min(local_clock(start, "13:00"), awake_end), home, "rest"
         )
         if not lessons:
             minutes(cfg["lunch_minutes"], home, "lunch")
         outing = None
         cash = needs.get("cash", self.config["money"]["initial_cash"])
-        if not needs.get("ill") and not needs.get("urgent_deadline"):
+        choice = None
+        if self.details and not needs.get("urgent_deadline"):
+            from src.core.life_dynamics import choose_free_time
+
+            choice = choose_free_time(self.details, needs, rng)
+            if ate_out and choice in {"walk", "cafe"}:
+                choice = "drawing"
+            if choice in {"drawing", "movie", "side_job", "laundry"}:
+                length = rng.randint(*self.details["free_time"]["minutes"][choice])
+                limit = min(awake_end, local_clock(start, cfg["dinner_start"]))
+                if cursor + timedelta(minutes=length) <= limit:
+                    minutes(length, home, choice)
+            elif choice in {"walk", "cafe", "gym", "shop", "clinic"}:
+                outing = choice
+        elif not needs.get("ill") and not needs.get("urgent_deadline"):
             if (
                 needs.get("groceries")
                 and cash >= self.config["money"]["prices"]["groceries"]
@@ -274,26 +418,84 @@ class Itinerary:
             place = "park" if outing == "walk" else outing
             duration = cfg["travel_minutes"]["home_" + place]
             begins = max(cursor, local_clock(start, cfg["outing_start"]))
+            if self.details and outing in {"walk", "cafe"}:
+                from src.core.world_plan import outing_segments
+
+                segments = outing_segments(
+                    begins,
+                    min(awake_end, local_clock(start, cfg["dinner_start"])),
+                    rng,
+                    self.config,
+                    self.details,
+                    cafe_allowed=cash
+                    >= self.config["money"]["prices"]["coffee"]
+                    + self.config["money"]["essentials_reserve"]
+                    and not needs.get("economize"),
+                )
+                if segments:
+                    until(begins, home, "rest")
+                    for segment in segments:
+                        minutes(
+                            segment["minutes"],
+                            segment["location"],
+                            segment["kind"],
+                            label=segment["label"],
+                            origin=segment["origin"],
+                            destination=segment["destination"],
+                        )
+                outing = None
             finishes = begins + timedelta(
-                minutes=2 * duration + cfg["outing_minutes"][outing]
+                minutes=2 * duration + cfg["outing_minutes"].get(outing, 0)
             )
-            if finishes < min(awake_end, local_clock(start, cfg["dinner_start"])):
+            venue = self.details["venues"].get(places[place]) if self.details else None
+            open_for_visit = not venue or (
+                begins + timedelta(minutes=duration)
+                >= local_clock(start, venue["opens"])
+                and finishes - timedelta(minutes=duration)
+                <= local_clock(start, venue["closes"])
+            )
+            if (
+                outing
+                and open_for_visit
+                and finishes < min(awake_end, local_clock(start, cfg["dinner_start"]))
+            ):
                 until(begins, home, "rest")
                 journey(places[place], duration, home)
                 minutes(cfg["outing_minutes"][outing], places[place], outing)
                 journey(home, duration, places[place])
         study_start = local_clock(
-            start, self.schedule._data["day_shape"]["study_window"]["from"]
+            start,
+            self.details["health"]["recovery_study_start"]
+            if self.details and needs.get("health_stage") == "recovering"
+            else self.schedule._data["day_shape"]["study_window"]["from"],
         )
         until(min(study_start, awake_end), home, "rest")
-        studying = "rest" if needs.get("ill") else "study"
-        until(min(local_clock(start, cfg["dinner_start"]), awake_end), home, studying)
+        budget = None
+        if self.details:
+            from src.core.life_dynamics import study_minutes
+
+            budget = study_minutes(self.details, needs.get("productivity", 0.6))
+            if budget and needs.get("health_stage") == "recovering":
+                budget += round(
+                    self.details["health"]["recovery_study_bonus_minutes"]
+                    * needs["productivity"]
+                )
+        studying = "rest" if needs.get("ill") and not budget else "study"
+
+        def study_until(end):
+            nonlocal budget
+            if budget is None:
+                until(end, home, studying)
+                return
+            portion = max(0, min(budget, int((end - cursor).total_seconds() / 60)))
+            if portion:
+                minutes(portion, home, "study")
+                budget -= portion
+            until(end, home, "rest")
+
+        study_until(min(local_clock(start, cfg["dinner_start"]), awake_end))
         minutes(cfg["dinner_minutes"], home, "dinner")
-        until(
-            min(local_clock(start, cfg["evening_rest_start"]), awake_end),
-            home,
-            studying,
-        )
+        study_until(min(local_clock(start, cfg["evening_rest_start"]), awake_end))
         until(awake_end, home, "rest")
         until(end, home, "sleep")
         if self.transitions:
@@ -393,7 +595,11 @@ class Itinerary:
         ]
         cfg = self.config["itinerary"]
         home = cfg["locations"]["home"]
-        illness = needs.get("ill")
+        illness = needs.get("ill") and (
+            not self.details
+            or needs.get("productivity", 0)
+            < self.details["productivity"]["minimum_to_study"]
+        )
         rain = needs.get("rain")
         low_cash = (
             needs.get("economize")
@@ -412,6 +618,17 @@ class Itinerary:
             if current.location != home:
                 if current.location == cfg["locations"]["university"]:
                     duration = self.schedule._data["commute_minutes"]
+                elif self.details and any(
+                    v["name"] == current.location
+                    for v in self.details.get("nutrition", {})
+                    .get("venues", {})
+                    .values()
+                ):
+                    duration = next(
+                        v["routes"]["home"]
+                        for v in self.details["nutrition"]["venues"].values()
+                        if v["name"] == current.location
+                    )
                 else:
                     place = next(
                         key
@@ -476,19 +693,22 @@ class Itinerary:
                 )
             revised.extend(item for item in suffix if item.kind == "sleep")
         elif current.location == home and (
-            rain or low_cash or needs.get("urgent_deadline")
+            rain
+            or low_cash
+            or needs.get("urgent_deadline")
+            or needs.get("stay_home_after_meal")
         ):
             revised = []
+            optional = False
             for item in suffix:
-                optional = (
-                    item.kind in {"walk", "cafe", "gym"}
-                    or item.kind == "travel"
-                    and all(
-                        endpoint != cfg["locations"]["university"]
-                        and endpoint != cfg["locations"]["shop"]
-                        for endpoint in (item.origin, item.destination)
-                    )
-                )
+                if item.kind == "travel" and item.origin == home:
+                    optional = item.destination not in {
+                        cfg["locations"]["university"],
+                        cfg["locations"]["shop"],
+                        cfg["locations"].get("home_stop"),
+                        cfg["locations"].get("clinic"),
+                    }
+                returns_home = item.kind == "travel" and item.destination == home
                 if optional:
                     item = replace(
                         item,
@@ -499,6 +719,8 @@ class Itinerary:
                         destination=None,
                     )
                 revised.append(item)
+                if returns_home:
+                    optional = False
             if revised == suffix:
                 return False
         else:

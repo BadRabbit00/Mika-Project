@@ -15,7 +15,14 @@ from src.core.transitions import activity_data
 
 @lru_cache(maxsize=8)
 def _rules(path):
-    return YAML(typ="safe").load(Path(path))["claims"]
+    rules = YAML(typ="safe").load(Path(path))["claims"]
+    food_path = Path(path).with_name("nutrition.yaml")
+    if food_path.exists():
+        venues = YAML(typ="safe").load(food_path)["venues"]
+        rules["shop"]["destinations"].extend(
+            venue["name"] for venue in venues.values() if venue["category"] == "shop"
+        )
+    return rules
 
 
 def plan_evidence(database, at):

@@ -1,0 +1,239 @@
+# Fictional authoring parameters. Durations are elapsed minutes; prices are KZT.
+version: 1
+productivity:
+  baseline: 0.6
+  mood_weights: {P: 0.08, A: 0.22, D: 0.1}
+  debt_penalty_per_hour: 0.035
+  hunger_penalty: 0.12
+  workload_penalty_per_hour: 0.025
+  minimum_to_study: 0.18
+  study_minutes: [30, 210]
+health:
+  duration_days: [3, 4, 5, 6, 7, 10, 14]
+  duration_weights: [20, 25, 25, 15, 12, 2, 1]
+  stages:
+    acute:
+      productivity: 0
+      facts: Слабость и температура; отменила дела и отдыхаю, учёба сегодня не по силам.
+    weak:
+      productivity: 0.2
+      facts: Температура меньше беспокоит, но быстро устаю; берегу силы дома.
+    recovering:
+      productivity: 0.7
+      facts: Силы постепенно возвращаются; могу немного позаниматься дома с перерывами.
+    well:
+      productivity: 1
+      facts: Самочувствие вернулось к обычному; снова распределяю дела.
+  clinic_minutes: 35
+  clinic_travel_minutes: 20
+  certificate_before_end_hours: 18
+  recovery_study_start: 14:00
+  recovery_study_bonus_minutes: 60
+morning:
+  mandatory: {hygiene: 5, packing: 5}
+  arrival_buffer_minutes: 10
+  optional: {makeup: 12, breakfast: 20, phone: 8}
+  skip_order: [phone, makeup, breakfast]
+  skip_chance: 0.85
+  tired_debt_hours: 4
+  severe_debt_hours: 7
+  sleep_extension_minutes: [10, 30]
+  taxi_minutes: 18
+  taxi_cost: 2200
+  taxi_chance: 0.65
+  stop_walk_minutes: 5
+  bus_wait_minutes: 3
+free_time:
+  weights: {drawing: 3, movie: 2, side_job: 1, walk: 3, cafe: 1, gym: 1}
+  minutes: {drawing: [60, 110], movie: [90, 120], side_job: [90, 120], laundry: [
+      85, 100]}
+  urgency_exponent: 6
+  due_days: {groceries: 7, laundry: 7, clinic: 30}
+  side_job_low_money_multiplier: 12
+  side_job_pay: 3500
+  side_job_payment_delay_hours: 24
+  low_productivity_threshold: 0.4
+  low_productivity_pay_factor: [0.7, 0.8]
+  errand_cash_minimum: 6000
+people:
+  mother:
+    name: мама
+    initial_cash: 45000
+    reserve: 15000
+    income: 180000
+    income_day: 5
+    daily_expenses: 3500
+    weekdays: [[08:30, 12:30, работа], [13:30, 18:00, работа], [19:00, 20:00,
+          домашние дела]]
+    weekends: [[10:00, 12:00, покупки], [18:00, 19:00, семейный ужин]]
+    sleep: [23:00, 07:00]
+    optional: [прогулка, встреча с подругой, дела по дому]
+  dasha:
+    name: Даша
+    initial_cash: 18000
+    reserve: 6000
+    income: 52000
+    income_day: 25
+    daily_expenses: 1100
+    weekdays: [[09:00, 14:00, пары], [17:00, 19:00, подработка]]
+    weekends: [[11:00, 14:00, подработка]]
+    sleep: [00:00, 08:00]
+    optional: [задание к семинару, звонок родителям, стирка]
+  aika:
+    name: Айка
+    initial_cash: 21000
+    reserve: 5000
+    income: 52000
+    income_day: 25
+    daily_expenses: 1000
+    weekdays: [[09:00, 15:00, пары], [18:00, 19:00, английский]]
+    weekends: [[10:00, 12:00, помощь семье]]
+    sleep: [23:30, 07:30]
+    optional: [подготовка презентации, бассейн, встреча с сестрой]
+  timur:
+    name: Тимур
+    initial_cash: 28000
+    reserve: 8000
+    income: 95000
+    income_day: 10
+    daily_expenses: 1400
+    weekdays: [[10:00, 14:00, пары], [15:00, 19:00, работа над проектом]]
+    weekends: [[12:00, 14:00, семейные дела]]
+    sleep: [00:30, 08:00]
+    optional: [тренировка, дедлайн проекта, встреча с друзьями]
+  brother:
+    name: брат
+    initial_cash: 2000
+    reserve: 1000
+    income: 8000
+    income_day: 5
+    daily_expenses: 150
+    weekdays: [[08:00, 14:00, школа], [16:00, 18:00, секция]]
+    weekends: [[11:00, 13:00, секция]]
+    sleep: [22:00, 07:00]
+    optional: [домашнее задание, прогулка с друзьями, помощь дома]
+calendar:
+  optional_chance: 0.35
+  optional_minutes: [30, 90]
+  invitation_reply_minutes: [10, 35]
+  meeting_minutes: [30, 50]
+  travel_buffer_minutes: 20
+food:
+  ingredients:
+    rice: {label: рис, shelf_days: 180}
+    eggs: {label: яйца, shelf_days: 7}
+    vegetables: {label: овощи, shelf_days: 5}
+    milk: {label: молоко, shelf_days: 3}
+    bread: {label: хлеб, shelf_days: 3}
+    oats: {label: овсянка, shelf_days: 120}
+    tea: {label: чай, shelf_days: 180}
+  basket: {rice: 4, eggs: 4, vegetables: 4, milk: 2, bread: 2, oats: 2, tea: 4}
+  basket_cost: 4400
+  prepared_shelf_days: 2
+  recipes:
+    vegetable_rice:
+      label: рис с овощами
+      minutes: [25, 35]
+      ingredients: {rice: 2, vegetables: 2}
+      portions: 3
+    omelette:
+      label: омлет
+      minutes: [12, 18]
+      ingredients: {eggs: 2, milk: 1}
+      substitutes: {milk: {vegetables: 1}}
+      portions: 2
+    oatmeal:
+      label: овсянка
+      minutes: [10, 15]
+      ingredients: {oats: 1, milk: 1}
+      portions: 1
+    toast:
+      label: тост с яйцом
+      minutes: [8, 12]
+      ingredients: {bread: 1, eggs: 1}
+      portions: 1
+devices:
+  kettle: {condition: working, uses: 0, lifespan_uses: 160, replacement_cost:
+      6500}
+  headphones: {condition: working, uses: 0, lifespan_uses: 100, replacement_cost:
+      4900}
+  umbrella: {condition: working, uses: 0, lifespan_uses: 30, replacement_cost:
+      3500}
+  washing_machine: {condition: working, uses: 0, lifespan_uses: 120,
+      replacement_cost: 0}
+  phone_charger: {condition: working, uses: 0, lifespan_uses: 200,
+      replacement_cost: 2500}
+venues:
+  парк:
+    name: районный парк
+    opens: 07:00
+    closes: 22:00
+    features: [фонтан, скамейки, карусель, киоск со сладкой ватой, тихая аллея]
+  кофейня:
+    name: кофейня по дороге из парка
+    opens: 09:00
+    closes: 21:00
+    features: [стойка, столик у окна, розетка, меню, витрина]
+  магазин:
+    name: магазин у дома
+    opens: 08:00
+    closes: 22:00
+    features: [овощной отдел, молочные продукты, касса, очередь]
+  зал:
+    name: районный зал
+    opens: 09:00
+    closes: 22:00
+    features: [раздевалка, кулер, зона растяжки]
+  поликлиника:
+    name: районная поликлиника
+    opens: 09:00
+    closes: 18:00
+    features: [регистратура, талон, очередь, кабинет]
+routes:
+  park_cafe_minutes: [10, 15]
+  obstruction_chance: 0.12
+  extra_minutes: [5, 15]
+  obstruction_reasons: [обход перекрытого тротуара, ожидание на переходе]
+outings:
+  duration_minutes: [110, 150]
+  park_walk_minutes: [20, 30]
+  park_rest_minutes: [20, 30]
+  cafe_minutes: [25, 40]
+  cafe_chance: 0.6
+scenario:
+  max_parallel: 24
+  max_deferred_days: 7
+  variables:
+    social_disappointment: 0
+    household_tension: 0
+    kitchen_agreement: false
+    missing_friend: false
+    laundry: clean
+    assignment_extension: false
+    symptoms_stage: well
+    energy_care: 0
+    umbrella_reminder: false
+    coursework_backup: false
+    spending_review: false
+    mother_repair: false
+    sleep_routine: false
+    cat_supplies: false
+    coffee_savings: false
+    walk_replanned: false
+    gym_soreness: false
+facts:
+  groceries: Купила ингредиенты по списку. Это продукты для готовки, а не уже
+    съеденный ужин.
+  cooked: Блюдо приготовлено из имеющихся продуктов; порции и использованные
+    ингредиенты сохранены.
+  spoiled: Проверила продукты и выбросила испортившееся; из них больше нельзя
+    готовить.
+  calendar_busy: У знакомого уже есть сохранённые дела на это время.
+  appointment: Встреча согласована на свободное время; дорога и место сохранены,
+    сама встреча ещё впереди.
+  no_slot: Подходящего общего окна пока нет; встреча не назначена.
+  ended: Занятие закончилось раньше завершения эпизода; действие не выполнено и
+    последствий нет.
+  clinic_wait: Пришла на назначенный приём; жду своей очереди, справки пока нет.
+  clinic_finished: Плановый приём закончился, справка получена; новый диагноз не
+    выдумывается.

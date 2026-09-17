@@ -325,17 +325,29 @@ class DerivedWorldProvider:
             else Random("road:" + at.date().isoformat()).random(),
         )
         if activity is not None:
+            from src.core.detailed_world import DetailedWorld
+
+            with self.itinerary.database.connection(readonly=True) as c:
+                action = DetailedWorld.active_action(c, activity.id, at)
             sleeping = sleep.contains(at) or activity.kind == "sleep"
             overridden = day.location != activity.location
             day = replace(
                 day,
                 activity_id=activity.id,
+                world_action_id=action["id"] if action and not overridden else None,
                 activity_kind=activity.kind if not overridden else "override",
-                activity_label=activity.label if not overridden else None,
+                activity_label=(action["label"] if action else activity.label)
+                if not overridden
+                else None,
                 subject=activity.subject if not overridden else None,
-                activity_until=activity.ends_at,
+                activity_until=min(activity.ends_at, action["until"])
+                if action
+                else activity.ends_at,
                 busy=activity.busy,
-                study_allowed=activity.can_study and not sleeping and not overridden,
+                study_allowed=activity.can_study
+                and not sleeping
+                and not overridden
+                and action is None,
                 chat_allowed=not sleeping,
                 blackout=Blackout(sleeping, "sleep" if sleeping else None),
             )
@@ -430,16 +442,28 @@ class RuntimeProviders:
             transitions=YAML(typ="safe").load(
                 self.config_dir / "activity_transitions.yaml"
             ),
+            details=YAML(typ="safe").load(self.config_dir / "world_details.yaml"),
         )
         self.life = LifeEngine(database, self.life_config, config_dir)
+        self.itinerary.details = self.life.details
         self.life.bootstrap(started_at)
         world.locations = dict(world.locations) | {
             name: tuple(value["objects"])
             for name, value in self.life_config["itinerary"]["extra_locations"].items()
         }
+        world.locations.update(
+            {
+                venue["name"]: tuple(
+                    self.life.details["nutrition"]["products"][key]["name"]
+                    for key in venue["menu"]
+                )
+                for venue in self.life.details["nutrition"]["venues"].values()
+            }
+        )
         self.sleep = ScheduledSleepProvider(
             database, world.schedule, initial, overrides=overrides
         )
+        self.sleep.life_details = self.life.details
         self.mood = DatabaseMoodProvider(database, self.model, self.sleep, initial)
         self.sleep.mood_at = self.mood.planning_p
         self.weather = WeatherClient.from_config(config_dir, settings=settings)

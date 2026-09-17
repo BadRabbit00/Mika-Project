@@ -69,9 +69,12 @@ def test_departure_rolls_back_learning_commit(tmp_path):
 async def test_life_mood_effect_is_applied_once(tmp_path):
     from pathlib import Path
 
+    from src.core.detailed_world import DetailedWorld
+    from src.core.nutrition import Nutrition
+    from src.core.time_utils import from_utc_iso
     from src.providers import RuntimeProviders
 
-    at = datetime(2026, 9, 16, 19, tzinfo=ALMATY)
+    at = datetime(2026, 9, 16, 18, 30, tzinfo=ALMATY)
     database = Database(tmp_path / "mood.sqlite3")
     database.initialize()
     providers = RuntimeProviders(database, Path("config"), clock=lambda: at)
@@ -79,7 +82,18 @@ async def test_life_mood_effect_is_applied_once(tmp_path):
         await providers.context(at)
         activity = providers.itinerary.current(at)
         providers.life.activity(activity, at)
-        later = at + timedelta(minutes=1)
+        with database.connection(readonly=True) as c:
+            assert not c.execute("SELECT 1 FROM life_effects").fetchone()
+        world = DetailedWorld(providers.life)
+        run = Nutrition(providers.life).home_meal(world, activity, at)
+        assert run
+        with database.connection(readonly=True) as c:
+            later = from_utc_iso(
+                c.execute(
+                    "SELECT due_at FROM world_runs WHERE id=?", (run,)
+                ).fetchone()[0]
+            )
+        world.advance(activity, later, seed=False)
         await providers.mood.apply_life_effect(later)
         await providers.mood.apply_life_effect(later + timedelta(seconds=1))
         with database.connection(readonly=True) as c:

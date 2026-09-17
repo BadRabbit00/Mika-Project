@@ -1,0 +1,2138 @@
+# Authored fictional event trees. Nodes consume real time; prose never selects outcomes.
+version: 1
+scenarios:
+  park_treat:
+    trigger:
+      places:
+      - парк
+      kinds:
+      - walk
+      - park_rest
+      min_minutes: 20
+    chance: 0.7
+    cooldown_days: 1
+    within_activity: true
+    entry: buy
+    nodes:
+      buy:
+        minutes:
+        - 6
+        - 12
+        outcomes:
+        - id: bought
+          facts: Купила одну сладкую вату у киоска в парке; покупка оплачена.
+          next: eat
+          when:
+            cash_gte: 3700
+          food: {action: buy, product: cotton_candy, price: 700, reserve: 3000, shelf_hours: 8}
+        - id: saved
+          facts: Посмотрела на сладкую вату и решила сохранить деньги; ничего не
+            купила.
+          next: fountain
+      eat:
+        minutes:
+        - 6
+        - 10
+        outcomes:
+        - id: finished
+          facts: Доела купленную сладкую вату на скамейке; второй порции сегодня
+            не покупала.
+          next: fountain
+          food: {action: eat, product: cotton_candy, meal: false, satiety: 6}
+          mood: life_treat
+      fountain:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: rested
+          facts: Посидела у фонтана и послушала воду; после паузы стало
+            спокойнее.
+          next:
+          mood: life_rest
+    label: сладкая вата в парке
+  park_carousel:
+    trigger:
+      places:
+      - парк
+      kinds:
+      - walk
+      - park_rest
+      min_minutes: 20
+    chance: 0.25
+    cooldown_days: 1
+    within_activity: true
+    entry: look
+    nodes:
+      look:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: ticket
+          facts: Выбрала карусель и купила один билет; очередь ещё впереди.
+          next: queue
+          when:
+            cash_gte: 4200
+          money: -1200
+        - id: watch
+          facts: Решила посмотреть на карусель со стороны и не тратиться.
+          next: watch
+      queue:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: ride
+          facts: Дождалась очереди и прокатилась; аттракцион закончился.
+          next: watch
+          mood: life_warmth
+      watch:
+        minutes:
+        - 5
+        - 9
+        outcomes:
+        - id: quiet
+          facts: После шума отошла на тихую аллею и немного выдохнула.
+          next:
+          mood: life_rest
+    label: карусель в парке
+  park_sketch:
+    trigger:
+      places:
+      - парк
+      kinds:
+      - walk
+      - park_rest
+      min_minutes: 20
+    chance: 0.4
+    cooldown_days: 1
+    within_activity: true
+    entry: notice
+    nodes:
+      notice:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: light
+          facts: Остановилась посмотреть, как свет ложится на воду; захотелось
+            сохранить это наблюдение.
+          next: draw
+      draw:
+        minutes:
+        - 12
+        - 18
+        outcomes:
+        - id: sketch
+          facts: Сделала быстрый набросок фонтана в блокноте; рисунок далёк от
+            идеала.
+          next: finish
+          mood: life_achievement
+      finish:
+        minutes:
+        - 5
+        - 7
+        outcomes:
+        - id: kept
+          facts: Убрала блокнот и оставила доработку рисунка для дома; пока
+            только набросок.
+          next:
+          flags:
+            sketch_pending: true
+    label: рисунок в парке
+  invite_dasha:
+    trigger:
+      places:
+      - дом
+      - универ
+      kinds:
+      - rest
+      - break
+      min_minutes: 6
+    chance: 0.25
+    cooldown_days: 2
+    within_activity: false
+    entry: invite
+    nodes:
+      invite:
+        minutes:
+        - 2
+        - 4
+        outcomes:
+        - id: sent
+          facts: 'Написала Даше: предложила встретиться, но ответа и договорённости
+            ещё нет.'
+          next: reply
+          flags:
+            social_waiting: dasha
+      reply:
+        minutes:
+        - 10
+        - 35
+        outcomes:
+        - id: busy
+          facts: 'Даша ответила: сейчас занята своими делами и сегодня встретиться
+            не получится. Мне стало немного грустно.'
+          next: alternative
+          when:
+            npc_busy: dasha
+          mood: life_uncertainty
+          flags:
+            social_waiting:
+            social_disappointment: 1
+          contact: dasha
+        - id: tired
+          facts: 'В ответе на приглашение попросили сегодня обойтись без встречи:
+            нет сил на общение. Мне грустно, но это не означает разрыв отношений.'
+          next: alternative
+          when:
+            npc_mood:
+              person: dasha
+              is: tired
+          contact: dasha
+          mood: life_uncertainty
+        - id: free
+          facts: Даша ответила и готова обсудить свободное время. Встреча ещё не
+            назначена.
+          next: agree
+          flags:
+            social_waiting:
+          contact: dasha
+        passive: true
+      agree:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: reserved
+          facts: Согласовали время и место встречи с Дашей; я записала
+            договорённость, сама встреча ещё впереди.
+          next: attend
+          appointment:
+            person: dasha
+            location: парк
+            minutes: 35
+          mood: life_warmth
+        - id: no_window
+          facts: Сравнили планы и не нашли подходящего общего окна. Решили
+            попробовать в другой день.
+          next: alternative
+          mood: life_uncertainty
+      attend:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: met
+          facts: Встретились с Дашей в согласованном месте и поговорили; встреча
+            действительно состоялась.
+          next: remember
+          when:
+            appointment_present: dasha
+          attend: dasha
+          mood: life_warmth
+        places:
+        - парк
+        - дом
+        kinds:
+        - walk
+        - park_rest
+        - rest
+      alternative:
+        minutes:
+        - 15
+        - 25
+        outcomes:
+        - id: home
+          facts: Вместо несостоявшейся встречи решила спокойно заняться
+            домашними делами. Отказ не означает ссору.
+          next: remember
+          flags:
+            missing_friend: true
+        places:
+        - дом
+        kinds:
+        - rest
+        - drawing
+        - movie
+      remember:
+        minutes:
+        - 8
+        - 15
+        outcomes:
+        - id: settled
+          facts: 'Вернулась мыслями к разговору: планы изменились, но общение не оборвалось.
+            Позже можно предложить другое время.'
+          next:
+          mood: life_rest
+    label: планы на встречу с Дашей
+  invite_aika:
+    trigger:
+      places:
+      - дом
+      - универ
+      kinds:
+      - rest
+      - break
+      min_minutes: 6
+    chance: 0.25
+    cooldown_days: 2
+    within_activity: false
+    entry: invite
+    nodes:
+      invite:
+        minutes:
+        - 2
+        - 4
+        outcomes:
+        - id: sent
+          facts: 'Написала Айке: предложила встретиться, но ответа и договорённости
+            ещё нет.'
+          next: reply
+          flags:
+            social_waiting: aika
+      reply:
+        minutes:
+        - 10
+        - 35
+        outcomes:
+        - id: busy
+          facts: 'Айка ответила: сейчас занята своими делами и сегодня встретиться
+            не получится. Мне стало немного грустно.'
+          next: alternative
+          when:
+            npc_busy: aika
+          mood: life_uncertainty
+          flags:
+            social_waiting:
+            social_disappointment: 1
+          contact: aika
+        - id: tired
+          facts: 'В ответе на приглашение попросили сегодня обойтись без встречи:
+            нет сил на общение. Мне грустно, но это не означает разрыв отношений.'
+          next: alternative
+          when:
+            npc_mood:
+              person: aika
+              is: tired
+          contact: aika
+          mood: life_uncertainty
+        - id: free
+          facts: Айка ответила и готова обсудить свободное время. Встреча ещё не
+            назначена.
+          next: agree
+          flags:
+            social_waiting:
+          contact: aika
+        passive: true
+      agree:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: reserved
+          facts: Согласовали время и место встречи с Айкой; я записала
+            договорённость, сама встреча ещё впереди.
+          next: attend
+          appointment:
+            person: aika
+            location: парк
+            minutes: 35
+          mood: life_warmth
+        - id: no_window
+          facts: Сравнили планы и не нашли подходящего общего окна. Решили
+            попробовать в другой день.
+          next: alternative
+          mood: life_uncertainty
+      attend:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: met
+          facts: Встретились с Айкой в согласованном месте и поговорили; встреча
+            действительно состоялась.
+          next: remember
+          when:
+            appointment_present: aika
+          attend: aika
+          mood: life_warmth
+        places:
+        - парк
+        - дом
+        kinds:
+        - walk
+        - park_rest
+        - rest
+      alternative:
+        minutes:
+        - 15
+        - 25
+        outcomes:
+        - id: home
+          facts: Вместо несостоявшейся встречи решила спокойно заняться
+            домашними делами. Отказ не означает ссору.
+          next: remember
+          flags:
+            missing_friend: true
+        places:
+        - дом
+        kinds:
+        - rest
+        - drawing
+        - movie
+      remember:
+        minutes:
+        - 8
+        - 15
+        outcomes:
+        - id: settled
+          facts: 'Вернулась мыслями к разговору: планы изменились, но общение не оборвалось.
+            Позже можно предложить другое время.'
+          next:
+          mood: life_rest
+    label: планы на встречу с Айкой
+  invite_timur:
+    trigger:
+      places:
+      - дом
+      - универ
+      kinds:
+      - rest
+      - break
+      min_minutes: 6
+    chance: 0.25
+    cooldown_days: 2
+    within_activity: false
+    entry: invite
+    nodes:
+      invite:
+        minutes:
+        - 2
+        - 4
+        outcomes:
+        - id: sent
+          facts: 'Написала Тимуру: предложила встретиться, но ответа и договорённости
+            ещё нет.'
+          next: reply
+          flags:
+            social_waiting: timur
+      reply:
+        minutes:
+        - 10
+        - 35
+        outcomes:
+        - id: busy
+          facts: 'Тимур ответил: сейчас занят своими делами и сегодня встретиться
+            не получится. Мне стало немного грустно.'
+          next: alternative
+          when:
+            npc_busy: timur
+          mood: life_uncertainty
+          flags:
+            social_waiting:
+            social_disappointment: 1
+          contact: timur
+        - id: tired
+          facts: 'В ответе на приглашение попросили сегодня обойтись без встречи:
+            нет сил на общение. Мне грустно, но это не означает разрыв отношений.'
+          next: alternative
+          when:
+            npc_mood:
+              person: timur
+              is: tired
+          contact: timur
+          mood: life_uncertainty
+        - id: free
+          facts: Тимур ответил и готов обсудить свободное время. Встреча ещё не
+            назначена.
+          next: agree
+          flags:
+            social_waiting:
+          contact: timur
+        passive: true
+      agree:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: reserved
+          facts: Согласовали время и место встречи с Тимуром; я записала
+            договорённость, сама встреча ещё впереди.
+          next: attend
+          appointment:
+            person: timur
+            location: парк
+            minutes: 35
+          mood: life_warmth
+        - id: no_window
+          facts: Сравнили планы и не нашли подходящего общего окна. Решили
+            попробовать в другой день.
+          next: alternative
+          mood: life_uncertainty
+      attend:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: met
+          facts: Встретились с Тимуром в согласованном месте и поговорили;
+            встреча действительно состоялась.
+          next: remember
+          when:
+            appointment_present: timur
+          attend: timur
+          mood: life_warmth
+        places:
+        - парк
+        - дом
+        kinds:
+        - walk
+        - park_rest
+        - rest
+      alternative:
+        minutes:
+        - 15
+        - 25
+        outcomes:
+        - id: home
+          facts: Вместо несостоявшейся встречи решила спокойно заняться
+            домашними делами. Отказ не означает ссору.
+          next: remember
+          flags:
+            missing_friend: true
+        places:
+        - дом
+        kinds:
+        - rest
+        - drawing
+        - movie
+      remember:
+        minutes:
+        - 8
+        - 15
+        outcomes:
+        - id: settled
+          facts: 'Вернулась мыслями к разговору: планы изменились, но общение не оборвалось.
+            Позже можно предложить другое время.'
+          next:
+          mood: life_rest
+    label: планы на встречу с Тимуром
+  home_drawing:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - drawing
+      min_minutes: 40
+    chance: 1
+    cooldown_days: 1
+    within_activity: true
+    entry: begin
+    nodes:
+      begin:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: materials
+          facts: Разложила блокнот и карандаши; выбрала сюжет рисунка.
+          next: work
+      work:
+        minutes:
+        - 20
+        - 30
+        outcomes:
+        - id: progress
+          facts: Получился удачный фрагмент рисунка, и настроение поднялось.
+          next: finish
+          mood: life_achievement
+          weight: 3
+        - id: restart
+          facts: Не понравилась перспектива; стёрла часть и попробовала заново.
+          next: finish
+          mood: life_frustration
+      finish:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: saved
+          facts: Сохранила рисунок в блокноте и убрала материалы; осталось что
+            доработать в другой раз.
+          next:
+          flags:
+            sketch_pending: true
+    label: рисование дома
+  movie_evening:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - movie
+      min_minutes: 70
+    chance: 1
+    cooldown_days: 1
+    within_activity: true
+    entry: choose
+    nodes:
+      choose:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: selected
+          facts: Выбрала фильм и устроилась дома; пока только начала смотреть.
+          next: watch
+      watch:
+        minutes:
+        - 55
+        - 70
+        outcomes:
+        - id: engaged
+          facts: Посмотрела большую часть фильма и увлеклась историей.
+          next: after
+          mood: life_rest
+        - id: distracted
+          facts: 'Фильм шёл фоном: сегодня трудно удерживать внимание, решила не заставлять
+            себя.'
+          next: after
+          when:
+            productivity_lte: 0.4
+          mood: life_uncertainty
+      after:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: saved
+          facts: Выключила фильм и сохранила место остановки; не утверждаю, что
+            досмотрела то, чего не видела.
+          next:
+          flags:
+            movie_paused: true
+    label: просмотр фильма
+  freelance:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - side_job
+      min_minutes: 65
+    chance: 1
+    cooldown_days: 1
+    within_activity: false
+    entry: brief
+    nodes:
+      brief:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: accepted
+          facts: Разобрала небольшое оплачиваемое задание и согласованные
+            требования; денег пока нет.
+          next: work
+      work:
+        minutes:
+        - 45
+        - 55
+        outcomes:
+        - id: submitted
+          facts: Выполнила и отправила результат подработки. Сумма с учётом
+            продуктивности зафиксирована; жду оплату.
+          next: payment
+          earned_pay: true
+          mood: life_achievement
+      payment:
+        minutes:
+        - 1440
+        - 1440
+        outcomes:
+        - id: paid
+          facts: Оплату за выполненную подработку получила; баланс пополнился на
+            ранее согласованную сумму.
+          next:
+          pay_earned: true
+          mood: life_relief
+        passive: true
+    persistent: true
+    label: оплачиваемое домашнее задание
+  cook_rice:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - cooking
+      min_minutes: 40
+    chance: 0.8
+    cooldown_days: 1
+    within_activity: false
+    entry: check
+    nodes:
+      check:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: ready
+          facts: 'Проверила продукты: для риса с овощами всё есть, начинаю готовить.'
+          next: cook
+          when:
+            recipe: vegetable_rice
+        - id: missing
+          facts: Для выбранного блюда не хватает продуктов; внесла недостающее в
+            список.
+          next: list
+          flags:
+            shopping_list: true
+      cook:
+        minutes:
+        - 25
+        - 35
+        outcomes:
+        - id: cooked
+          facts: Приготовила рис с овощами; ингредиенты израсходованы, готовые
+            порции стоят в холодильнике.
+          next: tidy
+          cook: vegetable_rice
+          mood: life_achievement
+      list:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: planned
+          facts: Записала, что купить при следующем походе в магазин; продукты
+            пока не появились.
+          next:
+      tidy:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: clean
+          facts: Вымыла посуду после готовки и освободила стол.
+          next:
+          mood: life_rest
+    persistent: true
+    label: приготовление риса с овощами
+  omelette_substitution:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - cooking
+      min_minutes: 25
+    chance: 0.5
+    cooldown_days: 1
+    within_activity: false
+    entry: plan
+    nodes:
+      plan:
+        minutes:
+        - 3
+        - 5
+        outcomes:
+        - id: available
+          facts: Проверила ингредиенты для омлета, включая допустимую замену
+            молока овощами.
+          next: cook
+          when:
+            recipe: omelette
+        - id: missing
+          facts: 'Сегодня омлет не собрать: не хватает ингредиентов. Решила не придумывать
+            ужин из ничего.'
+          next: list
+      cook:
+        minutes:
+        - 12
+        - 18
+        outcomes:
+        - id: done
+          facts: Омлет приготовлен из записанных ингредиентов; замена, если она
+            понадобилась, учтена.
+          next: finish
+          cook: omelette
+          mood: life_meal
+      finish:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: stored
+          facts: Убрала готовую еду и отметила срок хранения.
+          next:
+      list:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: written
+          facts: Добавила недостающие продукты в список покупок.
+          next:
+          flags:
+            shopping_list: true
+    persistent: true
+    label: приготовление омлета
+  shared_kitchen:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.5
+    cooldown_days: 4
+    within_activity: false
+    entry: notice
+    nodes:
+      notice:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: mess
+          facts: На кухне накопилась общая посуда; захотелось договориться о
+            правилах.
+          next: ask
+          flags:
+            kitchen_mess: true
+          mood: life_frustration
+      ask:
+        minutes:
+        - 10
+        - 20
+        outcomes:
+        - id: later
+          facts: 'Даша занята: разговор о кухне отложили, договорённости пока нет.'
+          next: return
+          when:
+            npc_busy: dasha
+          mood: life_uncertainty
+        - id: agreement
+          facts: Поговорили с Дашей и договорились убирать за собой; сегодня
+            начинаем с общей посуды.
+          next: clean
+          flags:
+            kitchen_agreement: true
+          mood: life_relief
+        passive: true
+      return:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: talk
+          facts: Вернулись к разговору о кухне и нашли спокойный компромисс.
+          next: clean
+          when:
+            npc_free: dasha
+          flags:
+            kitchen_agreement: true
+          mood: life_relief
+        wait_minutes:
+        - 60
+        - 90
+      clean:
+        minutes:
+        - 15
+        - 25
+        outcomes:
+        - id: done
+          facts: Убрала свою часть кухни; конкретное дело закончено.
+          next:
+          flags:
+            kitchen_mess: false
+          mood: life_achievement
+    label: уборка и разговор о кухне
+  laundry:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      - laundry
+      min_minutes: 25
+    chance: 1
+    cooldown_days: 6
+    within_activity: false
+    entry: sort
+    nodes:
+      sort:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: sorted
+          facts: Разобрала накопившуюся одежду и запустила стирку.
+          next: wash
+          flags:
+            laundry: washing
+          device_use: washing_machine
+          when:
+            due: laundry
+      wash:
+        minutes:
+        - 50
+        - 70
+        outcomes:
+        - id: washed
+          facts: Стирка закончилась; вещи мокрые, их ещё нужно развесить.
+          next: hang
+          flags:
+            laundry: wet
+        passive: true
+      hang:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: drying
+          facts: Развесила бельё; сушиться оно будет до следующего дня.
+          next: dry
+          flags:
+            laundry: drying
+        places:
+        - дом
+      dry:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: folded
+          facts: Проверила высохшую одежду и убрала её; чистые вещи снова
+            доступны.
+          next:
+          flags:
+            laundry: clean
+          mood: life_achievement
+        places:
+        - дом
+        wait_minutes:
+        - 720
+        - 1080
+    persistent: true
+    label: стирка и уход за одеждой
+  headphones_cable:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.1
+    cooldown_days: 14
+    within_activity: false
+    entry: fault
+    nodes:
+      fault:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: noticed
+          facts: В одном наушнике начал пропадать звук; проверяю, дело ли в
+            кабеле.
+          next: test
+          device:
+            name: headphones
+            condition: intermittent
+          mood: life_frustration
+          when:
+            device:
+              name: headphones
+              is: working
+      test:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: cleaned
+          facts: После проверки контакта звук вернулся. Отмечаю временное
+            улучшение, а не покупку новых наушников.
+          next: check
+          device:
+            name: headphones
+            condition: temporary
+      check:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: works
+          facts: При следующей проверке наушники работают; замену пока отложила.
+          next:
+          weight: 2
+          device:
+            name: headphones
+            condition: working
+          mood: life_relief
+        - id: broken
+          facts: Звук снова пропадает; временная мера не помогла, покупку нужно
+            запланировать.
+          next: replacement
+          device:
+            name: headphones
+            condition: broken
+          mood: life_frustration
+        places:
+        - дом
+        wait_minutes:
+        - 1440
+        - 2880
+      replacement:
+        minutes:
+        - 10
+        - 15
+        places:
+        - магазин
+        outcomes:
+        - id: replaced
+          facts: Выбрала и оплатила новые наушники вместо сломанных; бюджет стал
+            меньше, зато звук больше не пропадает.
+          next:
+          when:
+            cash_gte: 7900
+          money: -4900
+          device:
+            name: headphones
+            condition: working
+            reset_uses: true
+          mood: life_relief
+    persistent: true
+    label: проверка и ремонт наушников
+  charger_problem:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.1
+    cooldown_days: 20
+    within_activity: false
+    entry: notice
+    nodes:
+      notice:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: loose
+          facts: Телефон заряжается только при определённом положении провода.
+          next: test
+          device:
+            name: phone_charger
+            condition: intermittent
+          mood: life_frustration
+          when:
+            device:
+              name: phone_charger
+              is: working
+      test:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: bad
+          facts: Проверка подтвердила проблему с проводом; решила заменить его.
+          next: buy
+          device:
+            name: phone_charger
+            condition: broken
+      buy:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: bought
+          facts: Купила новый зарядный провод в магазине; покупка учтена.
+          next:
+          when:
+            cash_gte: 5500
+          money: -2500
+          device:
+            name: phone_charger
+            condition: working
+          mood: life_relief
+        places:
+        - магазин
+    persistent: true
+    label: проверка зарядки телефона
+  umbrella_weather:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.7
+    cooldown_days: 1
+    within_activity: false
+    entry: notice
+    nodes:
+      notice:
+        minutes:
+        - 4
+        - 6
+        outcomes:
+        - id: rain
+          facts: По свежим данным идёт дождь; проверила зонт перед выходом.
+          next: test
+          when:
+            rain: true
+          flags:
+            umbrella_reminder: true
+      test:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: fine
+          facts: Зонт раскрывается нормально; убрала его в сумку.
+          next: return
+          device_use: umbrella
+      return:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: dried
+          facts: Вернувшись домой, раскрыла зонт просушиться и убрала мокрые
+            вещи.
+          next:
+          flags:
+            umbrella_reminder: false
+          when:
+            returned_home: true
+        places:
+        - дом
+        wait_minutes:
+        - 60
+        - 90
+    label: дела с зонтом перед дождливой прогулкой
+  mother_reconnect:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.25
+    cooldown_days: 4
+    within_activity: false
+    entry: think
+    nodes:
+      think:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: decided
+          facts: После напряжённого разговора захотелось написать маме без
+            просьбы о деньгах.
+          next: contact
+          when:
+            state:
+              mother_tension:
+                gte: 1
+      contact:
+        minutes:
+        - 10
+        - 20
+        outcomes:
+        - id: busy
+          facts: Мама сейчас занята; договорились поговорить позже.
+          next: later
+          when:
+            npc_busy: mother
+          mood: life_uncertainty
+        - id: calm
+          facts: Поговорили с мамой об обычных делах; напряжение немного
+            отпустило.
+          next: after
+          effects:
+            mother_tension:
+              add: -1
+          mood: life_warmth
+        passive: true
+      later:
+        minutes:
+        - 120
+        - 180
+        outcomes:
+        - id: returned
+          facts: Мама освободилась, и мы спокойно вернулись к разговору.
+          next: after
+          when:
+            npc_free: mother
+          effects:
+            mother_tension:
+              add: -1
+          mood: life_warmth
+        passive: true
+      after:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: quiet
+          facts: После разговора стало легче; прежние разногласия не обязаны
+            исчезнуть за один вечер.
+          next:
+          flags:
+            mother_repair: true
+    label: разговор с мамой
+  timur_boundary:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.2
+    cooldown_days: 5
+    within_activity: false
+    entry: thought
+    nodes:
+      thought:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: need
+          facts: Поняла, что мне важно заранее знать о переносе планов; хочу
+            спокойно это обсудить.
+          next: talk
+          when:
+            state:
+              timur_tension:
+                gte: 1
+      talk:
+        minutes:
+        - 15
+        - 25
+        outcomes:
+        - id: later
+          facts: Тимур занят и не может нормально поговорить; тему сохранили до
+            свободного времени.
+          next: return
+          when:
+            npc_busy: timur
+        - id: heard
+          facts: Обсудили, как предупреждать друг друга о занятости; стало
+            понятнее, чего ждать.
+          next: after
+          effects:
+            timur_tension:
+              add: -1
+          mood: life_relief
+        passive: true
+      return:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: talked
+          facts: Вернулись к разговору без спешки и договорились предупреждать о
+            переносах.
+          next: after
+          when:
+            npc_free: timur
+          effects:
+            timur_tension:
+              add: -1
+          mood: life_warmth
+        wait_minutes:
+        - 120
+        - 180
+      after:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: recorded
+          facts: Договорённость появилась; доверие дальше будет зависеть от
+            поступков.
+          next:
+          flags:
+            contact_agreement: true
+    label: разговор с Тимуром о планах
+  brother_followthrough:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.2
+    cooldown_days: 3
+    within_activity: false
+    entry: reminder
+    nodes:
+      reminder:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: remembered
+          facts: Вспомнила обещание помочь брату; сначала проверю, свободен ли
+            он.
+          next: contact
+      contact:
+        minutes:
+        - 10
+        - 20
+        outcomes:
+        - id: busy
+          facts: У брата секция или другие дела; помощь перенесли.
+          next: retry
+          when:
+            npc_busy: brother
+        - id: ready
+          facts: Брат освободился; начали разбирать именно его вопрос.
+          next: help
+      retry:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: ready
+          facts: Нашли общее свободное время и вернулись к заданию.
+          next: help
+          when:
+            npc_free: brother
+        places:
+        - дом
+        wait_minutes:
+        - 120
+        - 180
+      help:
+        minutes:
+        - 20
+        - 30
+        outcomes:
+        - id: understood
+          facts: После нескольких примеров брат объяснил решение своими словами.
+          next:
+          mood: life_warmth
+          effects:
+            brother_helped: true
+        - id: partial
+          facts: 'Разобрали только часть: брат устал. Осталось конкретное место, к
+            которому вернёмся.'
+          next:
+          mood: life_uncertainty
+          effects:
+            brother_helped: false
+    label: помощь брату с заданием
+  coursework_backup:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - study
+      min_minutes: 25
+    chance: 0.35
+    cooldown_days: 5
+    within_activity: true
+    entry: worry
+    nodes:
+      worry:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: noticed
+          facts: Перед работой над курсовой проверила, где лежат файлы;
+            резервной копии не было.
+          next: backup
+      backup:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: copied
+          facts: Сделала резервную копию текущей версии курсовой; это не новая
+            выполненная часть.
+          next: check
+          flags:
+            coursework_backup: true
+          mood: life_relief
+      check:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: verified
+          facts: Открыла сохранённую копию и убедилась, что файл читается.
+          next:
+          mood: life_achievement
+    persistent: true
+    label: резервная копия материалов курсовой
+  assignment_extension:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      min_minutes: 15
+    chance: 0.8
+    cooldown_days: 30
+    within_activity: false
+    entry: assess
+    nodes:
+      assess:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: needs
+          facts: Из-за болезни не укладываюсь в учебный срок; решила запросить
+            перенос.
+          next: request
+          when:
+            ill: true
+      request:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: sent
+          facts: Написала преподавателю просьбу о переносе срока; согласия пока
+            нет.
+          next: response
+      response:
+        minutes:
+        - 720
+        - 1440
+        outcomes:
+        - id: approved
+          facts: Преподаватель согласовал два дополнительных дня; новый срок
+            записан.
+          next:
+          extend_deadline_days: 2
+          flags:
+            assignment_extension: true
+          mood: life_relief
+          weight: 3
+        - id: refused
+          facts: Перенос срока не согласовали; нужно перераспределить оставшееся
+            время.
+          next:
+          mood: life_uncertainty
+        passive: true
+    label: обсуждение срока сдачи задания
+  ill_friend_visit:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      min_minutes: 20
+    chance: 0.5
+    cooldown_days: 5
+    within_activity: false
+    entry: message
+    nodes:
+      message:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: told
+          facts: Написала Тимуру, что заболела и сегодня никуда не выйду.
+          next: reply
+          when:
+            ill: true
+          mood: life_uncertainty
+      reply:
+        minutes:
+        - 15
+        - 30
+        outcomes:
+        - id: busy
+          facts: Тимур занят; поддержал сообщением, приехать пока не может.
+          next: rest
+          when:
+            npc_busy: timur
+          mood: life_warmth
+        - id: plan
+          facts: Тимур предложил ненадолго заехать; согласовали время визита.
+          next: visit
+          appointment:
+            person: timur
+            location: дом
+            minutes: 30
+        - id: message
+          facts: Не нашли времени для визита, но поговорили в сообщениях.
+          next: rest
+          mood: life_warmth
+        passive: true
+      visit:
+        minutes:
+        - 15
+        - 20
+        outcomes:
+        - id: visited
+          facts: Тимур действительно зашёл ненадолго. Стало радостнее, но
+            болезнь ещё не прошла.
+          next: rest
+          when:
+            appointment_present: timur
+          attend: timur
+          mood: life_warmth
+        places:
+        - дом
+      rest:
+        minutes:
+        - 20
+        - 30
+        outcomes:
+        - id: rested
+          facts: После общения снова отдыхаю дома; нагрузку сегодня не
+            увеличиваю.
+          next:
+    label: общение с Тимуром во время болезни
+  recovery_notes:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      min_minutes: 15
+    chance: 0.7
+    cooldown_days: 7
+    within_activity: false
+    entry: ask
+    nodes:
+      ask:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: asked
+          facts: Попросила Айку прислать записи пропущенных пар; пока их не
+            получила.
+          next: reply
+          when:
+            ill: true
+      reply:
+        minutes:
+        - 30
+        - 90
+        outcomes:
+        - id: later
+          facts: Айка занята; записи обещала прислать позже.
+          next: receive
+          when:
+            npc_busy: aika
+        - id: sent
+          facts: Айка прислала записи. Теперь они доступны, но разбирать их буду
+            сама дома.
+          next: review
+          mood: life_relief
+        passive: true
+      receive:
+        minutes:
+        - 120
+        - 180
+        outcomes:
+        - id: sent
+          facts: Айка освободилась и прислала обещанные записи.
+          next: review
+          when:
+            npc_free: aika
+          mood: life_warmth
+        passive: true
+      review:
+        minutes:
+        - 20
+        - 30
+        outcomes:
+        - id: sorted
+          facts: Разобрала список пропущенных тем и отметила, с чего начать; это
+            ещё не усвоенные знания.
+          next:
+          flags:
+            missed_notes_sorted: true
+          mood: life_achievement
+        places:
+        - дом
+        kinds:
+        - study
+    label: пропущенные конспекты от Айки
+  budget_review:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.25
+    cooldown_days: 3
+    within_activity: false
+    entry: check
+    nodes:
+      check:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: counted
+          facts: Сверила деньги и ближайшие обязательные расходы; спонтанные
+            покупки подождут.
+          next: choice
+          flags:
+            spending_review: true
+          mood: life_uncertainty
+          when:
+            shortfall: true
+      choice:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: economy
+          facts: Решила оставить запас на еду и дорогу, а доставку еды отложить.
+          next: after
+          flags:
+            no_delivery: true
+      after:
+        minutes:
+        - 20
+        - 30
+        outcomes:
+        - id: relief
+          facts: После разбора расходов стало понятнее, на что хватает денег;
+            баланс от одного планирования не вырос.
+          next:
+          mood: life_relief
+    label: планирование расходов
+  coffee_savings:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.5
+    cooldown_days: 3
+    within_activity: false
+    entry: decide
+    nodes:
+      decide:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: goal
+          facts: Прикинула, сколько ещё нужно на замену кофеварки; покупка не
+            произойдёт сама собой.
+          next: reserve
+          when:
+            coffee_broken: true
+      reserve:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: saved
+          facts: Отложила часть свободных денег на кофеварку; тратить этот
+            резерв на кафе не буду.
+          next: wait
+          when:
+            cash_gte: 6000
+          save_money: 1000
+          flags:
+            coffee_savings: true
+          mood: life_achievement
+        - id: postponed
+          facts: Свободного остатка сейчас нет; сначала еда и обязательные
+            расходы.
+          next: wait
+      wait:
+        minutes:
+        - 30
+        - 60
+        outcomes:
+        - id: kept
+          facts: План замены сохранила; до покупки продолжаю обходиться тем, что
+            есть.
+          next:
+    persistent: true
+    label: накопления на кофеварку
+  cat_supplies:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.8
+    cooldown_days: 4
+    within_activity: false
+    entry: check
+    nodes:
+      check:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: needed
+          facts: Проверила принадлежности для кота на передержке; расходники
+            заканчиваются.
+          next: buy
+          when:
+            cat_home: true
+      buy:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: paid
+          facts: Купила расходники для кота, сохранила сумму для разговора с
+            хозяйкой.
+          next: owner
+          when:
+            cash_gte: 4500
+          money: -1500
+          flags:
+            cat_supplies: true
+        places:
+        - магазин
+      owner:
+        minutes:
+        - 30
+        - 60
+        outcomes:
+        - id: agreed
+          facts: Написала хозяйке о расходах; она подтвердила, что обсудим их
+            при передаче кота.
+          next:
+          flags:
+            cat_reimbursement_pending: 1500
+          mood: life_relief
+        passive: true
+    persistent: true
+    label: забота о принадлежностях для кота
+  gym_recovery:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.4
+    cooldown_days: 4
+    within_activity: false
+    entry: notice
+    nodes:
+      notice:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: sore
+          facts: После сохранённой тренировки чувствую обычную мышечную
+            усталость; сегодня выбираю более спокойные дела.
+          next: stretch
+          when:
+            recent_activity:
+              kind: gym
+              hours: 48
+          flags:
+            gym_soreness: true
+      stretch:
+        minutes:
+        - 12
+        - 18
+        outcomes:
+        - id: gentle
+          facts: Сделала спокойную растяжку дома без новой интенсивной
+            тренировки.
+          next: later
+          mood: life_rest
+      later:
+        minutes:
+        - 1440
+        - 1440
+        outcomes:
+        - id: better
+          facts: На следующий день дискомфорт уменьшился; возвращаюсь к нагрузке
+            постепенно.
+          next:
+          flags:
+            gym_soreness: false
+          mood: life_recovery
+        passive: true
+    label: восстановление после тренировки
+  grocery_queue:
+    trigger:
+      places:
+      - магазин
+      kinds:
+      - shop
+      min_minutes: 20
+    chance: 0.45
+    cooldown_days: 1
+    within_activity: true
+    entry: list
+    nodes:
+      list:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: checked
+          facts: Сверила список с тем, что действительно нужно; лишнее в корзину
+            не положила.
+          next: queue
+      queue:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: waiting
+          facts: На кассе очередь; покупка ещё не завершена, на неё уходит
+            время.
+          next: finish
+          mood: life_frustration
+      finish:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: done
+          facts: Очередь закончилась; проверила покупки и оставшийся маршрут
+            домой.
+          next:
+          mood: life_relief
+    label: покупки и очередь в магазине
+  cafe_seat:
+    trigger:
+      places:
+      - кофейня
+      kinds:
+      - cafe
+      min_minutes: 25
+    chance: 0.85
+    cooldown_days: 1
+    within_activity: true
+    entry: look
+    nodes:
+      look:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: crowded
+          facts: В кофейне оказалось шумно; ищу место поспокойнее.
+          next: settle
+          mood: life_frustration
+        - id: window
+          facts: Нашла свободное место у окна и устроилась.
+          next: settle
+          mood: life_warmth
+      settle:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: pause
+          facts: Сижу за выбранным столиком и отдыхаю; нового заказа не делала.
+          next: leave
+          mood: life_rest
+      leave:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: ready
+          facts: Убрала вещи со столика и проверила, сколько времени осталось до
+            выхода.
+          next:
+    label: выбор места в кофейне
+  forgotten_charger:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.12
+    cooldown_days: 5
+    within_activity: false
+    entry: remember
+    nodes:
+      remember:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: found
+          facts: Разбирая рюкзак, заметила, что зарядка осталась не на своём
+            месте.
+          next: search
+      search:
+        minutes:
+        - 8
+        - 12
+        outcomes:
+        - id: found
+          facts: Нашла зарядку дома и убрала в карман рюкзака.
+          next: check
+          mood: life_relief
+      check:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: checklist
+          facts: Добавила зарядку в список необязательных вещей для следующего
+            выхода.
+          next:
+          flags:
+            packing_charger: true
+    label: забытый зарядный провод
+  sleep_routine:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+      hours:
+      - 20
+      - 24
+    chance: 0.4
+    cooldown_days: 2
+    within_activity: false
+    entry: tired
+    nodes:
+      tired:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: noticed
+          facts: Под вечер трудно сосредоточиться; решила заранее закончить
+            шумные дела.
+          next: prepare
+          when:
+            productivity_lte: 0.4
+      prepare:
+        minutes:
+        - 15
+        - 25
+        outcomes:
+        - id: ready
+          facts: Подготовила одежду и рюкзак на завтра; утренних дел будет
+            меньше.
+          next: quiet
+          flags:
+            sleep_routine: true
+          mood: life_achievement
+      quiet:
+        minutes:
+        - 10
+        - 20
+        outcomes:
+        - id: calmer
+          facts: Приглушила свет и спокойно провела паузу; спать пойду по
+            сохранённому плану.
+          next:
+          mood: life_rest
+    label: спокойная подготовка к следующему дню
+  family_photo:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.12
+    cooldown_days: 7
+    within_activity: false
+    entry: found
+    nodes:
+      found:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: photo
+          facts: Наткнулась на старое семейное фото и решила отправить брату.
+          next: reply
+      reply:
+        minutes:
+        - 20
+        - 45
+        outcomes:
+        - id: busy
+          facts: Брат пока занят; фото осталось в переписке без ответа.
+          next: later
+          when:
+            npc_busy: brother
+        - id: laughed
+          facts: Брат ответил, вспомнили смешной момент с фотографии.
+          next: after
+          mood: life_warmth
+        passive: true
+      later:
+        minutes:
+        - 90
+        - 180
+        outcomes:
+        - id: reply
+          facts: Брат освободился и ответил на фото; получилось короткое тёплое
+            общение.
+          next: after
+          when:
+            npc_free: brother
+          mood: life_warmth
+        passive: true
+      after:
+        minutes:
+        - 5
+        - 10
+        outcomes:
+        - id: kept
+          facts: Сохранила фотографию отдельно, чтобы не потерять.
+          next:
+    label: семейная фотография и переписка
+  promise_conflict:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      - drawing
+      - movie
+      min_minutes: 25
+    chance: 0.2
+    cooldown_days: 3
+    within_activity: false
+    entry: notice
+    nodes:
+      notice:
+        minutes:
+        - 5
+        - 8
+        outcomes:
+        - id: overlap
+          facts: При сверке дел заметила, что два желания не помещаются в
+            свободный вечер.
+          next: prioritize
+      prioritize:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: essential
+          facts: Оставила обязательные дела, а необязательное занятие перенесла;
+            это решение сохранила.
+          next: after
+          flags:
+            priorities_reviewed: true
+          mood: life_uncertainty
+      after:
+        minutes:
+        - 10
+        - 15
+        outcomes:
+        - id: clear
+          facts: 'После выбора стало спокойнее: сегодня не нужно успеть всё сразу.'
+          next:
+          mood: life_relief
+    label: перенос обещанной помощи
+  ill_food_delivery:
+    trigger:
+      places:
+      - дом
+      kinds:
+      - rest
+      min_minutes: 5
+    chance: 1
+    cooldown_days: 1
+    within_activity: false
+    entry: order
+    nodes:
+      order:
+        minutes:
+        - 3
+        - 5
+        outcomes:
+        - id: ordered
+          facts: Из-за болезни остаюсь дома и заказала еду; заказ оплачен, но
+            курьер ещё не приехал.
+          next: delivery
+          when:
+            ill: true
+            pantry_lte: 2
+            cash_gte: 2500
+          money: -2500
+      delivery:
+        minutes:
+        - 40
+        - 65
+        passive: true
+        outcomes:
+        - id: arrived
+          facts: Оплаченная еда приехала; получила две готовые порции.
+          next: eat
+          effects:
+            pantry:
+              add: 2
+          mood: life_relief
+      eat:
+        minutes:
+        - 15
+        - 20
+        places:
+        - дом
+        outcomes:
+        - id: ate
+          facts: Спокойно поела дома и вернулась к отдыху; болезнь от еды не
+            исчезла.
+          next:
+          when:
+            pantry_gte: 1
+          food: {action: home, product: delivered_meal, portions: 1, meal: true, satiety: 48}
+          mood: life_meal
+    persistent: true
+    label: заказ еды во время болезни

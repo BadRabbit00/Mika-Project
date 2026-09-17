@@ -1,7 +1,8 @@
 # Autonomous life runtime
 
 Implementation uses the isolated `BlogAI-life` worktree and temporary databases.
-The running checkout, its credentials and its production database are unchanged.
+The running process and production database are unchanged. The owner-requested
+state topic is stored separately in the ignored deployment layout.
 The ordered checklist is in [LIFE_IMPLEMENTATION.md](LIFE_IMPLEMENTATION.md).
 
 ## Connected components
@@ -37,18 +38,19 @@ outcomes. Existing PAD and cycle equations remain unchanged; consequences use
 the mood service and retain cause, before/after state and an application receipt.
 
 Life posts and ordinary chat are allowed while awake. Busy activities use shorter
-posts and longer gaps; rest permits longer posts. Configured burst limits prevent
-clusters. Legacy weekly off-topic quotas, category bans and exam-day exclusions
-do not govern this runtime. The exact daily target remains unset pending owner
-agreement. The default admission rule keeps published life posts in a strict
+posts and longer gaps; rest permits longer posts. The owner selected 10–30 minute
+busy gaps, 5–20 minute rest gaps and no daily or burst quota. Legacy weekly
+off-topic quotas, category bans and exam-day exclusions do not govern this
+runtime. The default admission rule keeps published life posts in a strict
 majority; a numeric share can be configured later. No events are created to fill
 a publication quota.
 
 Food, financial pressure, illness, relationship outcomes and commitments affect
 tasks and future choices. Existing recognized appliance, series, gym, coursework
 and cat state is adopted without retroactive purchases. Legacy records remain
-stored. [LIFE_GAPS.md](LIFE_GAPS.md) describes deliberate modeling limits and
-possible future authoring detail.
+stored. [LIFE_GAPS.md](LIFE_GAPS.md) describes the model's boundaries.
+[DETAILED_WORLD.md](DETAILED_WORLD.md) describes the
+new event trees, NPC calendars, inventory, productivity and pinned state view.
 
 ## Verification
 

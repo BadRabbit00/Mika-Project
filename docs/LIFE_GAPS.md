@@ -1,60 +1,58 @@
-# Life model: remaining preferences and authoring scope
+# Life model: authored scope and remaining limits
 
-The owner approved the financial table and authorized deeper fictional rules.
-The connected runtime is described in [AUTONOMOUS_LIFE_WORK.md](AUTONOMOUS_LIFE_WORK.md).
-These limits must not be filled with model-invented facts.
+The owner authorized fictional world design and selected **no daily post quota**.
+Busy gaps are 10–30 minutes; rest gaps are 5–20 minutes. Actual events, sleep,
+validation and delivery govern publication. Mandatory activity notices retain
+priority. See [DETAILED_WORLD.md](DETAILED_WORLD.md) for the implemented rules.
 
-## Remaining preference
+## Resolved gaps
 
-The exact daily publication range still needs agreement. `daily_target` remains
-null. Busy/rest gaps, lengths, bursts and occasional evening reflections have
-explicit adjustable defaults. Life remains a strict majority of published posts
-unless an explicit share is configured. The engine never invents an event to
-meet a quota.
+- NPC work/class/sleep calendars, optional commitments, appointment conflicts,
+  disposable wallets, income, expenses, mood and contact history are persisted.
+- Ingredients have quantities, ownership and expiry. Recipes consume ingredients,
+  permit explicit substitutions and create perishable prepared portions.
+- Elapsed hunger, optional meal slots and cravings affect routes, portion size,
+  productivity and mood. Thirteen fictional food venues and shops have distinct
+  menus, prices and hours; purchase and consumption are separate saved actions.
+- Coffee repair/replacement coexists with headphone, charger, umbrella, kettle
+  and washing-machine state. Effects and actual purchases are explicit rules.
+- Outings include travel, opening hours, park subactivities, a possible cafe and
+  saved route disruptions. Posting frequency does not shorten the enclosing arc.
+- Home hobbies, paid work, groceries, laundry, clinic visits and social plans
+  compete for free time. Recurring chores use exponential deadline urgency.
+- Illness has acute, weak and recovering stages. Productivity controls home study.
+  Sleep debt can replace optional preparation with sleep and an affordable taxi.
+  Low-productivity work earns 20–30% less, paid only after completion.
+- Delayed invitations, disappointment, support, extensions and agreements have
+  concrete branches, persistent effects and mood consequences.
+- Operators receive before/after changes and one pinned editable state photo.
 
-## Implemented fictional scope
+## Deliberate boundaries
 
-- Money: approved balances, scheduled income, restricted housing funds, actual
-  purchases, assistance, debts, reserve-aware repayments and unpaid bills.
-- Food: portions, shopping baskets, meal consumption, shortage and roommate
-  compensation. Ingredients, nutrition and spoilage are not modeled.
-- People: persisted daily availability and mood, contact history, trust/tension,
-  calm help, lectures, delays, refusals, explanations and unresolved conversations.
-  NPCs do not have complete independent calendars or financial ledgers.
-- Home: temporary coffee repair, repeated failure, affordable replacement and
-  delivery. Other possessions are static unless a rule changes them.
-- Health: onset, disturbed future sleep, changed plans, several recovery days and
-  help with missed material. These are fictional states, not medical diagnoses.
-- Obligations: task dependencies, places, hours, priorities, deadlines, reserved
-  duration, progress and submission. No invented grade follows submission.
-- Leisure/family: episodes and later discussion, gym visits/expiry/renewal,
-  temporary cat care/departure, brother help and follow-up problems.
-- Weather: only a fresh observation can trigger a weather replan. Returning from
-  a walk takes time; the engine cannot rewrite a completed journey.
+These are modeling limits, not unresolved permission requests:
 
-## Useful future depth
+- The city is a fictional route graph with configured hours and travel times,
+  not a street map or a live transport service. Disruptions are authored draws.
+- Food uses ingredient units and portions, not calories, grams or dietary advice.
+  Existing portions are adopted without an invented opening purchase.
+- NPCs follow authored calendars; they are not independent generative agents.
+  Disposable wallets govern extra assistance and loans. Approved regular family
+  housing/allowance streams remain separate household funding accounts.
+- Coursework has progress, extensions and submission, but no invented grades.
+  Health stages are fictional simulation states, not diagnoses or treatment.
+- Device histories cover the authored rules. More possessions require explicit
+  rules before they can fail, be bought or repaired.
+- Physical follow-ups wait for a compatible saved interval. Passive waits may
+  cross days; unresolved scenario branches have a configured deferral horizon.
+  Material obligations, paid orders and earned receivables are exempt from that
+  expiry; prior consequences remain recorded when an optional branch ends.
+- The `/state` export contains simulation state and plans, not every historical
+  database row or private user dialogue. Uncertain sends need receipt reconciliation.
 
-| Area | Additional decisions needed for a richer model |
-| --- | --- |
-| Income | Reasons and probabilities for a late scholarship or parental transfer; partial amounts and revised due dates |
-| Food | Ingredient inventory, recipes, spoilage, shared ownership, cooking failures and substitutes |
-| Parents | Work calendars, their own commitments and limits; longer-term repair after difficult conversations |
-| Dasha | Her cash and obligations, consent to repeated help, household agreements and shared shopping |
-| Timur | Specific plans/promises, reasons for missed contact, boundaries and distinct reconciliation actions |
-| Health | Fictional symptom stages and return-to-activity rules, without unsupported medical claims |
-| Coursework | Assignment-specific workload, extensions, lateness consequences and externally recorded grades |
-| Cat | Owner, exact collection agreement, supplies and who pays when collection is delayed |
-| City | Named routes, opening hours, shelters, transport disruption and venue-specific costs |
-| Promises | Explicit negotiation when two deadlines conflict, partial completion and communicated rescheduling |
+## Verification boundary
 
-These are extensions to the stored causal model. They are not permission for the
-language model to claim an unrecorded transfer, conversation, diagnosis, purchase,
-attendance or reconciliation. New outcomes must first be implemented as persisted
-events with effects and follow-up tasks.
-
-## Delivery boundary
-
-Internal errors and rejected/unsent replies remain diagnostic data. Confirmed
-dialogue alone is visible to future responses. Sleep, current activity and actual
-receipt times explain a delayed answer. Freshness checks can cancel a draft;
-they must never repeat the underlying event or its consequences.
+Development uses temporary databases and offline prose/transport adapters. No
+local model was called for this expansion. Language quality and real Telegram
+delivery/pin permissions remain deployment checks. Production data and the
+running process remain untouched; the requested `topics.state` entry is a
+separate private deployment configuration change.

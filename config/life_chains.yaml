@@ -45,9 +45,19 @@ mood_events:
   life_recovery: {delta: [0.13, 0.16, 0.1]}
   life_meal: {delta: [0.08, 0.08, 0.03]}
   life_hunger: {delta: [-0.12, -0.12, -0.05]}
+  life_treat: {delta: [0.04, 0.02, 0.01]}
+  life_small_disappointment: {delta: [-0.03, 0.01, -0.01]}
   life_rest: {delta: [0.1, -0.05, 0.06]}
   life_debt: {delta: [0.08, 0.02, -0.08]}
 tasks:
+  prepare_meal:
+    places: [дом]
+    activities: [rest, cooking]
+    hours: [7, 24]
+    priority: 98
+    reason: prepared_food_low
+    mood: life_achievement
+    facts: Приготовила еду из имеющихся ингредиентов; готовые порции сохранены для следующих приёмов пищи.
   mother_contact: {places: [дом], hours: [10, 21], priority: 90, reason: insufficient_money}
   mother_followup: {places: [дом], hours: [10, 21], priority: 90, reason: waiting_for_mother}
   dasha_loan: {places: [дом], hours: [9, 23], priority: 85, reason: refused_parent_help}

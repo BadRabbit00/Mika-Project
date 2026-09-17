@@ -468,6 +468,51 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
         "CREATE INDEX activity_transitions_post ON activity_transitions(post_id) "
         "WHERE post_id IS NOT NULL",
     ),
+    (
+        f"""CREATE TABLE world_runs (
+            id TEXT PRIMARY KEY NOT NULL, scenario TEXT NOT NULL,
+            node TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'running'
+                CHECK (status IN ('running','completed','cancelled')),
+            {_utc("created_at")} NOT NULL, {_utc("due_at")} NOT NULL,
+            payload TEXT NOT NULL CHECK (json_valid(payload))
+        )""",
+        "CREATE INDEX world_runs_due ON world_runs(due_at) WHERE status='running'",
+        f"""CREATE TABLE world_steps (
+            id TEXT PRIMARY KEY NOT NULL,
+            run_id TEXT NOT NULL REFERENCES world_runs(id),
+            event_id TEXT NOT NULL UNIQUE REFERENCES life_events(id),
+            node TEXT NOT NULL, {_utc("starts_at")} NOT NULL,
+            {_utc("ends_at")} NOT NULL,
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            CHECK (julianday(ends_at)>julianday(starts_at))
+        )""",
+        """CREATE TABLE world_calendars (
+            person TEXT NOT NULL,
+            day TEXT NOT NULL CHECK (is_calendar_date(day)=1),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            PRIMARY KEY (person,day)
+        )""",
+        f"""CREATE TABLE world_appointments (
+            id TEXT PRIMARY KEY NOT NULL, person TEXT NOT NULL,
+            {_utc("starts_at")} NOT NULL, {_utc("ends_at")} NOT NULL,
+            location TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'reserved'
+                CHECK (status IN ('reserved','attended','cancelled','missed')),
+            payload TEXT NOT NULL CHECK (json_valid(payload)),
+            CHECK (julianday(ends_at)>julianday(starts_at))
+        )""",
+        f"""CREATE TABLE world_plans (
+            id TEXT PRIMARY KEY NOT NULL,
+            day TEXT NOT NULL CHECK (is_calendar_date(day)=1),
+            {_utc("at")} NOT NULL, payload TEXT NOT NULL CHECK (json_valid(payload))
+        )""",
+        f"""CREATE TABLE world_changes (
+            sequence INTEGER PRIMARY KEY,
+            {_utc("at")} NOT NULL, cause TEXT NOT NULL,
+            snapshot TEXT NOT NULL CHECK (json_valid(snapshot)),
+            changes TEXT NOT NULL CHECK (json_valid(changes)),
+            outbox_id INTEGER REFERENCES outbox(id)
+        )""",
+    ),
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 

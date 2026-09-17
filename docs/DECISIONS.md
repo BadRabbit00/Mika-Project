@@ -471,6 +471,23 @@ SleepProvider  → bedtime, wake, reason, debt из sleep_log
 - The supplied semester date, 2026-09-01, is a Tuesday. Keep the date; the
   Monday comment in the original patch is incorrect.
 
+## Dialogue-routing correction, 2026-09-17
+
+The owner replaced the graph-first, keyword-based chat router from architecture
+sections 22.1 and 33.4. Normal dialogue can ask for missing information and use
+personal memory without a graph lookup. A bounded model call may request study
+notes when the actual conversational question needs them. An empty or unavailable
+lookup allows a natural follow-up rather than requiring a literal uncertainty
+phrase. Technical assertions still require supplied evidence and validated
+citations; this correction does not change post or self-quiz validation.
+
+Direct user answers remain in the active session immediately and survive restart.
+Session closure extracts verbatim, source-validated personal facts. A delivered
+name question can establish the meaning of a short name answer. Unsent output,
+rejected drafts and error payloads cannot provide that evidence.
+
+Implementation and verification: [CHAT_DIALOGUE.md](CHAT_DIALOGUE.md).
+
 ## Autonomous-world correction
 
 The user revoked the caller-supplied location requirement. DerivedWorldProvider

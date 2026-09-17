@@ -54,7 +54,7 @@ transfers are separate persistent state.
 | --- | ---: | --- |
 | Public transport | 120 / boarding | Charge actual boardings, including transfers |
 | Home food portion | 550 | Consume inventory; charge money when buying ingredients |
-| Grocery basket | 4,400 | Adds eight portions; lasts according to actual meals |
+| Grocery basket | 4,400 | Buys the configured ingredient basket; cooking creates portions |
 | University lunch | 1,000 | Only when selected and bought at university |
 | Simple snack | 500 | Optional purchase, never an automatic daily deduction |
 | Cafe coffee | 1,200 | A discretionary expense |
@@ -65,9 +65,10 @@ transfers are separate persistent state.
 | Small repair supplies | 700 | May improve the appliance temporarily; no guaranteed repair |
 | Gym renewal | 15,000 | Optional purchase; existing paid subscription remains valid |
 
-Portions are a deliberately simple inventory unit. Recipe-specific ingredient
-prices, spoilage rates, shared purchases, and Dasha's reimbursement rules remain
-authoring decisions. Refunds and compensation require explicit ledger events.
+The detailed-world extension adds ingredient units, recipe yields, shelf lives
+and ownership in `world_details.yaml`. Prepared meals still use portions. The
+basket total remains 4,400; no second charge is made when cooking. Refunds and
+compensation require explicit ledger events.
 
 ## Help and borrowing
 
@@ -89,7 +90,9 @@ This table did not originally specify outcome probabilities or NPC financial
 capacity. The subsequent instruction authorized fictional scenario authoring;
 persisted daily availability and help/delay/lecture/refusal rules now live in
 `life_chains.yaml` and the life engine, with deterministic branch fixtures.
-Independent NPC financial ledgers remain an extension described in LIFE_GAPS.md.
+Independent disposable NPC wallets and calendars now live in `world_details.yaml`;
+their movements are recorded in the shared ledger. Regular housing and allowance
+remain the approved separate household flows described above.
 
 ## Monthly sanity check
 

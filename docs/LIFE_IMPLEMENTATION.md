@@ -24,8 +24,8 @@ boundaries remain mandatory. Work stays in BlogAI-life with temporary databases.
 - [x] Build truthful event contexts and an evening event/mood retrospective.
 - [x] Generate off-topic, daily, situation and continuation posts through Writer.
 - [x] Revalidate context before send; rewrite or expire the same saved event.
-- [x] Configure busy/rest cadence, bursts and event-level deduplication. Keep the
-      daily target unset until the separately requested count is approved.
+- [x] Configure busy/rest cadence and event-level deduplication. The later owner
+      decision removes daily/burst quotas and sets 10–30 / 5–20 minute gaps.
 - [x] Persist required activity notices, chosen breaks and intended returns;
       regenerate stale prose and confirm grouped notices with delivery receipts.
       See [ACTIVITY_TRANSITIONS.md](ACTIVITY_TRANSITIONS.md).
@@ -67,9 +67,9 @@ task. A publication is optional. The language model cannot choose the outcome.
 | Cat needs care | Care reserves a home interval and produces warmth | The care interval cannot count as article study; departure ends recurring tasks and creates a mixed mood event |
 | Completed coursework | Real progress and submission receipt | Deadline pressure resolves, freeing the evening and making deferred social plans feasible |
 
-Further authored directions, including explicit promise negotiation, shared
-cooking, NPC budgets and richer reconciliation, are listed in
-[LIFE_GAPS.md](LIFE_GAPS.md). They are not claimed as existing runtime branches.
+The deeper rules for promise negotiation, cooking, NPC budgets, calendars and
+reconciliation are described in [DETAILED_WORLD.md](DETAILED_WORLD.md).
+[LIFE_GAPS.md](LIFE_GAPS.md) now records the remaining modeling boundaries.
 
 ## Behavioral boundaries
 

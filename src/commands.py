@@ -141,8 +141,17 @@ class CommandService:
             learner = connection.execute(
                 "SELECT state_json FROM learner_state WHERE id='learner'"
             ).fetchone()
+            world = connection.execute(
+                "SELECT at,snapshot FROM world_changes ORDER BY sequence DESC LIMIT 1"
+            ).fetchone()
             return {
                 "learning_state": json.loads(learner[0]) if learner else None,
+                "world": {
+                    "observed_at": world["at"],
+                    "snapshot": json.loads(world["snapshot"]),
+                }
+                if world
+                else None,
                 "topics": [
                     dict(row)
                     for row in connection.execute("SELECT * FROM topics ORDER BY name")

@@ -46,9 +46,10 @@ itinerary:
   walk_university_minutes: 75
   task_minutes: 15
   task_minimum_minutes: 5
-  task_durations: {coursework: 40, series: 45, groceries: 25, brother_help: 25, gym: 55}
+  task_durations: {coursework: 40, series: 45, groceries: 25, brother_help: 25, gym: 55, prepare_meal: 35}
   task_label: бытовое дело
   task_labels:
+    prepare_meal: приготовление еды
     mother_contact: разговор с мамой
     mother_followup: разговор с мамой
     dasha_loan: разговор с Дашей о займе
@@ -65,12 +66,21 @@ itinerary:
     aika_discussion: разговор с Айкой
     cat_care: уход за котом
     gym: тренировка
+    park_rest: отдых у фонтана
+    drawing: рисование дома
+    movie: фильм дома
+    side_job: подработка дома
+    cooking: приготовление еды
+    hygiene: чистка зубов и умывание
+    packing: сбор рюкзака
+    makeup: макияж
+    clinic: плановый приём в поликлинике
   breakfast_minutes: 25
   lunch_minutes: 35
   dinner_minutes: 45
   outing_start: "15:30"
   outing_chance: 0.65
-  outing_minutes: {walk: 50, cafe: 40, shop: 25, gym: 55}
+  outing_minutes: {walk: 50, cafe: 40, shop: 45, gym: 55, clinic: 35}
   evening_rest_start: "22:00"
   dinner_start: "18:30"
   # Durations are fictional route parameters. University commute uses schedule.yaml.
@@ -79,6 +89,9 @@ itinerary:
     home_park: 20
     home_cafe: 15
     home_gym: 20
+    home_clinic: 20
+    home_home_stop: 5
+    home_university_stop: 30
   labels:
     sleep: сон
     breakfast: завтрак
@@ -94,7 +107,18 @@ itinerary:
     walk: прогулка
     cafe: отдых в кофейне
     shop: покупка продуктов
+    laundry: стирка и домашние дела
     gym: тренировка
+    park_rest: отдых у фонтана
+    drawing: рисование дома
+    movie: фильм дома
+    side_job: подработка дома
+    cooking: приготовление еды
+    hygiene: чистка зубов и умывание
+    packing: сбор рюкзака
+    makeup: макияж
+    clinic: плановый приём в поликлинике
+    bus_wait: ожидание автобуса на остановке
   locations:
     home: дом
     university: универ
@@ -103,16 +127,22 @@ itinerary:
     park: парк
     cafe: кофейня
     gym: зал
+    clinic: поликлиника
+    home_stop: остановка у дома
+    university_stop: остановка у универа
   extra_locations:
     магазин: {objects: [список покупок, корзина, продукты, очередь]}
     парк: {objects: [дорожка, деревья, скамейка, телефон]}
     зал: {objects: [абонемент, раздевалка, вода, тренажёры]}
+    поликлиника: {objects: [регистратура, талон, очередь, кабинет]}
+    остановка у дома: {objects: [остановка, расписание, автобус, рюкзак]}
+    остановка у универа: {objects: [остановка, расписание, автобус, рюкзак]}
 publishing:
   daily_target: null
   minimum_life_share: null
-  busy_gap_minutes: [100, 180]
-  rest_gap_minutes: [45, 90]
-  max_burst: 2
+  busy_gap_minutes: [10, 30]
+  rest_gap_minutes: [5, 20]
+  max_burst: null
   burst_rest_minutes: 90
   evening_summary_chance: 0.35
   busy_chars: [120, 320]

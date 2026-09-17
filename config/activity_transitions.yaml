@@ -51,7 +51,7 @@ claims:
     kinds: [tea_prepare, tea_break]
   food:
     pattern: '(?:иду|пойду|буду|сейчас|готовлю|приготовила|поем).{0,25}(?:есть|поесть|еду|обед|ужин)|(?:made|making|having)\s+(?:dinner|lunch|breakfast)'
-    kinds: [food_prepare, food_break, breakfast, lunch, dinner]
+    kinds: [food_prepare, food_break, breakfast, lunch, dinner, early_dinner, dining]
   tea_drinking:
     pattern: '\b(?:пью|пила|попила|выпила)\s+ча[йюя]|\bdrinking\s+tea'
     kinds: [tea_break]

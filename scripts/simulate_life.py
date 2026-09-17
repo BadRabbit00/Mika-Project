@@ -14,7 +14,7 @@ import structlog
 from src.core.db import Database
 from src.core.itinerary import Activity
 from src.core.life_engine import LifeEngine
-from src.core.time_utils import ALMATY
+from src.core.time_utils import ALMATY, from_utc_iso
 from src.core.writing_snapshot import WritingSnapshot
 from src.life import LifeRuntime
 from src.live import LiveApplication
@@ -38,6 +38,13 @@ async def simulate(days, output):
             identity = event["id"]
             facts = json.loads(event["payload"])
             text = facts["facts"] or "Recorded evening retrospective"
+            if facts.get("at") and from_utc_iso(facts["at"]) < blocks["day"].at:
+                text = (
+                    "Recorded at "
+                    + from_utc_iso(facts["at"]).strftime("%m-%d %H:%M")
+                    + ": "
+                    + text
+                )
             if facts.get("mandatory"):
                 text = (
                     "; ".join(
@@ -140,7 +147,49 @@ async def simulate(days, output):
                     }:
                         pass
                     assert len(sent) == receipts
-                clock[0] = min(clock[0] + timedelta(minutes=20), activity.ends_at)
+                following = [clock[0] + timedelta(minutes=20), activity.ends_at]
+                if activity.kind == "sleep":
+                    following = [activity.ends_at]
+                else:
+                    with database.connection(readonly=True) as c:
+                        following.extend(
+                            from_utc_iso(row[0])
+                            for row in c.execute(
+                                "SELECT due_at FROM world_runs WHERE status='running' "
+                                "AND due_at>? AND due_at<?",
+                                (clock[0], activity.ends_at),
+                            )
+                        )
+                        if not runtime.details.occupied(c, clock[0]):
+                            for row in c.execute(
+                                "SELECT node,payload FROM world_runs "
+                                "WHERE status='running' AND due_at<=?",
+                                (clock[0],),
+                            ):
+                                payload = json.loads(row["payload"])
+                                node = payload["spec"]["nodes"][row["node"]]
+                                place = (
+                                    node
+                                    if node.get("places") or node.get("kinds")
+                                    else payload["spec"]["trigger"]
+                                )
+                                ready_at = clock[0] + timedelta(minutes=1)
+                                if (
+                                    payload.get("waiting")
+                                    and runtime.details._place(
+                                        place, activity, ready_at
+                                    )
+                                    and ready_at + timedelta(minutes=node["minutes"][1])
+                                    <= activity.ends_at
+                                ):
+                                    following.append(ready_at)
+                                    break
+                        cadence = c.execute(
+                            "SELECT value FROM life_state WHERE key='life.next_post'"
+                        ).fetchone()
+                        if cadence and from_utc_iso(json.loads(cadence[0])) > clock[0]:
+                            following.append(from_utc_iso(json.loads(cadence[0])))
+                clock[0] = min(following)
             state = providers.life.state()
             with database.connection(readonly=True) as c:
                 counts = {
@@ -154,6 +203,11 @@ async def simulate(days, output):
                         "outbox",
                         "life_breaks",
                         "activity_transitions",
+                        "world_runs",
+                        "world_steps",
+                        "world_calendars",
+                        "world_plans",
+                        "world_changes",
                     )
                 }
             restart_state = providers.life.state()
