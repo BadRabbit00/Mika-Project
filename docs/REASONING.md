@@ -28,6 +28,14 @@ The reasoning deadline covers generation and its transport retries together.
 generation. Slower hardware may need a longer reasoning deadline within the
 declared range. A timeout produces a failed call receipt, not an accepted draft.
 
+The wall-clock deadline raises an HTTP transport timeout tagged with the local
+`/completion` endpoint. Learning actions follow the local-service policy: pause
+for fifteen minutes, retain the pending action, then retry through normal study
+admission. The alert is `local_model_unavailable`; it does not change curator
+authentication or scheduling. Task cancellation during shutdown stays cancellation.
+Terminal failures already recorded by older versions are not automatically
+requeued; their trace and delivery receipts need review before resuming them.
+
 ## Context and output limits
 
 For each reasoning request the client reads the actual per-slot context capacity

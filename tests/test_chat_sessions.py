@@ -111,6 +111,7 @@ async def test_overnight_inbox_reads_at_wake_and_recovers_bound_delivery(
     asleep = AT.replace(hour=3)
     awake = AT.replace(hour=8)
     clock = [asleep]
+    monkeypatch.setattr("src.publish.now", lambda: clock[0])
     session = await service.open("dm", at=asleep - timedelta(hours=1))
 
     async def context(at=None):
