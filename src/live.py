@@ -175,10 +175,20 @@ class LiveApplication(LearningApplication):
                 "SELECT kind,text,context_snapshot FROM posts WHERE id=?",
                 (payload["post_id"],),
             ).fetchone()
+            event = c.execute(
+                "SELECT id FROM life_events WHERE post_id=? "
+                "ORDER BY (kind='transition') DESC LIMIT 1",
+                (payload["post_id"],),
+            ).fetchone()
         if row is None:
             raise DeliveryExpired()
         if row["kind"] not in {"offtop", "daily", "situation"}:
             return day.study_allowed
+        if event and not await asyncio.to_thread(
+            self.life.details.publishable, event[0]
+        ):
+            await asyncio.to_thread(self.life.expire, payload["post_id"], at)
+            raise DeliveryExpired()
         if row["context_snapshot"]:
             snapshot = WritingSnapshot.decode(row["context_snapshot"])
             if snapshot.day.activity_id and (

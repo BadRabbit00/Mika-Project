@@ -118,6 +118,7 @@ class LifeEngine:
             "ingredients": state.get("ingredients", []),
             "devices": state.get("devices", {}),
             "world_flags": state.get("world_flags", {}),
+            "social_plans": state.get("social_plans", {}),
         }
 
     def food_view(self, at):

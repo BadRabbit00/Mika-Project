@@ -346,7 +346,93 @@ async def test_reasoning_timeout_bounds_all_retries(request_data, tmp_path):
         database=database,
         transport=httpx.MockTransport(slow),
     ) as llm:
-        with pytest.raises(TimeoutError):
+        with pytest.raises(
+            httpx.ReadTimeout, match="Local generation deadline"
+        ) as failure:
             await llm.generate(request_data)
+        assert failure.value.request.url.path == "/completion"
     with database.connection() as c:
-        assert c.execute("SELECT status FROM runs").fetchone()[0] == "failed"
+        row = c.execute("SELECT status,error,output FROM runs").fetchone()
+        assert row["status"] == "failed"
+        assert "0.01" in row["error"]
+        assert row["output"] is None
+
+
+async def test_reasoning_deadline_retries_local_action_after_restart(
+    tmp_path, request_data
+):
+    from datetime import datetime, timedelta
+    from unittest.mock import AsyncMock
+
+    from src.core.time_utils import ALMATY, from_utc_iso
+    from src.orchestrator import Event, Phase, State
+    from src.runner import ActionRunner, SQLiteLearningStore
+
+    at = datetime(2026, 9, 17, 20, tzinfo=ALMATY)
+    database = Database(tmp_path / "deadline-action.sqlite3")
+    database.initialize()
+    state = State(
+        phase=Phase.INGESTED,
+        topic="security",
+        article_id="one",
+        articles=("one",),
+        min_articles=3,
+        quiz_threshold=0.6,
+    )
+    store = SQLiteLearningStore(database, state)
+    server, unavailable, alert = Server(), True, AsyncMock()
+
+    async def transport(request):
+        if request.url.path == "/completion" and unavailable:
+            await asyncio.sleep(10)
+        return server.handle(request)
+
+    async with LocalLLM(
+        settings=Settings(**{"llm.reasoning_timeout_sec": 0.01}),
+        database=database,
+        transport=httpx.MockTransport(transport),
+    ) as llm:
+
+        async def struggle(action, at):
+            await llm.generate(request_data)
+
+        runner = ActionRunner(store, {"struggle": struggle}, alert=alert)
+        await runner.dispatch(Event("assess", "assess", "local-deadline", at))
+        assert await runner.run_once(at=at) == "retry"
+        alert.assert_awaited_once_with("local-deadline", "local_model_unavailable")
+        saved = store.actions()[0]
+        assert saved["status"] == "pending"
+        assert saved["attempts"] == 1
+        assert "Local generation deadline" in saved["error"]
+        assert from_utc_iso(saved["due_at"]) == at + timedelta(minutes=15)
+        with database.connection(readonly=True) as c:
+            flags = c.execute(
+                "SELECT curator_paused_until,curator_auth_failed FROM learner_state"
+            ).fetchone()
+            assert tuple(flags) == (None, 0)
+            assert c.execute("SELECT count(*) FROM posts").fetchone()[0] == 0
+        restored = SQLiteLearningStore(database, state)
+        retry = ActionRunner(restored, runner.handlers, alert=alert)
+        assert await retry.run_once(at=at + timedelta(minutes=14)) == "idle"
+        unavailable = False
+        assert await retry.run_once(at=at + timedelta(minutes=15)) == "completed"
+        assert await retry.run_once(at=at + timedelta(minutes=16)) == "idle"
+        assert len(restored.actions()) == 1
+        assert restored.actions()[0]["attempts"] == 2
+
+
+async def test_generation_cancellation_is_not_reported_as_transport_timeout(
+    request_data,
+):
+    server = Server()
+
+    async def cancelled(request):
+        if request.url.path == "/completion":
+            raise asyncio.CancelledError()
+        return server.handle(request)
+
+    async with LocalLLM(
+        settings=Settings(), transport=httpx.MockTransport(cancelled)
+    ) as llm:
+        with pytest.raises(asyncio.CancelledError):
+            await llm.generate(request_data)

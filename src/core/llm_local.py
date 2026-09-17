@@ -235,11 +235,21 @@ class LocalLLM:
         response = {}
         try:
             check_study()
-            async with asyncio.timeout(deadline):
-                kwargs = {"timeout": deadline} if deadline is not None else {}
-                response = await self._request(
-                    self.generation, "POST", "/completion", json=payload, **kwargs
-                )
+            try:
+                async with asyncio.timeout(deadline):
+                    kwargs = {"timeout": deadline} if deadline is not None else {}
+                    response = await self._request(
+                        self.generation, "POST", "/completion", json=payload, **kwargs
+                    )
+            except TimeoutError as error:
+                # Preserve the provider identity across the wall-clock deadline.
+                # The runner applies local retries to HTTP transport failures.
+                raise httpx.ReadTimeout(
+                    f"Local generation deadline exceeded after {deadline} seconds",
+                    request=httpx.Request(
+                        "POST", self.generation.base_url.join("/completion")
+                    ),
+                ) from error
             raw = response.get("content")
             if not isinstance(raw, str):
                 raise ValueError("Invalid completion response")

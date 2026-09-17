@@ -118,6 +118,33 @@ Evening summaries receive real events and verbal mood changes. Chat sees the sam
 world, subject, resources and mood; sleep keeps messages unread. Repeated sleep
 polls do not rewrite the inbox. Only validated, delivered replies enter memory.
 
+### Scenario publication milestones
+
+Publication policy belongs to the saved scenario node or outcome:
+
+- `event` (default): a distinct result, delivered in causal order within its run.
+- `latest`: a temporary situation, such as waiting for a reply. The next recorded
+  step retires an unsent version, including a draft already in the outbox.
+- `silent`: internal reflection. Its history and mood effects remain, but it does
+  not request another post about the same outcome.
+
+The Dasha, Aika and Timur invitation trees save each decision in `social_plans`
+in the same transaction as its event. A rejected meeting is visible immediately;
+doing things at home has its own action label and result. Reflection afterwards
+is passive: it does not continue occupying the activity or stop study. Physical
+location still comes from the itinerary; a decision to stay home is not a new
+arrival if Mika was already there.
+
+An earlier pending result cannot be overtaken by a later result of the same run.
+Retries block that story, not unrelated stories or required activity notices.
+Generation and delivery both reject obsolete drafts. Already delivered later
+steps prevent old pending steps from resurfacing after restart.
+
+Startup upgrades publication annotations in existing saved trees and restores
+social decisions from recorded outcomes. It preserves selected branches, action
+durations, receipts, money and mood effects. Delivered posts remain historical
+facts; they are neither deleted nor resent. No schema migration is required.
+
 ## One operator state message
 
 The optional topic belongs in the private YAML alongside the seven existing ones:

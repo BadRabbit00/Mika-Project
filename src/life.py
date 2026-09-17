@@ -63,6 +63,8 @@ class LifeRuntime:
             log.exception("life_weather_deferred")
 
     def recover(self):
+        self.details.recover()
+
         def save(c):
             for row in c.execute(
                 "SELECT * FROM life_events WHERE publication_status='generating'"
@@ -235,16 +237,19 @@ class LifeRuntime:
     def _next(self, at):
         if mandatory := self.transitions.next(at):
             return mandatory
+
         # A present-tense activity observation loses relevance at its boundary.
         # Its history remains available to the retrospective, without a new post.
-        self.database.run_transaction(
-            lambda c: c.execute(
+        def retire(c):
+            self.details.retire_obsolete(c)
+            c.execute(
                 "UPDATE life_events SET publication_status='expired' WHERE "
                 "id LIKE 'activity:%' AND publication_status IN ('pending','draft') "
                 "AND valid_until<=?",
                 (at,),
             )
-        )
+
+        self.database.run_transaction(retire)
         with self.database.connection(readonly=True) as c:
             cfg = self.providers.life_config["publishing"]
             cutoff = at - timedelta(minutes=cfg["burst_rest_minutes"])
@@ -283,6 +288,13 @@ class LifeRuntime:
                 "SELECT * FROM life_events WHERE publication_status IN "
                 "('pending','draft') AND kind!='transition' "
                 "AND at<=? AND (retry_at IS NULL OR retry_at<=?) AND attempts<3 "
+                "AND NOT EXISTS (SELECT 1 FROM world_steps step "
+                "JOIN world_steps earlier ON earlier.run_id=step.run_id "
+                "AND earlier.rowid<step.rowid "
+                "JOIN life_events predecessor ON predecessor.id=earlier.event_id "
+                "WHERE step.event_id=life_events.id "
+                "AND predecessor.publication_status IN "
+                "('pending','generating','draft','queued') AND predecessor.at<=?) "
                 "AND NOT EXISTS (SELECT 1 FROM life_events intent WHERE "
                 "json_extract(intent.payload,'$.related_event_id')=life_events.id "
                 "AND (intent.publication_status IN "
@@ -291,7 +303,7 @@ class LifeRuntime:
                 "AND notice.delivered_at IS NULL))) "
                 "ORDER BY (kind='daily') DESC,(task_id IS NOT NULL) DESC,at DESC "
                 "LIMIT 1",
-                (at, at),
+                (at, at, at),
             ).fetchone()
         return dict(row) if row else None
 
@@ -427,6 +439,8 @@ class LifeRuntime:
     async def _generate(self, event):
         with structlog.contextvars.bound_contextvars(trace_id=event["id"]):
             try:
+                if not await asyncio.to_thread(self.details.publishable, event["id"]):
+                    return
                 blocks = await self.providers.context(self.clock())
                 if blocks["day"].blackout.blocked:
                     return
@@ -506,6 +520,9 @@ class LifeRuntime:
                     fresh.activity_id != blocks["day"].activity_id
                     or fresh.world_action_id != blocks["day"].world_action_id
                     or fresh.blackout.blocked
+                    or not await asyncio.to_thread(
+                        self.details.publishable, event["id"]
+                    )
                 ):
                     await asyncio.to_thread(self.expire, event["post_id"], self.clock())
                     return
