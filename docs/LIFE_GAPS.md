@@ -25,7 +25,7 @@ priority. See [DETAILED_WORLD.md](DETAILED_WORLD.md) for the implemented rules.
   Low-productivity work earns 20–30% less, paid only after completion.
 - Delayed invitations, disappointment, support, extensions and agreements have
   concrete branches, persistent effects and mood consequences.
-- Operators receive before/after changes and one pinned editable state document.
+- Operators receive before/after changes and one pinned editable state photo.
 
 ## Deliberate boundaries
 
@@ -46,7 +46,7 @@ These are modeling limits, not unresolved permission requests:
   cross days; unresolved scenario branches have a configured deferral horizon.
   Material obligations, paid orders and earned receivables are exempt from that
   expiry; prior consequences remain recorded when an optional branch ends.
-- The state attachment contains simulation state and plans, not every historical
+- The `/state` export contains simulation state and plans, not every historical
   database row or private user dialogue. Uncertain sends need receipt reconciliation.
 
 ## Verification boundary

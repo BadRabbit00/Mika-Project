@@ -128,11 +128,12 @@ topics:
   state: 1266
 ```
 
-The ops bot sends a state document, saves its receipt, pins that message and edits
+The ops bot sends a state photo, saves its receipt, pins that message and edits
 the same ID thereafter. The caption shows current place/activity, mood, health,
-productivity and money. The JSON contains resources, tasks, appointments, NPC
-calendars and the nested plan. Historical rows and private user chat are excluded.
-The bot needs document and pin permissions in the state topic.
+productivity and money. The [PAD plot](PAD_STATE.md) shows its current mood with
+fixed axes and camera. `/state` exports JSON with resources, tasks, appointments,
+NPC calendars and the nested plan. Historical rows and private user chat are
+excluded. The bot needs photo/media and pin permissions in the state topic.
 
 The machine topic receives a separate before/after record with its cause. Large
 diffs use JSON attachments. Identical snapshots produce no new record. Bookkeeping

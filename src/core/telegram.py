@@ -1,15 +1,17 @@
 """Explicit deployment layout and asynchronous aiogram outbox transport."""
 
+import asyncio
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import structlog
 from aiogram.exceptions import (
     TelegramBadRequest,
     TelegramForbiddenError,
     TelegramRetryAfter,
 )
-from aiogram.types import BufferedInputFile, InputMediaDocument
+from aiogram.types import BufferedInputFile, InputMediaDocument, InputMediaPhoto
 from dotenv import dotenv_values
 from pydantic import (
     AliasChoices,
@@ -21,7 +23,10 @@ from pydantic import (
 )
 from ruamel.yaml import YAML
 
+from src.core.pad_plot import render_png
 from src.publish import DeliveryRejected, Destination
+
+log = structlog.get_logger("blogai.telegram")
 
 
 @dataclass(frozen=True)
@@ -163,6 +168,14 @@ class TelegramTransport:
         common = {"chat_id": destination.chat_id}
         if destination.topic_id is not None:
             common["message_thread_id"] = destination.topic_id
+        if payload["method"] in {"photo", "edit_photo"}:
+            try:
+                content = await asyncio.to_thread(render_png, payload["pad_plot"])
+                photo = BufferedInputFile(content, filename="mika-state.png")
+            except Exception as error:
+                # Nothing has reached Telegram; this failure is safe to retry.
+                log.exception("pad_render_failed", trace_id=payload.get("trace_id"))
+                raise DeliveryRejected("PAD image rendering failed") from error
         try:
             match payload["method"]:
                 case "message":
@@ -181,6 +194,23 @@ class TelegramTransport:
                         document=document,
                         caption=payload.get("caption"),
                         reply_markup=payload.get("reply_markup"),
+                    )
+                case "photo":
+                    result = await bot.send_photo(
+                        **common,
+                        photo=photo,
+                        caption=payload.get("caption"),
+                        show_caption_above_media=True,
+                    )
+                case "edit_photo":
+                    result = await bot.edit_message_media(
+                        chat_id=destination.chat_id,
+                        message_id=payload["message_id"],
+                        media=InputMediaPhoto(
+                            media=photo,
+                            caption=payload.get("caption"),
+                            show_caption_above_media=True,
+                        ),
                     )
                 case "edit":
                     result = await bot.edit_message_text(
@@ -215,6 +245,14 @@ class TelegramTransport:
             raise DeliveryRejected(
                 "Telegram flood control", retry_after=error.retry_after
             ) from error
-        except (TelegramBadRequest, TelegramForbiddenError) as error:
+        except TelegramBadRequest as error:
+            if (
+                payload["method"] == "edit_photo"
+                and "message is not modified" in error.message.lower()
+            ):
+                # Telegram confirms that this message already has the desired media.
+                return payload["message_id"]
+            raise DeliveryRejected(type(error).__name__) from error
+        except TelegramForbiddenError as error:
             raise DeliveryRejected(type(error).__name__) from error
         return result.message_id

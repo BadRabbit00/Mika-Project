@@ -150,7 +150,16 @@ class Publisher:
     def _operation(key, destination, *, trace_id, method, at=None, **data):
         at = require_aware(now() if at is None else at)
         if (
-            method not in {"message", "document", "edit", "edit_document", "pin"}
+            method
+            not in {
+                "message",
+                "document",
+                "edit",
+                "edit_document",
+                "photo",
+                "edit_photo",
+                "pin",
+            }
             or not trace_id
         ):
             raise ValueError("Unsupported Telegram operation or missing trace")

@@ -1,0 +1,18 @@
+# Operator visualization only; names come from mood.yaml in PAD sign order.
+view:
+  elevation: 22
+  azimuth: 30
+  roll: 0
+  projection: ortho
+  vertical_axis: z
+octant_alpha: 0.10
+tick_step: 0.5
+colors:
+  "+++": "#e4b52b"  # Exuberance: bright gold.
+  "++-": "#d863ac"  # Playful excitement: pink.
+  "+-+": "#279779"  # Calm control: green.
+  "+--": "#6cb4cf"  # Soft relaxation: light blue.
+  "-++": "#e53935"  # Anger: red.
+  "-+-": "#8f68bc"  # Anxious activation: violet.
+  "--+": "#ed8b23"  # Controlled irritation: orange.
+  "---": "#527295"  # Low-energy sadness: slate blue.

@@ -101,5 +101,5 @@ can be consumed in a later suitable interval. Expired food is discarded. A
 restart cannot charge the same order or consume its stock twice.
 
 Meal outcomes, carried stock, craving state and verbal hunger are shared with
-chat and the operator state document. Generated prose remains subject to the
+chat and the operator state message. Generated prose remains subject to the
 same current-activity and delivery checks as the rest of the world.

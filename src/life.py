@@ -45,8 +45,10 @@ class LifeRuntime:
             self.database,
             log_destination=log_destination,
             state_destination=state_destination,
+            config_dir=providers.config_dir,
         )
         self._last_minute, self._generation = None, None
+        self._last_mood_revision = None
         self.weather_enabled, self._weather_job, self._weather_due = (
             weather_enabled,
             None,
@@ -314,9 +316,7 @@ class LifeRuntime:
             self._last_minute = minute
         if not blocks["day"].blackout.blocked:
             await self.providers.mood.apply_life_effect(at)
-        if changed_minute:
-            await asyncio.to_thread(self._observe_state, at)
-            await asyncio.to_thread(self.journal.flush, at)
+        await asyncio.to_thread(self._refresh_state, at, changed_minute)
         if blocks["day"].blackout.blocked:
             return "sleep"
         if self._generation is not None and not self._generation.done():
@@ -326,6 +326,16 @@ class LifeRuntime:
             return "cadence_or_no_event"
         self._generation = asyncio.create_task(self._generate(event))
         return "queued"
+
+    def _refresh_state(self, at, changed_minute):
+        # Only committed rows are visible here; rendering never mutates mood.
+        with self.database.connection(readonly=True) as c:
+            row = c.execute("SELECT at FROM mood ORDER BY at DESC LIMIT 1").fetchone()
+        revision = row[0] if row else None
+        if changed_minute or revision != self._last_mood_revision:
+            self._observe_state(at)
+            self.journal.flush(at)
+            self._last_mood_revision = revision
 
     def _observe_state(self, at):
         state = self.engine.state()
@@ -392,7 +402,7 @@ class LifeRuntime:
                 "ongoing": self.engine.public_state(at)["ongoing_activity"],
                 "food": self.engine.food_view(at),
             },
-            mood={axis: round(getattr(mood, axis), 2) for axis in ("P", "A", "D")},
+            mood={axis: round(getattr(mood, axis), 4) for axis in ("P", "A", "D")},
             sleep={
                 "bedtime": to_utc_iso(sleep.bedtime),
                 "wake": to_utc_iso(sleep.wake),

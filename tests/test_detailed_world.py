@@ -310,21 +310,22 @@ async def test_one_state_message_is_pinned_and_edited_after_delivery(engine):
     worker = OutboxWorker(
         engine.database, SimpleNamespace(send=send), clock=lambda: clock[0]
     )
-    journal.observe({"cash": 22000}, AT, cause="start")
+    mood = {"P": 0.2, "A": -0.1, "D": 0.3}
+    journal.observe({"cash": 22000, "mood": mood}, AT, cause="start")
     journal.flush(AT)
     journal.flush(AT)
     assert await worker.run_once(at=clock[0]) == "sent"
     clock[0] += timedelta(seconds=5)
     journal.flush(clock[0])
     assert await worker.run_once(at=clock[0]) == "sent"
-    journal.observe({"cash": 20800}, clock[0], cause="coffee")
+    journal.observe({"cash": 20800, "mood": mood}, clock[0], cause="coffee")
     clock[0] += timedelta(seconds=5)
     journal.flush(clock[0])
     assert await worker.run_once(at=clock[0]) == "sent"
     WorldJournal(engine.database, state_destination=journal.state_destination).flush(
         clock[0]
     )
-    assert [row["method"] for row in sent] == ["document", "pin", "edit_document"]
+    assert [row["method"] for row in sent] == ["photo", "pin", "edit_photo"]
     assert sent[-1]["message_id"] == 321
     assert json.loads(sent[-1]["content"])["cash"] == 20800
 
@@ -338,13 +339,14 @@ async def test_uncertain_state_send_is_not_replaced(engine):
 
     target = Destination("state", "ops", -100, 1266)
     journal = WorldJournal(engine.database, state_destination=target)
-    journal.observe({"cash": 1000}, AT, cause="start")
+    mood = {"P": 0.2, "A": -0.1, "D": 0.3}
+    journal.observe({"cash": 1000, "mood": mood}, AT, cause="start")
     journal.flush(AT)
     send = AsyncMock(side_effect=TimeoutError("Receipt was lost"))
     worker = OutboxWorker(engine.database, SimpleNamespace(send=send), clock=lambda: AT)
     assert await worker.run_once(at=AT) == "uncertain"
     restarted = WorldJournal(engine.database, state_destination=target)
-    restarted.observe({"cash": 900}, AT, cause="expense")
+    restarted.observe({"cash": 900, "mood": mood}, AT, cause="expense")
     restarted.flush(AT + timedelta(minutes=1))
     assert await worker.run_once(at=AT + timedelta(minutes=1)) == "idle"
     send.assert_awaited_once()

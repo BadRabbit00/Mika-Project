@@ -169,6 +169,7 @@
                 cp -r ${lib.cleanSource ./.} source
                 chmod -R u+w source
                 cd source
+                export MPLCONFIGDIR="$TMPDIR/mika-matplotlib"
                 uv lock --check --offline
                 pytest -q
                 python -m src.cli run --dry-run

@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 
 from src.core.db import enqueue_outbox
+from src.core.pad_plot import RENDER_VERSION, PadPlot
 from src.core.time_utils import from_utc_iso, require_aware
 
 
@@ -22,12 +23,20 @@ def differences(before, after, prefix=""):
 
 
 class WorldJournal:
-    def __init__(self, database, *, log_destination=None, state_destination=None):
+    def __init__(
+        self,
+        database,
+        *,
+        log_destination=None,
+        state_destination=None,
+        config_dir="config",
+    ):
         self.database = database
         self.log_destination, self.state_destination = (
             log_destination,
             state_destination,
         )
+        self.plot = PadPlot.from_config(config_dir) if state_destination else None
 
     def observe(self, snapshot, at, *, cause):
         at = require_aware(at)
@@ -150,7 +159,10 @@ class WorldJournal:
                         message_id=previous["tg_message_id"],
                         depends_on=previous["id"],
                     )
-                if payload.get("world_sequence") == latest["sequence"]:
+                if (
+                    payload.get("world_sequence") == latest["sequence"]
+                    and payload.get("state_format") == f"pad-photo-{RENDER_VERSION}"
+                ):
                     return
             content = json.dumps(
                 {"observed_at": latest["at"], **json.loads(latest["snapshot"])},
@@ -182,21 +194,23 @@ class WorldJournal:
                     elif key == "until":
                         value = from_utc_iso(value).strftime("%m-%d %H:%M")
                     caption += "\n" + key + ": " + str(value)
-            caption += "\nThe attached JSON contains the complete current state."
+            caption += "\n/state exports the complete current state."
             data = dict(
-                filename="mika-state.json",
+                filename="mika-state.png",
                 content=content,
                 caption=caption[:900],
                 world_state=True,
                 world_sequence=latest["sequence"],
+                state_format=f"pad-photo-{RENDER_VERSION}",
+                pad_plot=self.plot.snapshot(snapshot["mood"]),
             )
             if previous:
                 data["message_id"] = previous["tg_message_id"]
             self._enqueue(
                 c,
-                f"world-state:{target.chat_id}:{target.topic_id}:{latest['sequence']}",
+                f"world-state:pad-{RENDER_VERSION}:{target.chat_id}:{target.topic_id}:{latest['sequence']}",
                 target,
-                "edit_document" if previous else "document",
+                "edit_photo" if previous else "photo",
                 at,
                 **data,
             )

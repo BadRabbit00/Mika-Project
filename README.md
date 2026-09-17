@@ -112,7 +112,8 @@ See the [implementation checklist](docs/LIFE_IMPLEMENTATION.md),
 Saved NPC calendars, appointments, food, money and productivity influence future
 activities. Breakfast, lunch and dinner are optional opportunities; skipped meals
 preserve hunger. The private Telegram YAML can include `topics.state` for one
-pinned, editable state document, separate from the machine-topic change log.
+pinned, editable state photo with a [3D PAD mood plot](docs/PAD_STATE.md), separate
+from the machine-topic change log. `/state` exports the full world snapshot.
 
 Run the offline simulation on temporary storage:
 
